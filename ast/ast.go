@@ -40,7 +40,17 @@ type Type struct {
 }
 
 type NonUnionType struct {
-	TypeReference *string `@Ident`
+	LiteralType   *LiteralType `@@`
+	TypeReference *string      `| @Ident`
+}
+
+type LiteralType struct {
+	FunctionType *FunctionType `@@`
+}
+
+type FunctionType struct {
+	Parameters []FunctionParameter `"(" (@@ ("," @@)*)? ")"`
+	ReturnType *Type               `"=>" @@`
 }
 
 type UnionType struct {
@@ -59,19 +69,29 @@ type StatementOrExpression struct {
 }
 
 type Expression struct {
-	WrappedExpression *Expression `"("@@")"`
-	Number            *Number     `| @@`
-	String            *string     `| @String`
-	Invocation        *Invocation `| @@`
-	Ident             *string     `| @Ident`
+	Number       *Number       `@@`
+	String       *string       `| @String`
+	Invocation   *Invocation   `| @@`
+	ObjectAccess *ObjectAccess `| @@`
+	Ident        *string       `| @Ident`
 }
 
 type Invocation struct {
+	Invoked   Invocable    `@@`
 	Arguments []Expression `"("@@? ("," @@)* ")"`
 }
 
 type ObjectAccess struct {
+	Accessee      Accessable `@@`
 	AccessedValue Expression `"."@@`
+}
+
+type Invocable struct {
+	Ident *string `@Ident`
+}
+
+type Accessable struct {
+	Ident *string `@Ident`
 }
 
 type Number struct {
@@ -84,8 +104,15 @@ type LetDecl struct {
 }
 
 type Statement struct {
-	LetDecl    *LetDecl    `@@`
-	ReturnStmt *Expression `| "return" @@ ";"`
+	ExpressionStmt *Expression          `@@ ";"`
+	LetDecl        *LetDecl             `| @@`
+	AssignmentStmt *AssignmentStatement `| @@`
+	ReturnStmt     *Expression          `| "return" @@ ";"`
+}
+
+type AssignmentStatement struct {
+	Ident string     `@Ident "="`
+	Value Expression `@@ ";"`
 }
 
 type TS struct {
@@ -93,6 +120,10 @@ type TS struct {
 }
 
 func (left *Type) Equals(right *Type) bool {
+	if right == nil {
+		return false
+	}
+
 	if left.NonUnionType != nil && right.NonUnionType != nil {
 		left, right := left.NonUnionType, right.NonUnionType
 

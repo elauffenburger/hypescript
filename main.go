@@ -12,22 +12,24 @@ func main() {
 
 	ast, err := parser.ParseString(`
 		function foo(a: string, b: num): num {
-			let foo = 5;
-			let bar = "bar";
+			let ay = 5;
+			let bee = "bar";
 
-			return foo;
+			return ay;
 		}
 
 		function blah() {
 			let foo = "asdf";
 
 			let bar = console;
+			bar = console;
+			bar.log(foo);
 
 			return foo;
 		}
 
-		function main(): num {
-			return 0;
+		function main(): void {
+			blah();
 		}
 	`)
 

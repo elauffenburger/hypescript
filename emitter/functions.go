@@ -6,14 +6,6 @@ import (
 	"strings"
 )
 
-type functionBuilder struct {
-	Context  *Context
-	Function *ast.Function
-
-	ExplicitReturnType *ast.Type
-	ImpliedReturnType  *ast.Type
-}
-
 type functionInfo struct {
 	Function *ast.Function
 
@@ -75,6 +67,12 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 		}
 	}
 
+	if functionInfo.ImplicitReturnType == nil {
+		functionInfo.ImplicitReturnType = &ast.Type{
+			NonUnionType: &ast.NonUnionType{TypeReference: strRef("void")},
+		}
+	}
+
 	context.ExitScope()
 
 	return &functionInfo, nil
@@ -92,10 +90,22 @@ func writeFunction(context *Context, function *ast.Function) error {
 		}
 	}
 
-	returnTypeName := mangleTypeName(*functionInfo.ImplicitReturnType.NonUnionType.TypeReference)
-	functionName := mangleFunctionName(function.Name)
+	returnType := functionInfo.ImplicitReturnType
 
-	// DO NOT SUBMIT: need to add the function as a known identifier to the current scope.
+	// DO NOT SUBMIT: this is super not guaranteed to be correct!
+	mangledReturnTypeName := mangleTypeName(*returnType.NonUnionType.TypeReference)
+	mangledFunctionName := mangleFunctionName(function.Name)
+
+	context.CurrentScope.AddIdentifer(function.Name, ast.Type{
+		NonUnionType: &ast.NonUnionType{
+			LiteralType: &ast.LiteralType{
+				FunctionType: &ast.FunctionType{
+					Parameters: function.Parameters,
+					ReturnType: returnType,
+				},
+			},
+		},
+	})
 
 	context.EnterScope()
 
@@ -104,7 +114,7 @@ func writeFunction(context *Context, function *ast.Function) error {
 	for i, arg := range function.Parameters {
 		typeName, argName := mangleTypeName(*arg.Type.NonUnionType.TypeReference), arg.Name
 
-		formattedArgs.WriteString(fmt.Sprintf("%s* %s", typeName, argName))
+		formattedArgs.WriteString(fmt.Sprintf("%s %s", typeName, argName))
 
 		if i != numArgs-1 {
 			formattedArgs.WriteString(", ")
@@ -113,7 +123,7 @@ func writeFunction(context *Context, function *ast.Function) error {
 		context.CurrentScope.AddIdentifer(arg.Name, arg.Type)
 	}
 
-	context.WriteString(fmt.Sprintf("%s* %s(%s) {\n", returnTypeName, functionName, formattedArgs.String()))
+	context.WriteString(fmt.Sprintf("%s %s(%s) {\n", mangledReturnTypeName, mangledFunctionName, formattedArgs.String()))
 
 	for _, statementOrExpression := range function.Body {
 		context.WriteString("\t")

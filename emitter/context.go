@@ -41,16 +41,16 @@ func (scope *Scope) Clone() Scope {
 	return newScope
 }
 
-func (scope *Scope) TypeOf(ident string) *ast.Type {
+func (scope *Scope) TypeOf(ident string) (*ast.Type, error) {
 	t, ok := scope.IdentTypes[ident]
 	if !ok {
-		panic(fmt.Sprintf("Unknown identifier %s in scope: %#v", ident, scope))
+		return nil, fmt.Errorf("unknown identifier %s in scope: %#v", ident, scope)
 	}
 
-	return &t
+	return &t, nil
 }
 
-func (context *Context) TypeOf(ident string) *ast.Type {
+func (context *Context) TypeOf(ident string) (*ast.Type, error) {
 	return context.CurrentScope.TypeOf(ident)
 }
 
