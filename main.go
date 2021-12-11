@@ -51,11 +51,16 @@ type Function struct {
 	Name       string                  `"function" @Ident`
 	Arguments  []FunctionArgument      `"(" (@@ ("," @@)*)? ")"`
 	ReturnType *Type                   `(":" @@)?`
-	Body       []ExpressionOrStatement `"{"@@*"}"`
+	Body       []StatementOrExpression `"{"@@*"}"`
 }
 
 type Type struct {
-	TypeName string `@Ident`
+	TypeName  *string    `@Ident`
+	UnionType *UnionType `| @@`
+}
+
+type UnionType struct {
+	Types []*Type `@@ | @@ ("|" @@)*`
 }
 
 type FunctionArgument struct {
@@ -63,7 +68,7 @@ type FunctionArgument struct {
 	Type Type   `":" @@`
 }
 
-type ExpressionOrStatement struct {
+type StatementOrExpression struct {
 	Statement  *Statement  `@@`
 	Expression *Expression `| @@`
 }
@@ -174,50 +179,6 @@ ts_string* ts_string_new(char* str) {
 `)
 }
 
-func (function *Function) ReturnStatements() []*Statement {
-	var stmts []*Statement
-
-	for _, statementOrExpression := range function.Body {
-		if statementOrExpression.Statement == nil || statementOrExpression.Statement.ReturnStmt == nil {
-			continue
-		}
-
-		stmts = append(stmts, statementOrExpression.Statement)
-	}
-
-	return stmts
-}
-
-func (function *Function) InferReturnType(context *Context) *Type {
-	var impliedReturnType *Type
-	if function.ReturnType != nil {
-		impliedReturnType = function.ReturnType
-	}
-
-	returnStmts := function.ReturnStatements()
-
-	// If the function didn't specify a return value and there aren't any returns, assume the type is void.
-	if impliedReturnType == nil && len(returnStmts) == 0 {
-		return &Type{TypeName: string(TsVoid)}
-	}
-
-	// Otherwise, we need to make sure the return types line up.
-	for _, stmt := range returnStmts {
-		inferredType := inferType(context, stmt.ReturnStmt)
-
-		if impliedReturnType == nil {
-			impliedReturnType = inferredType
-			continue
-		}
-
-		if inferredType != impliedReturnType {
-			panic(fmt.Sprintf("Function return types didn't line up for: %#v", function))
-		}
-	}
-
-	return impliedReturnType
-}
-
 func (context *Context) EnterScope() {
 	newScope := Scope{
 		IdentTypes: make(map[string]Type),
@@ -242,9 +203,95 @@ func (scope *Scope) AddIdentifer(ident string, identType Type) {
 	scope.IdentTypes[ident] = identType
 }
 
+type FunctionBuilder struct {
+	Context  *Context
+	Function *Function
+
+	ExplicitReturnType *Type
+	ImpliedReturnType  *Type
+}
+
+type FunctionInfo struct {
+	Function *Function
+
+	ExplicitReturnType *Type
+	ImplicitReturnType *Type
+}
+
+func buildFunctionInfo(context *Context, function *Function) *FunctionInfo {
+	functionInfo := FunctionInfo{Function: function, ExplicitReturnType: function.ReturnType}
+
+	context.EnterScope()
+
+	// DO NOT SUBMIT: need to add the function as a known identifier to the current scope.
+
+	for _, arg := range function.Arguments {
+		context.CurrentScope.AddIdentifer(arg.Name, arg.Type)
+	}
+
+	for _, stmtOrExpr := range function.Body {
+		// Expressions can't produce identifiers, so we can skip them.
+		if stmtOrExpr.Statement == nil {
+			continue
+		}
+
+		stmt := stmtOrExpr.Statement
+
+		// If this is a let decl, add the ident to the current scope.
+		if stmt.LetDecl != nil {
+			context.CurrentScope.AddIdentifer(stmt.LetDecl.Name, *inferType(context, &stmt.LetDecl.Value))
+
+			continue
+		}
+
+		// If this is a return stmt, update the implicit return type.
+		if stmt.ReturnStmt != nil {
+			returnStmtType := inferType(context, stmt.ReturnStmt)
+
+			// If we don't have an implied type yet, use this return statement's.
+			if functionInfo.ImplicitReturnType == nil {
+				functionInfo.ImplicitReturnType = returnStmtType
+				continue
+			}
+
+			// ...otherwise, if the return types match, bail out.
+			if functionInfo.ImplicitReturnType == returnStmtType {
+				continue
+			}
+
+			// ...otherwise, we need to treat this as a union of the existing type and this type.
+			functionInfo.ImplicitReturnType = createUnionType(functionInfo.ImplicitReturnType, returnStmtType)
+		}
+	}
+
+	context.ExitScope()
+
+	return &functionInfo
+}
+
+func createUnionType(left, right *Type) *Type {
+	return &Type{UnionType: &UnionType{Types: []*Type{left, right}}}
+}
+
+func (left *Type) Equals(right *Type) bool {
+	if left.TypeName != nil && right.TypeName != nil {
+		return *left.TypeName == *right.TypeName
+	}
+
+	panic(fmt.Sprintf("Unsupported type comparison between %#v and %#v", left, right))
+}
+
 func writeFunction(context *Context, function *Function) {
-	returnType := function.InferReturnType(context)
-	returnTypeName, functionName := mangleTypeName(returnType.TypeName), mangleFunctionName(function.Name)
+	functionInfo := buildFunctionInfo(context, function)
+
+	if functionInfo.ExplicitReturnType != nil {
+		if !functionInfo.ExplicitReturnType.Equals(functionInfo.ImplicitReturnType) {
+			panic(fmt.Sprintf("implicit and explicit return types of function were not the same: %#v", *functionInfo))
+		}
+	}
+
+	returnTypeName := mangleTypeName(*functionInfo.ImplicitReturnType.TypeName)
+	functionName := mangleFunctionName(function.Name)
 
 	// DO NOT SUBMIT: need to add the function as a known identifier to the current scope.
 
@@ -253,7 +300,7 @@ func writeFunction(context *Context, function *Function) {
 	formattedArgs := strings.Builder{}
 	numArgs := len(function.Arguments)
 	for i, arg := range function.Arguments {
-		typeName, argName := mangleTypeName(arg.Type.TypeName), arg.Name
+		typeName, argName := mangleTypeName(*arg.Type.TypeName), arg.Name
 
 		formattedArgs.WriteString(fmt.Sprintf("%s* %s", typeName, argName))
 
@@ -277,7 +324,7 @@ func writeFunction(context *Context, function *Function) {
 	context.ExitScope()
 }
 
-func writeStatementOrExpression(context *Context, expressionOrStatement *ExpressionOrStatement) {
+func writeStatementOrExpression(context *Context, expressionOrStatement *StatementOrExpression) {
 	if expressionOrStatement.Statement != nil {
 		writeStatement(context, expressionOrStatement.Statement)
 		return
@@ -292,7 +339,7 @@ func writeStatement(context *Context, statement *Statement) {
 	if letDecl := statement.LetDecl; letDecl != nil {
 		letDeclType := inferType(context, &letDecl.Value)
 
-		context.WriteString(fmt.Sprintf("%s* %s = ", mangleTypeName(letDeclType.TypeName), letDecl.Name))
+		context.WriteString(fmt.Sprintf("%s* %s = ", mangleTypeName(*letDeclType.TypeName), letDecl.Name))
 		writeExpression(context, &letDecl.Value)
 		context.WriteString(";")
 
@@ -344,12 +391,15 @@ func mangleFunctionName(functionName string) string {
 
 func inferType(context *Context, expression *Expression) *Type {
 	// DO NOT SUBMIT -- need to actually impl!
+
 	if expression.String != nil {
-		return &Type{TypeName: string(TsString)}
+		t := string(TsString)
+		return &Type{TypeName: &t}
 	}
 
 	if expression.Number != nil {
-		return &Type{TypeName: string(TsNum)}
+		t := string(TsNum)
+		return &Type{TypeName: &t}
 	}
 
 	if expression.WrappedExpression != nil {

@@ -23,20 +23,20 @@ func TestParseSimpleFunction(t *testing.T) {
 			{
 				Name: "foo",
 				ReturnType: &Type{
-					TypeName: "num",
+					TypeName: strRef("num"),
 				},
 				Arguments: []FunctionArgument{
-					{Name: "bar", Type: Type{TypeName: "string"}},
-					{Name: "baz", Type: Type{TypeName: "num"}},
+					{Name: "bar", Type: Type{TypeName: strRef("string")}},
+					{Name: "baz", Type: Type{TypeName: strRef("num")}},
 				},
-				Body: []ExpressionOrStatement{
+				Body: []StatementOrExpression{
 					{
 						Statement: &Statement{
 							LetDecl: &LetDecl{
 								Name: "foo",
 								Value: Expression{
 									Number: &Number{
-										Integer: 5,
+										Integer: intRef(5),
 									},
 								},
 							},
@@ -47,20 +47,28 @@ func TestParseSimpleFunction(t *testing.T) {
 							LetDecl: &LetDecl{
 								Name: "bar",
 								Value: Expression{
-									String: "bar",
+									String: strRef("bar"),
 								},
 							},
 						},
 					},
 					{
 						Statement: &Statement{
-							ReturnStmt: &Expression{Ident: "foo"},
+							ReturnStmt: &Expression{Ident: strRef("foo")},
 						},
 					},
 				},
 			},
 		},
 	})
+}
+
+func strRef(str string) *string {
+	return &str
+}
+
+func intRef(num int) *int {
+	return &num
 }
 
 func assertEqual(t *testing.T, actual *TS, expected *TS) {
