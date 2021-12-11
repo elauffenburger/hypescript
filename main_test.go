@@ -1,6 +1,7 @@
 package main
 
 import (
+	"elauffenburger/hypescript/ast"
 	"reflect"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 )
 
 func TestParseSimpleFunction(t *testing.T) {
-	ast := parseString(
+	parsed := parseString(
 		`
 		function foo (bar: string, baz: num): num {
 			let foo = 5;
@@ -18,43 +19,49 @@ func TestParseSimpleFunction(t *testing.T) {
 		}
 	`, t)
 
-	assertEqual(t, ast, &TS{
-		Functions: []Function{
+	assertEqual(t, parsed, &ast.TS{
+		Functions: []ast.Function{
 			{
 				Name: "foo",
-				ReturnType: &Type{
-					TypeName: strRef("num"),
+				ReturnType: &ast.Type{
+					NonUnionType: &ast.NonUnionType{TypeReference: strRef("num")},
 				},
-				Arguments: []FunctionArgument{
-					{Name: "bar", Type: Type{TypeName: strRef("string")}},
-					{Name: "baz", Type: Type{TypeName: strRef("num")}},
-				},
-				Body: []StatementOrExpression{
+				Arguments: []ast.FunctionArgument{
 					{
-						Statement: &Statement{
-							LetDecl: &LetDecl{
+						Name: "bar",
+						Type: ast.Type{
+							NonUnionType: &ast.NonUnionType{TypeReference: strRef("string")},
+						},
+					},
+					{
+						Name: "baz",
+						Type: ast.Type{
+							NonUnionType: &ast.NonUnionType{TypeReference: strRef("num")},
+						},
+					},
+				},
+				Body: []ast.StatementOrExpression{
+					{
+						Statement: &ast.Statement{
+							LetDecl: &ast.LetDecl{
 								Name: "foo",
-								Value: Expression{
-									Number: &Number{
-										Integer: intRef(5),
-									},
+								Value: ast.Expression{
+									Number: &ast.Number{Integer: intRef(5)},
 								},
 							},
 						},
 					},
 					{
-						Statement: &Statement{
-							LetDecl: &LetDecl{
-								Name: "bar",
-								Value: Expression{
-									String: strRef("bar"),
-								},
+						Statement: &ast.Statement{
+							LetDecl: &ast.LetDecl{
+								Name:  "bar",
+								Value: ast.Expression{String: strRef("bar")},
 							},
 						},
 					},
 					{
-						Statement: &Statement{
-							ReturnStmt: &Expression{Ident: strRef("foo")},
+						Statement: &ast.Statement{
+							ReturnStmt: &ast.Expression{Ident: strRef("foo")},
 						},
 					},
 				},
@@ -71,19 +78,19 @@ func intRef(num int) *int {
 	return &num
 }
 
-func assertEqual(t *testing.T, actual *TS, expected *TS) {
+func assertEqual(t *testing.T, actual *ast.TS, expected *ast.TS) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("actual did not match expected: \n\nACTUAL:\n%#v\n\nEXPECTED:\n%#v", actual, expected)
 	}
 }
 
-func parseString(str string, t *testing.T) *TS {
-	parser, err := participle.Build(&TS{})
+func parseString(str string, t *testing.T) *ast.TS {
+	parser, err := participle.Build(&ast.TS{})
 	if err != nil {
 		t.Error(err)
 	}
 
-	ast := TS{}
+	ast := ast.TS{}
 	err = parser.ParseString(str, &ast)
 
 	if err != nil {
