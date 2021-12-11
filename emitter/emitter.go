@@ -24,18 +24,12 @@ type emitter struct {
 }
 
 func (e emitter) Emit(ast *ast.TS) error {
-	bufferedWriter := bufio.NewWriter(e.writer)
+	context := NewContext(bufio.NewWriter(e.writer))
 
-	context := Context{
-		Output: bufferedWriter,
-	}
-
-	context.EnterScope()
-
-	writeRuntime(&context)
+	writeRuntime(context)
 
 	for _, function := range ast.Functions {
-		err := writeFunction(&context, &function)
+		err := writeFunction(context, &function)
 		if err != nil {
 			return err
 		}
@@ -43,9 +37,7 @@ func (e emitter) Emit(ast *ast.TS) error {
 		context.WriteString("\n\n")
 	}
 
-	context.ExitScope()
-
-	return bufferedWriter.Flush()
+	return context.Output.Flush()
 }
 
 func New(writer io.Writer) Emitter {
@@ -79,6 +71,14 @@ ts_string* ts_string_new(char* str) {
 	result->len = strlen(str);
 
 	return result;
+}
+
+void ts_console_log(ts_string* str) {
+	printf("%s\n", str->value);
+}
+
+void main() {
+	ts_main();
 }
 
 `)
@@ -163,7 +163,7 @@ func mangleTypeName(name string) string {
 }
 
 func mangleFunctionName(name string) string {
-	return fmt.Sprintf("%s", name)
+	return fmt.Sprintf("ts_%s", name)
 }
 
 func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {

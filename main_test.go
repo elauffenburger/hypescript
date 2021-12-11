@@ -26,7 +26,7 @@ func TestParseSimpleFunction(t *testing.T) {
 				ReturnType: &ast.Type{
 					NonUnionType: &ast.NonUnionType{TypeReference: strRef("num")},
 				},
-				Arguments: []ast.FunctionArgument{
+				Parameters: []ast.FunctionParameter{
 					{
 						Name: "bar",
 						Type: ast.Type{

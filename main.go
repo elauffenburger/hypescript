@@ -21,6 +21,8 @@ func main() {
 		function blah() {
 			let foo = "asdf";
 
+			let bar = console;
+
 			return foo;
 		}
 

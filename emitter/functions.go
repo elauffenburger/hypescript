@@ -28,8 +28,8 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 
 	// DO NOT SUBMIT: need to add the function as a known identifier to the current scope.
 
-	for _, arg := range function.Arguments {
-		context.CurrentScope.AddIdentifer(arg.Name, arg.Type)
+	for _, param := range function.Parameters {
+		context.CurrentScope.AddIdentifer(param.Name, param.Type)
 	}
 
 	for _, stmtOrExpr := range function.Body {
@@ -100,8 +100,8 @@ func writeFunction(context *Context, function *ast.Function) error {
 	context.EnterScope()
 
 	formattedArgs := strings.Builder{}
-	numArgs := len(function.Arguments)
-	for i, arg := range function.Arguments {
+	numArgs := len(function.Parameters)
+	for i, arg := range function.Parameters {
 		typeName, argName := mangleTypeName(*arg.Type.NonUnionType.TypeReference), arg.Name
 
 		formattedArgs.WriteString(fmt.Sprintf("%s* %s", typeName, argName))

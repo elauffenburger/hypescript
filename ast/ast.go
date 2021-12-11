@@ -2,9 +2,34 @@ package ast
 
 import "fmt"
 
+type TypeDefinition struct {
+	InterfaceDefinition *InterfaceDefinition `@@`
+}
+
+type InterfaceDefinition struct {
+	Name    string                      `"interface" @Ident "{"`
+	Members []InterfaceMemberDefinition `(@@";")* "}"`
+}
+
+type InterfaceMemberDefinition struct {
+	Field  *InterfaceFieldDefinition  `@@`
+	Method *InterfaceMethodDefinition `| @@`
+}
+
+type InterfaceFieldDefinition struct {
+	Name string `@Ident`
+	Type Type   `":" @@`
+}
+
+type InterfaceMethodDefinition struct {
+	Name       string              `@Ident`
+	Parameters []FunctionParameter `"(" (@@ ("," @@)*)? ")"`
+	ReturnType *Type               `(":" @@)?;`
+}
+
 type Function struct {
 	Name       string                  `"function" @Ident`
-	Arguments  []FunctionArgument      `"(" (@@ ("," @@)*)? ")"`
+	Parameters []FunctionParameter     `"(" (@@ ("," @@)*)? ")"`
 	ReturnType *Type                   `(":" @@)?`
 	Body       []StatementOrExpression `"{"@@*"}"`
 }
@@ -23,7 +48,7 @@ type UnionType struct {
 	Tail []NonUnionType `("|" @@)*`
 }
 
-type FunctionArgument struct {
+type FunctionParameter struct {
 	Name string `@Ident`
 	Type Type   `":" @@`
 }
@@ -37,7 +62,16 @@ type Expression struct {
 	WrappedExpression *Expression `"("@@")"`
 	Number            *Number     `| @@`
 	String            *string     `| @String`
+	Invocation        *Invocation `| @@`
 	Ident             *string     `| @Ident`
+}
+
+type Invocation struct {
+	Arguments []Expression `"("@@? ("," @@)* ")"`
+}
+
+type ObjectAccess struct {
+	AccessedValue Expression `"."@@`
 }
 
 type Number struct {

@@ -19,6 +19,26 @@ func (context *Context) WriteString(str string) {
 
 type Scope struct {
 	IdentTypes map[string]ast.Type
+	Types      []ast.TypeDefinition
+}
+
+func NewScope() Scope {
+	return Scope{
+		IdentTypes: make(map[string]ast.Type),
+		Types:      make([]ast.TypeDefinition, 0),
+	}
+}
+
+func (scope *Scope) Clone() Scope {
+	newScope := NewScope()
+
+	for k, v := range scope.IdentTypes {
+		newScope.IdentTypes[k] = v
+	}
+
+	newScope.Types = append(newScope.Types, scope.Types...)
+
+	return newScope
 }
 
 func (scope *Scope) TypeOf(ident string) *ast.Type {
@@ -34,13 +54,18 @@ func (context *Context) TypeOf(ident string) *ast.Type {
 	return context.CurrentScope.TypeOf(ident)
 }
 
-func (context *Context) EnterScope() {
-	newScope := Scope{
-		IdentTypes: make(map[string]ast.Type),
+func (context *Context) EnterScope() *Scope {
+	var newScope Scope
+	if context.CurrentScope != nil {
+		newScope = context.CurrentScope.Clone()
+	} else {
+		newScope = NewScope()
 	}
 
 	context.scopes = append(context.scopes, newScope)
 	context.CurrentScope = &newScope
+
+	return &newScope
 }
 
 func (context *Context) ExitScope() {
@@ -56,4 +81,51 @@ func (context *Context) ExitScope() {
 
 func (scope *Scope) AddIdentifer(ident string, identType ast.Type) {
 	scope.IdentTypes[ident] = identType
+}
+
+func (scope *Scope) AddType(t ast.TypeDefinition) {
+	scope.Types = append(scope.Types, t)
+}
+
+func NewContext(output *bufio.Writer) *Context {
+	ctx := Context{
+		Output: output,
+	}
+
+	global := ctx.EnterScope()
+
+	global.AddType(ast.TypeDefinition{
+		InterfaceDefinition: &ast.InterfaceDefinition{
+			Name: "Console",
+			Members: []ast.InterfaceMemberDefinition{
+				{
+					Method: &ast.InterfaceMethodDefinition{
+						Name: "log",
+						Parameters: []ast.FunctionParameter{
+							{
+								Name: "message",
+								Type: ast.Type{
+									NonUnionType: &ast.NonUnionType{
+										TypeReference: strRef("any"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	global.AddIdentifer("console", ast.Type{
+		NonUnionType: &ast.NonUnionType{
+			TypeReference: strRef("Console"),
+		},
+	})
+
+	return &ctx
+}
+
+func strRef(str string) *string {
+	return &str
 }
