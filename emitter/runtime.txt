@@ -1,0 +1,156 @@
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+// TODO: wow this is awful.
+const int TS_OBJECT_FIELD_NUM = 10;
+
+// TODO: don't do this.
+const int UNDEFINED = 0xDEADBEEF;
+
+// TODO: unify with ts_object.
+typedef struct ts_num {
+	int value;
+} ts_num;
+
+// TODO: unify with ts_object.
+typedef struct ts_string {
+	char* value;
+	int len;
+} ts_string;
+
+typedef struct ts_object_field_descriptor {
+	ts_string* name;
+	int type_id;
+	void* metadata;
+} ts_object_field_descriptor;
+
+typedef struct ts_object_field {
+	ts_object_field_descriptor* descriptor;
+	void* value;
+} ts_object_field;
+
+typedef struct ts_object {
+	ts_object_field* fields[TS_OBJECT_FIELD_NUM];
+
+	int next_field_index;
+} ts_object;
+
+int ts_object_get_field_number(ts_object* obj, ts_string* field_name) {
+	for (int i = 0; i < TS_OBJECT_FIELD_NUM; i++) {
+		ts_object_field* field = obj->fields[i];
+		if (field == NULL) {
+			continue;
+		}
+		
+		ts_object_field_descriptor* descriptor = field->descriptor;
+		if (strcmp(descriptor->name->value, field_name->value) == 0) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void* ts_object_get_field(ts_object* obj, ts_string* name) {
+	int field_number = ts_object_get_field_number(obj, name);
+	if (field_number == -1) {
+		return UNDEFINED;
+	}
+
+	return obj->fields[field_number]->value;
+}
+
+void ts_object_set_field(ts_object* obj, ts_object_field_descriptor* field, void* value) {
+	int field_number = ts_object_get_field_number(obj, field->name);
+
+	// If there's no existing field, create one.
+	if (field_number == -1) {
+		int new_field_number = obj->next_field_index++;
+
+		// Create a new field.
+		ts_object_field* new_field = (ts_object_field*)malloc(sizeof(ts_object_field));
+		new_field->descriptor = field;
+		new_field->value = value;
+
+		// Attach the field.
+		obj->fields[new_field_number] = new_field;
+
+		return;
+	}
+
+	// Otherwise, just set the field.
+	// TODO: handle freeing memory (whoops!).
+	obj->fields[field_number]->value = value;
+}
+
+ts_object* ts_object_new(ts_object_field* fields[]) {
+	ts_object* obj = (ts_object*)malloc(sizeof(ts_object));
+	obj->next_field_index = 0;
+
+	size_t num_fields = sizeof(fields) / sizeof(ts_object_field*);
+	for (int i = 0; i < num_fields; i++) {
+		int field_index = obj->next_field_index++;
+
+		obj->fields[field_index] = fields[i];
+	}
+
+	return obj;
+}
+
+ts_object_field* ts_object_field_new(ts_object_field_descriptor* descriptor, void* value) {
+	ts_object_field* field = (ts_object_field*)malloc(sizeof(ts_object_field));
+	field->descriptor = descriptor;
+	field->value = value;
+
+	return field;
+}
+
+ts_object_field_descriptor* ts_object_field_descriptor_new(ts_string* name, int type_id, void* metadata) {
+	ts_object_field_descriptor* descriptor = (ts_object_field_descriptor*)malloc(sizeof(ts_object_field_descriptor));
+	descriptor->name = name;
+	descriptor->type_id = type_id;
+	descriptor->metadata = metadata;
+
+	return descriptor;
+}
+
+ts_num* ts_num_new(int num) {
+	ts_num* result = (ts_num*)malloc(sizeof(ts_num));
+	result->value = num;
+
+	return result;
+}
+
+ts_string* ts_string_new(char* str) {
+	ts_string* result = (ts_string*)malloc(sizeof(ts_string));
+	result->value = str;
+	result->len = strlen(str);
+
+	return result;
+}
+
+void ts_Console_log(ts_string* str) {
+	printf("%s\n", str->value);
+}
+
+typedef struct ts_Console {
+	void (*log)(ts_string* str);
+} ts_Console;
+
+ts_Console* console;
+
+static void init_globals() {
+	console = (ts_Console*)malloc(sizeof(ts_Console));
+	console->log = ts_Console_log;
+}
+
+void ts_main();
+
+int main() {
+	init_globals();
+
+	ts_main();
+
+	return 0;
+}

@@ -46,11 +46,21 @@ type NonUnionType struct {
 
 type LiteralType struct {
 	FunctionType *FunctionType `@@`
+	ObjectType   *ObjectType   `| @@`
 }
 
 type FunctionType struct {
 	Parameters []FunctionParameter `"(" (@@ ("," @@)*)? ")"`
 	ReturnType *Type               `"=>" @@`
+}
+
+type ObjectType struct {
+	Fields []ObjectTypeField `"{" @@? ("," @@)* ","? "}"`
+}
+
+type ObjectTypeField struct {
+	Name string `(@Ident | ("\""@Ident"\"")) ":"`
+	Type Type   `":" @@`
 }
 
 type UnionType struct {
@@ -69,11 +79,12 @@ type StatementOrExpression struct {
 }
 
 type Expression struct {
-	Number       *Number       `@@`
-	String       *string       `| @String`
-	Invocation   *Invocation   `| @@`
-	ObjectAccess *ObjectAccess `| @@`
-	Ident        *string       `| @Ident`
+	Number              *Number              `@@`
+	String              *string              `| @String`
+	Invocation          *Invocation          `| @@`
+	ObjectInstantiation *ObjectInstantiation `| @@`
+	ObjectAccess        *ObjectAccess        `| @@`
+	Ident               *string              `| @Ident`
 }
 
 type Invocation struct {
@@ -113,6 +124,15 @@ type Statement struct {
 type AssignmentStatement struct {
 	Ident string     `@Ident "="`
 	Value Expression `@@ ";"`
+}
+
+type ObjectInstantiation struct {
+	Fields []ObjectFieldInstantiation `"{" @@? ("," @@)* ","? "}"`
+}
+
+type ObjectFieldInstantiation struct {
+	Name  string     `(@Ident | ("\""@Ident"\"")) ":"`
+	Value Expression `@@`
 }
 
 type TS struct {

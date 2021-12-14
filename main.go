@@ -29,6 +29,8 @@ func main() {
 		}
 
 		function main(): void {
+			let obj = { foo: "bar", baz: 5 };
+
 			blah();
 		}
 	`)

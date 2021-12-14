@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"elauffenburger/hypescript/ast"
 	"fmt"
+	"strings"
 )
 
 type Context struct {
@@ -13,8 +14,24 @@ type Context struct {
 	Output *bufio.Writer
 }
 
-func (context *Context) WriteString(str string) {
-	context.Output.WriteString(str)
+func (ctx *Context) WriteString(str string) {
+	ctx.Output.WriteString(str)
+}
+
+// TODO: remove this; it's kind of a hack!
+func (ctx *Context) WithinPrintContext(operation func(*Context) error) (string, error) {
+	output := strings.Builder{}
+
+	printCtx := &Context{
+		scopes:       ctx.scopes,
+		CurrentScope: ctx.CurrentScope,
+		Output:       bufio.NewWriter(&output),
+	}
+
+	err := operation(printCtx)
+	printCtx.Output.Flush()
+
+	return output.String(), err
 }
 
 type Scope struct {
