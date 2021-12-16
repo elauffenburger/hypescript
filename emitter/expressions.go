@@ -288,14 +288,6 @@ func writeIdent(ctx *Context, ident string) error {
 	return nil
 }
 
-func writeInvocable(ctx *Context, invocable ast.Invocable) error {
-	if invocable.Ident != nil {
-		return writeIdent(ctx, *invocable.Ident)
-	}
-
-	return fmt.Errorf("unknown invocable type: %#v", invocable)
-}
-
 func writeAccessable(ctx *Context, accessable ast.Accessable) error {
 	if accessable.Ident != nil {
 		ctx.WriteString(*accessable.Ident)

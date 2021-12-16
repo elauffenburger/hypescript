@@ -104,10 +104,6 @@ type ObjectAccess struct {
 	AccessedIdent string `"."@Ident`
 }
 
-type Invocable struct {
-	Ident *string `@Ident`
-}
-
 type Accessable struct {
 	Ident *string `@Ident`
 }
