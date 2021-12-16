@@ -28,7 +28,14 @@ func main() {
 		}
 
 		function main(): void {
-			let obj = { foo: "bar", baz: 5, qux: { a: "a" } };
+			let obj = { 
+				foo: "bar", 
+				baz: 5, 
+				qux: { 
+					a: "a" 
+				} 
+			};
+
 			obj.qux.a;
 
 			blah();

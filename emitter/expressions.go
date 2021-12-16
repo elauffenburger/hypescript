@@ -111,36 +111,7 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 	}
 
 	if chainedObjOperation := expr.ChainedObjectOperation; chainedObjOperation != nil {
-		// TODO: need to update this as we walk the chain.
-		accessee := &chainedObjOperation.Accessee
-
-		for _, operation := range chainedObjOperation.Operations {
-			if objAccess := operation.Access; objAccess != nil {
-				nextAccessee, err := writeAccessedObjectAccess(ctx, accessee, operation.Access)
-				if err != nil {
-					return err
-				}
-
-				accessee = nextAccessee
-
-				continue
-			}
-
-			if objInvoc := operation.Invocation; objInvoc != nil {
-				nextAccessee, err := writeAccessedObjectInvocation(ctx, accessee, operation.Invocation)
-				if err != nil {
-					return err
-				}
-
-				accessee = nextAccessee
-
-				continue
-			}
-
-			return fmt.Errorf("unknown operation in chained object operation: %#v", operation)
-		}
-
-		return nil
+		return writeChainedObjectOperation(ctx, chainedObjOperation)
 	}
 
 	if expr.Ident != nil {
@@ -150,55 +121,166 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 	return fmt.Errorf("unknown expression type: %#v", expr)
 }
 
-func writeAccessedObjectAccess(ctx *Context, accessee *ast.Accessable, access *ast.ObjectAccess) (nextAccessee *ast.Accessable, err error) {
-	// TODO: this will _not_ work for multiple chained object accessess
-	// because of how ts_object_get_field calls will be emitted!
+type chainedObjectOperationLink struct {
+	accessee     *ast.Accessable
+	accesseeType *ast.Type
+	operation    ast.ObjectOperation
+	next         *chainedObjectOperationLink
+	prev         *chainedObjectOperationLink
+}
 
-	accesseeType, err := inferAccessableType(ctx, *accessee)
-	if err != nil {
-		return nil, err
+func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
+	if link.operation.Access != nil {
+		if t := link.accesseeType.NonUnionType; t != nil {
+			if t := t.LiteralType; t != nil {
+				if t := t.ObjectType; t != nil {
+					// TODO: this is not always correct!
+					fieldName := link.operation.Access.AccessedIdent
+					var field *ast.ObjectTypeField
+
+					for _, f := range t.Fields {
+						if f.Name == fieldName {
+							field = &f
+
+							break
+						}
+					}
+
+					if field == nil {
+						return fmt.Errorf("failed to find field %s in %#v", fieldName, link.accesseeType)
+					}
+
+					fieldType, err := getRuntimeTypeName(&field.Type)
+					if err != nil {
+						return err
+					}
+
+					ctx.WriteString(fmt.Sprintf("(%s*)ts_object_get_field(", mangleTypeName(fieldType)))
+
+					if link.prev != nil {
+						err = writeLink(ctx, link.prev)
+						if err != nil {
+							return err
+						}
+					} else {
+						if link.accessee.Ident == nil {
+							return fmt.Errorf("expected ident for accessee: %#v", link)
+						}
+
+						ctx.WriteString(*link.accessee.Ident)
+					}
+
+					ctx.WriteString(fmt.Sprintf(", \"%s\")", field.Name))
+
+					return nil
+				}
+			}
+		}
+
+		return fmt.Errorf("unknown type in object access: %#v", link.accesseeType)
 	}
 
-	// Figure out how to access the accessee.
-	if accesseeType.NonUnionType != nil {
-		if accesseeType.NonUnionType.LiteralType != nil {
-			// Check if this is an object type.
-			if accesseeType.NonUnionType.LiteralType.ObjectType != nil {
-				fieldName := access.AccessedIdent
-				var field *ast.ObjectTypeField
+	if link.operation.Invocation != nil {
+		if t := link.accesseeType.NonUnionType; t != nil {
+			if t := t.LiteralType; t != nil {
+				if t.FunctionType != nil {
+					ctx.WriteString(*link.accessee.Ident)
 
-				for _, f := range accesseeType.NonUnionType.LiteralType.ObjectType.Fields {
-					if f.Name == fieldName {
-						field = &f
-
-						break
-					}
+					return writeObjectInvocation(ctx, link.operation.Invocation)
 				}
-
-				if field == nil {
-					return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
-				}
-
-				fieldType, err := getRuntimeTypeName(&field.Type)
-				if err != nil {
-					return nil, err
-				}
-
-				ctx.WriteString(fmt.Sprintf("(%s*)ts_object_get_field(", mangleTypeName(fieldType)))
-
-				err = writeAccessableAccess(ctx, *accessee)
-				if err != nil {
-					return nil, err
-				}
-
-				ctx.WriteString(fmt.Sprintf(", \"%s\")", field.Name))
-
-				return typeToAccessee(&field.Type)
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
+	return fmt.Errorf("unknown operation in chained object operation: %#v", link)
+}
+
+func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (lastLink *chainedObjectOperationLink, err error) {
+	accessee := &chainedOp.Accessee
+	var currentLink *chainedObjectOperationLink
+
+	for _, op := range chainedOp.Operations {
+		accesseeType, err := inferAccessableType(ctx, *accessee)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create a new link.
+		link := chainedObjectOperationLink{
+			accessee:     accessee,
+			accesseeType: accesseeType,
+			operation:    op,
+			prev:         currentLink,
+		}
+
+		// Link the current link (if any) to the new link.
+		if currentLink != nil {
+			currentLink.next = &link
+		}
+
+		// Make the current link the new link.
+		currentLink = &link
+
+		// Add "access" chain operation.
+		if access := op.Access; access != nil {
+			if t := accesseeType.NonUnionType; t != nil {
+				if t := t.LiteralType; t != nil {
+					if t := t.ObjectType; t != nil {
+						fieldName := access.AccessedIdent
+						var field *ast.ObjectTypeField
+
+						for _, f := range t.Fields {
+							if f.Name == fieldName {
+								field = &f
+
+								break
+							}
+						}
+
+						if field == nil {
+							return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
+						}
+
+						accessee, err = typeToAccessee(&field.Type)
+						if err != nil {
+							return nil, err
+						}
+
+						continue
+					}
+				}
+			}
+
+			return nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
+		}
+
+		// Add "invocation" chain operation.
+		if objInvoc := op.Invocation; objInvoc != nil {
+			if t := accesseeType.NonUnionType; t != nil {
+				if t := t.LiteralType; t != nil {
+					accessee, err = typeToAccessee(accesseeType)
+					if err != nil {
+						return nil, err
+					}
+
+					continue
+				}
+			}
+		}
+
+		return nil, fmt.Errorf("unknown operation in chained object operation: %#v", op)
+	}
+
+	return currentLink, nil
+}
+
+func writeChainedObjectOperation(ctx *Context, chainedOp *ast.ChainedObjectOperation) error {
+	lastLink, err := buildOperationChain(ctx, chainedOp)
+	if err != nil {
+		return err
+	}
+
+	return writeLink(ctx, lastLink)
 }
 
 func typeToAccessee(t *ast.Type) (*ast.Accessable, error) {
@@ -229,40 +311,6 @@ func getRuntimeTypeName(t *ast.Type) (string, error) {
 	}
 
 	return "", fmt.Errorf("unknown type: %#v", t)
-}
-
-func writeAccessedObjectInvocation(ctx *Context, accessee *ast.Accessable, invoc *ast.ObjectInvocation) (nextAccessee *ast.Accessable, err error) {
-	accesseeType, err := inferAccessableType(ctx, *accessee)
-	if err != nil {
-		return nil, err
-	}
-
-	// Figure out how to access the accessee.
-	if t := accesseeType.NonUnionType; t != nil {
-		if t := t.LiteralType; t != nil {
-			if t.ObjectType != nil {
-				ctx.WriteString(*accessee.Ident)
-
-				err := writeObjectInvocation(ctx, invoc)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			if t.FunctionType != nil {
-				ctx.WriteString(*accessee.Ident)
-
-				err := writeObjectInvocation(ctx, invoc)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			return typeToAccessee(accesseeType)
-		}
-	}
-
-	return nil, fmt.Errorf("unknown type in object invocation: %#v", accesseeType)
 }
 
 func writeObjectInvocation(ctx *Context, invocation *ast.ObjectInvocation) error {
