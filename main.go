@@ -23,13 +23,13 @@ func main() {
 
 			let bar = console;
 			bar = console;
-			bar.log(foo);
 
 			return foo;
 		}
 
 		function main(): void {
 			let obj = { foo: "bar", baz: 5 };
+			obj.foo;
 
 			blah();
 		}

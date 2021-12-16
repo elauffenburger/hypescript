@@ -79,22 +79,29 @@ type StatementOrExpression struct {
 }
 
 type Expression struct {
-	Number              *Number              `@@`
-	String              *string              `| @String`
-	Invocation          *Invocation          `| @@`
-	ObjectInstantiation *ObjectInstantiation `| @@`
-	ObjectAccess        *ObjectAccess        `| @@`
-	Ident               *string              `| @Ident`
+	Number                 *Number                 `@@`
+	String                 *string                 `| @String`
+	ChainedObjectOperation *ChainedObjectOperation `| @@`
+	ObjectInstantiation    *ObjectInstantiation    `| @@`
+	Ident                  *string                 `| @Ident`
 }
 
-type Invocation struct {
-	Invoked   Invocable    `@@`
+type ChainedObjectOperation struct {
+	Accessee   Accessable        `@@`
+	Operations []ObjectOperation `@@ @@*`
+}
+
+type ObjectOperation struct {
+	Access     *ObjectAccess     `@@`
+	Invocation *ObjectInvocation `| @@`
+}
+
+type ObjectInvocation struct {
 	Arguments []Expression `"("@@? ("," @@)* ")"`
 }
 
 type ObjectAccess struct {
-	Accessee      Accessable `@@`
-	AccessedValue Expression `"."@@`
+	AccessedIdent string `"."@Ident`
 }
 
 type Invocable struct {
