@@ -4,6 +4,7 @@ import (
 	"elauffenburger/hypescript/emitter"
 	"elauffenburger/hypescript/parser"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -54,7 +55,9 @@ func main() {
 
 	err = emitter.Emit(ast)
 	if err != nil {
-		panic(err)
+		fmt.Printf("%+v\n", err)
+
+		os.Exit(1)
 	}
 
 	fmt.Println(output.String())

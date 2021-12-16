@@ -3,6 +3,8 @@ package emitter
 import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 func mangleTypeName(name string) string {
@@ -51,7 +53,7 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 		for i, field := range expr.ObjectInstantiation.Fields {
 			fieldType, err := inferType(ctx, &field.Value)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "failed to infer type for object field")
 			}
 
 			fields[i] = ast.ObjectTypeField{
@@ -74,7 +76,7 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 	if expr.ChainedObjectOperation != nil {
 		tail, err := buildOperationChain(ctx, expr.ChainedObjectOperation)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to build operation chain for chained obj operation")
 		}
 
 		return tail.accesseeType, nil

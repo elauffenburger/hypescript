@@ -4,15 +4,21 @@ import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 func writeStatementOrExpression(ctx *Context, stmtOrExpr *ast.StatementOrExpression) error {
 	if stmtOrExpr.Statement != nil {
-		return writeStatement(ctx, stmtOrExpr.Statement)
+		err := writeStatement(ctx, stmtOrExpr.Statement)
+
+		return errors.Wrap(err, "failed to write statement")
 	}
 
 	if stmtOrExpr.Expression != nil {
-		return writeExpression(ctx, stmtOrExpr.Expression)
+		err := writeExpression(ctx, stmtOrExpr.Expression)
+
+		return errors.Wrap(err, "failed to write expression")
 	}
 
 	return fmt.Errorf("unknown StatementOrExpression: %#v", stmtOrExpr)
@@ -22,7 +28,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 	if exprStmt := stmt.ExpressionStmt; exprStmt != nil {
 		err := writeExpression(ctx, exprStmt)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to write expression statement")
 		}
 
 		ctx.WriteString(";")
@@ -33,7 +39,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 	if letDecl := stmt.LetDecl; letDecl != nil {
 		letDeclType, err := inferType(ctx, &letDecl.Value)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to write let decl")
 		}
 
 		var typeName string
@@ -52,7 +58,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 
 		err = writeExpression(ctx, &letDecl.Value)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to write let decl")
 		}
 
 		ctx.WriteString(";")
@@ -67,7 +73,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 
 		err := writeExpression(ctx, returnStmt)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to write return statement")
 		}
 
 		ctx.WriteString(";")
@@ -82,11 +88,7 @@ func writeAssignment(ctx *Context, stmt *ast.Assignment) error {
 	ctx.WriteString(" = ")
 
 	err := writeExpression(ctx, &stmt.Value)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return errors.Wrap(err, "failed to write assignment")
 }
 
 func writeExpression(ctx *Context, expr *ast.Expression) error {
@@ -105,19 +107,27 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 	}
 
 	if objInst := expr.ObjectInstantiation; objInst != nil {
-		return writeObjectInstantiation(ctx, objInst)
+		err := writeObjectInstantiation(ctx, objInst)
+
+		return errors.Wrap(err, "failed to write object instantiation")
 	}
 
 	if chainedObjOperation := expr.ChainedObjectOperation; chainedObjOperation != nil {
-		return writeChainedObjectOperation(ctx, chainedObjOperation)
+		err := writeChainedObjectOperation(ctx, chainedObjOperation)
+
+		return errors.Wrap(err, "failed to write chained object operation")
 	}
 
 	if expr.Ident != nil {
-		return writeIdent(ctx, *expr.Ident)
+		err := writeIdent(ctx, *expr.Ident)
+
+		return errors.Wrap(err, "failed to write ident")
 	}
 
 	if expr.IdentAssignment != nil {
-		return writeIdentAssignment(ctx, expr.IdentAssignment)
+		err := writeIdentAssignment(ctx, expr.IdentAssignment)
+
+		return errors.Wrap(err, "failed to write ident assignment")
 	}
 
 	return fmt.Errorf("unknown expression type: %#v", expr)
@@ -126,10 +136,11 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 func writeIdentAssignment(ctx *Context, asign *ast.IdentAssignment) error {
 	err := writeIdent(ctx, asign.Ident)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to write ident in ident assignment")
 	}
 
-	return writeAssignment(ctx, &asign.Assignment)
+	err = writeAssignment(ctx, &asign.Assignment)
+	return errors.Wrap(err, "failed to write assignment in ident assignment")
 }
 
 type chainedObjectOperationLink struct {
@@ -163,7 +174,7 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 
 					fieldType, err := getRuntimeTypeName(&field.Type)
 					if err != nil {
-						return err
+						return errors.Wrap(err, "failed to find field type for object literal type")
 					}
 
 					ctx.WriteString(fmt.Sprintf("(%s*)ts_object_get_field(", mangleTypeName(fieldType)))
@@ -171,7 +182,7 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 					if link.prev != nil {
 						err = writeLink(ctx, link.prev)
 						if err != nil {
-							return err
+							return errors.Wrap(err, "failed to write chained object link")
 						}
 					} else {
 						if link.accessee.Ident == nil {
@@ -197,7 +208,9 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 				if t.FunctionType != nil {
 					ctx.WriteString(*link.accessee.Ident)
 
-					return writeObjectInvocation(ctx, link.operation.Invocation)
+					err := writeObjectInvocation(ctx, link.operation.Invocation)
+
+					return errors.Wrap(err, "failed to write object invocation")
 				}
 			}
 		}
@@ -213,7 +226,7 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 	for _, op := range chainedOp.Operations {
 		accesseeType, err := inferAccessableType(ctx, *accessee)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to infer accessable type during operation chain")
 		}
 
 		// Create a new link.
@@ -254,7 +267,7 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 
 						accessee, err = typeToAccessee(&field.Type)
 						if err != nil {
-							return nil, err
+							return nil, errors.Wrap(err, "failed to convert type to accessee for obj access")
 						}
 
 						continue
@@ -271,7 +284,7 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 				if t := t.LiteralType; t != nil {
 					accessee, err = typeToAccessee(accesseeType)
 					if err != nil {
-						return nil, err
+						return nil, errors.Wrap(err, "failed to convert type to accessee for obj invocation")
 					}
 
 					continue
@@ -285,19 +298,21 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 	return currentLink, nil
 }
 
-func writeChainedObjectOperation(ctx *Context, chainedOp *ast.ChainedObjectOperation) error {
-	lastLink, err := buildOperationChain(ctx, chainedOp)
+func writeChainedObjectOperation(ctx *Context, op *ast.ChainedObjectOperation) error {
+	lastLink, err := buildOperationChain(ctx, op)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to build operation chain")
 	}
 
 	err = writeLink(ctx, lastLink)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to write operation chain")
 	}
 
-	if asign := chainedOp.Assignment; asign != nil {
-		return writeAssignment(ctx, asign)
+	if asign := op.Assignment; asign != nil {
+		err = writeAssignment(ctx, asign)
+
+		return errors.Wrap(err, "failed to write assignment")
 	}
 
 	return nil
@@ -363,12 +378,12 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 
 		fieldType, err := inferType(ctx, &field.Value)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to infer type for field during obj instantiation")
 		}
 
 		typeId, err := getTypeIdFor(ctx, fieldType)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to find type id for field type during obj instantiation")
 		}
 
 		// TODO: handle actual cases of types that need metadata.
@@ -381,7 +396,7 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 		})
 
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to write value for field during obj instantiation")
 		}
 
 		formattedFields.WriteString(fmt.Sprintf("ts_object_field_new(%s, %s)", fieldDescriptor, value))
@@ -409,20 +424,6 @@ func writeIdent(ctx *Context, ident string) error {
 	}
 
 	return nil
-}
-
-func writeAccessableAccess(ctx *Context, accessable ast.Accessable) error {
-	if accessable.Ident != nil {
-		ctx.WriteString(*accessable.Ident)
-
-		return nil
-	}
-
-	if accessable.LiteralType != nil {
-		return nil
-	}
-
-	return fmt.Errorf("unknown accessable type: %#v", accessable)
 }
 
 func getTypeIdFor(ctx *Context, t *ast.Type) (int, error) {

@@ -4,6 +4,8 @@ import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type functionInfo struct {
@@ -36,7 +38,7 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 		if stmt.LetDecl != nil {
 			inferredType, err := inferType(context, &stmt.LetDecl.Value)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "failed to infer type for value of let decl")
 			}
 
 			context.CurrentScope.AddIdentifer(stmt.LetDecl.Name, *inferredType)
@@ -48,7 +50,7 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 		if stmt.ReturnStmt != nil {
 			returnStmtType, err := inferType(context, stmt.ReturnStmt)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "failed to infer type for return statement")
 			}
 
 			// If we don't have an implied type yet, use this return statement's.
@@ -81,7 +83,7 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 func writeFunction(context *Context, function *ast.Function) error {
 	functionInfo, err := buildFunctionInfo(context, function)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to build function info")
 	}
 
 	if functionInfo.ExplicitReturnType != nil {
@@ -130,7 +132,7 @@ func writeFunction(context *Context, function *ast.Function) error {
 
 		err := writeStatementOrExpression(context, &statementOrExpression)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to write function body")
 		}
 
 		context.WriteString("\n")

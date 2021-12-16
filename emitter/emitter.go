@@ -5,6 +5,8 @@ import (
 	"elauffenburger/hypescript/ast"
 	_ "embed"
 	"io"
+
+	"github.com/pkg/errors"
 )
 
 //go:embed runtime.txt
@@ -41,7 +43,7 @@ func (e emitter) Emit(ast *ast.TS) error {
 	for _, function := range ast.Functions {
 		err := writeFunction(context, &function)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to write function")
 		}
 
 		context.WriteString("\n\n")
