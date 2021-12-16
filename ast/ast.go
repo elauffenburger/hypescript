@@ -105,7 +105,8 @@ type ObjectAccess struct {
 }
 
 type Accessable struct {
-	Ident *string `@Ident`
+	Ident       *string      `@Ident`
+	LiteralType *LiteralType `| "(" @@ ")"`
 }
 
 type Number struct {

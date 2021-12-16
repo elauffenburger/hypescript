@@ -111,23 +111,28 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 	}
 
 	if chainedObjOperation := expr.ChainedObjectOperation; chainedObjOperation != nil {
-		accessee := chainedObjOperation.Accessee
+		// TODO: need to update this as we walk the chain.
+		accessee := &chainedObjOperation.Accessee
 
 		for _, operation := range chainedObjOperation.Operations {
 			if objAccess := operation.Access; objAccess != nil {
-				err := writeAccessedObjectAccess(ctx, &accessee, operation.Access)
+				nextAccessee, err := writeAccessedObjectAccess(ctx, accessee, operation.Access)
 				if err != nil {
 					return err
 				}
+
+				accessee = nextAccessee
 
 				continue
 			}
 
 			if objInvoc := operation.Invocation; objInvoc != nil {
-				err := writeAccessedObjectInvocation(ctx, &accessee, operation.Invocation)
+				nextAccessee, err := writeAccessedObjectInvocation(ctx, accessee, operation.Invocation)
 				if err != nil {
 					return err
 				}
+
+				accessee = nextAccessee
 
 				continue
 			}
@@ -145,24 +150,24 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 	return fmt.Errorf("unknown expression type: %#v", expr)
 }
 
-func writeAccessedObjectAccess(ctx *Context, accessee *ast.Accessable, access *ast.ObjectAccess) error {
+func writeAccessedObjectAccess(ctx *Context, accessee *ast.Accessable, access *ast.ObjectAccess) (nextAccessee *ast.Accessable, err error) {
 	// TODO: this will _not_ work for multiple chained object accessess
 	// because of how ts_object_get_field calls will be emitted!
 
 	accesseeType, err := inferAccessableType(ctx, *accessee)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Figure out how to access the accessee.
-	if nonUnionType := accesseeType.NonUnionType; nonUnionType != nil {
-		if literalType := nonUnionType.LiteralType; literalType != nil {
+	if accesseeType.NonUnionType != nil {
+		if accesseeType.NonUnionType.LiteralType != nil {
 			// Check if this is an object type.
-			if objType := literalType.ObjectType; objType != nil {
+			if accesseeType.NonUnionType.LiteralType.ObjectType != nil {
 				fieldName := access.AccessedIdent
 				var field *ast.ObjectTypeField
 
-				for _, f := range objType.Fields {
+				for _, f := range accesseeType.NonUnionType.LiteralType.ObjectType.Fields {
 					if f.Name == fieldName {
 						field = &f
 
@@ -171,51 +176,93 @@ func writeAccessedObjectAccess(ctx *Context, accessee *ast.Accessable, access *a
 				}
 
 				if field == nil {
-					return fmt.Errorf("failed to find field %s in %#v", fieldName, objType)
+					return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
 				}
 
-				// DO NOT SUBMIT: this is super not always true!
-				fieldType := *field.Type.NonUnionType.TypeReference
-				ctx.WriteString(fmt.Sprintf("(%s)ts_object_get_field(", mangleTypeName(fieldType)))
-
-				err = writeAccessable(ctx, *accessee)
+				fieldType, err := getRuntimeTypeName(&field.Type)
 				if err != nil {
-					return err
+					return nil, err
+				}
+
+				ctx.WriteString(fmt.Sprintf("(%s*)ts_object_get_field(", mangleTypeName(fieldType)))
+
+				err = writeAccessableAccess(ctx, *accessee)
+				if err != nil {
+					return nil, err
 				}
 
 				ctx.WriteString(fmt.Sprintf(", \"%s\")", field.Name))
-				return nil
+
+				return typeToAccessee(&field.Type)
 			}
 		}
 	}
 
-	return fmt.Errorf("unknown type in object access: %#v", accesseeType)
+	return nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
 }
 
-func writeAccessedObjectInvocation(ctx *Context, accessee *ast.Accessable, invocation *ast.ObjectInvocation) error {
+func typeToAccessee(t *ast.Type) (*ast.Accessable, error) {
+	if t := t.NonUnionType; t != nil {
+		if t := t.LiteralType; t != nil {
+			return &ast.Accessable{LiteralType: t}, nil
+		}
+
+		if t := t.TypeReference; t != nil {
+			return &ast.Accessable{Ident: t}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not convert type to accessee: %#v", t)
+}
+
+func getRuntimeTypeName(t *ast.Type) (string, error) {
+	if t.NonUnionType != nil {
+		if t.NonUnionType.TypeReference != nil {
+			return *t.NonUnionType.TypeReference, nil
+		}
+
+		if t.NonUnionType.LiteralType != nil {
+			if t.NonUnionType.LiteralType.ObjectType != nil {
+				return string(TsObject), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("unknown type: %#v", t)
+}
+
+func writeAccessedObjectInvocation(ctx *Context, accessee *ast.Accessable, invoc *ast.ObjectInvocation) (nextAccessee *ast.Accessable, err error) {
 	accesseeType, err := inferAccessableType(ctx, *accessee)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Figure out how to access the accessee.
-	if nonUnionType := accesseeType.NonUnionType; nonUnionType != nil {
-		if literalType := nonUnionType.LiteralType; literalType != nil {
-			if objType := literalType.ObjectType; objType != nil {
+	if t := accesseeType.NonUnionType; t != nil {
+		if t := t.LiteralType; t != nil {
+			if t.ObjectType != nil {
 				ctx.WriteString(*accessee.Ident)
 
-				return writeObjectInvocation(ctx, invocation)
+				err := writeObjectInvocation(ctx, invoc)
+				if err != nil {
+					return nil, err
+				}
 			}
 
-			if functionType := literalType.FunctionType; functionType != nil {
+			if t.FunctionType != nil {
 				ctx.WriteString(*accessee.Ident)
 
-				return writeObjectInvocation(ctx, invocation)
+				err := writeObjectInvocation(ctx, invoc)
+				if err != nil {
+					return nil, err
+				}
 			}
+
+			return typeToAccessee(accesseeType)
 		}
 	}
 
-	return fmt.Errorf("unknown type in object invocation: %#v", accesseeType)
+	return nil, fmt.Errorf("unknown type in object invocation: %#v", accesseeType)
 }
 
 func writeObjectInvocation(ctx *Context, invocation *ast.ObjectInvocation) error {
@@ -228,6 +275,10 @@ func writeObjectInvocation(ctx *Context, invocation *ast.ObjectInvocation) error
 func inferAccessableType(ctx *Context, accessable ast.Accessable) (*ast.Type, error) {
 	if accessable.Ident != nil {
 		return ctx.TypeOf(*accessable.Ident)
+	}
+
+	if accessable.LiteralType != nil {
+		return &ast.Type{NonUnionType: &ast.NonUnionType{LiteralType: accessable.LiteralType}}, nil
 	}
 
 	return nil, fmt.Errorf("unknown accessable type: %#v", accessable)
@@ -288,10 +339,14 @@ func writeIdent(ctx *Context, ident string) error {
 	return nil
 }
 
-func writeAccessable(ctx *Context, accessable ast.Accessable) error {
+func writeAccessableAccess(ctx *Context, accessable ast.Accessable) error {
 	if accessable.Ident != nil {
 		ctx.WriteString(*accessable.Ident)
 
+		return nil
+	}
+
+	if accessable.LiteralType != nil {
 		return nil
 	}
 

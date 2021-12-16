@@ -20,8 +20,8 @@ const (
 type coreType string
 
 const (
-	TsCoreObj  coreType = "ts_obj"
-	TsCoreVoid coreType = "void"
+	TsObject coreType = "ts_object"
+	TsVoid   coreType = "void"
 )
 
 type Emitter interface {

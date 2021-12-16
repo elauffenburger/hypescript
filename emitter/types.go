@@ -6,11 +6,11 @@ import (
 )
 
 func mangleTypeName(name string) string {
-	if name == string(TsCoreVoid) || name == string(TsCoreObj) {
+	if name == string(TsVoid) || name == string(TsObject) {
 		return name
 	}
 
-	return fmt.Sprintf("ts_%s*", name)
+	return fmt.Sprintf("ts_%s", name)
 }
 
 func mangleFunctionName(name string) string {
