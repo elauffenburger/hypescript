@@ -27,16 +27,19 @@ func main() {
 			return foo;
 		}
 
+		function blah2() {}
+
 		function main(): void {
 			let obj = { 
 				foo: "bar", 
 				baz: 5, 
 				qux: { 
-					a: "a" 
+					a: "a",
+					foo: blah
 				} 
 			};
 
-			obj.qux.a;
+			obj.qux.foo = blah2;
 
 			blah();
 		}

@@ -6,7 +6,7 @@ import (
 )
 
 func mangleTypeName(name string) string {
-	if name == string(TsVoid) || name == string(TsObject) {
+	if asCoreType := (coreType)(name); asCoreType != "" {
 		return name
 	}
 
@@ -69,6 +69,15 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 				},
 			},
 		}, nil
+	}
+
+	if expr.ChainedObjectOperation != nil {
+		tail, err := buildOperationChain(ctx, expr.ChainedObjectOperation)
+		if err != nil {
+			return nil, err
+		}
+
+		return tail.accesseeType, nil
 	}
 
 	return nil, fmt.Errorf("could not infer type of %#v", *expr)

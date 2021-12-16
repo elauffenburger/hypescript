@@ -81,14 +81,21 @@ type StatementOrExpression struct {
 type Expression struct {
 	Number                 *Number                 `@@`
 	String                 *string                 `| @String`
+	IdentAssignment        *IdentAssignment        `| @@`
 	ChainedObjectOperation *ChainedObjectOperation `| @@`
 	ObjectInstantiation    *ObjectInstantiation    `| @@`
 	Ident                  *string                 `| @Ident`
 }
 
+type IdentAssignment struct {
+	Ident      string     `@Ident`
+	Assignment Assignment `@@`
+}
+
 type ChainedObjectOperation struct {
 	Accessee   Accessable        `@@`
 	Operations []ObjectOperation `@@ @@*`
+	Assignment *Assignment       `@@?`
 }
 
 type ObjectOperation struct {
@@ -115,19 +122,17 @@ type Number struct {
 
 type LetDecl struct {
 	Name  string     `"let" @Ident`
-	Value Expression `"=" @@ ";"`
+	Value Expression `"=" @@`
 }
 
 type Statement struct {
-	ExpressionStmt *Expression          `@@ ";"`
-	LetDecl        *LetDecl             `| @@`
-	AssignmentStmt *AssignmentStatement `| @@`
-	ReturnStmt     *Expression          `| "return" @@ ";"`
+	ExpressionStmt *Expression `@@ ";"`
+	LetDecl        *LetDecl    `| @@ ";"`
+	ReturnStmt     *Expression `| "return" @@ ";"`
 }
 
-type AssignmentStatement struct {
-	Ident string     `@Ident "="`
-	Value Expression `@@ ";"`
+type Assignment struct {
+	Value Expression `"=" @@`
 }
 
 type ObjectInstantiation struct {

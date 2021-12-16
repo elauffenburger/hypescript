@@ -62,19 +62,6 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 		return nil
 	}
 
-	if assignmentStmt := stmt.AssignmentStmt; assignmentStmt != nil {
-		ctx.WriteString(fmt.Sprintf("%s = ", assignmentStmt.Ident))
-
-		err := writeExpression(ctx, &assignmentStmt.Value)
-		if err != nil {
-			return err
-		}
-
-		ctx.WriteString(";")
-
-		return nil
-	}
-
 	if returnStmt := stmt.ReturnStmt; returnStmt != nil {
 		ctx.WriteString("return ")
 
@@ -89,6 +76,17 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 	}
 
 	return fmt.Errorf("unknown statement type: %#v", stmt)
+}
+
+func writeAssignment(ctx *Context, stmt *ast.Assignment) error {
+	ctx.WriteString(" = ")
+
+	err := writeExpression(ctx, &stmt.Value)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func writeExpression(ctx *Context, expr *ast.Expression) error {
@@ -118,7 +116,20 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 		return writeIdent(ctx, *expr.Ident)
 	}
 
+	if expr.IdentAssignment != nil {
+		return writeIdentAssignment(ctx, expr.IdentAssignment)
+	}
+
 	return fmt.Errorf("unknown expression type: %#v", expr)
+}
+
+func writeIdentAssignment(ctx *Context, asign *ast.IdentAssignment) error {
+	err := writeIdent(ctx, asign.Ident)
+	if err != nil {
+		return err
+	}
+
+	return writeAssignment(ctx, &asign.Assignment)
 }
 
 type chainedObjectOperationLink struct {
@@ -280,7 +291,16 @@ func writeChainedObjectOperation(ctx *Context, chainedOp *ast.ChainedObjectOpera
 		return err
 	}
 
-	return writeLink(ctx, lastLink)
+	err = writeLink(ctx, lastLink)
+	if err != nil {
+		return err
+	}
+
+	if asign := chainedOp.Assignment; asign != nil {
+		return writeAssignment(ctx, asign)
+	}
+
+	return nil
 }
 
 func typeToAccessee(t *ast.Type) (*ast.Accessable, error) {
@@ -303,9 +323,13 @@ func getRuntimeTypeName(t *ast.Type) (string, error) {
 			return *t.NonUnionType.TypeReference, nil
 		}
 
-		if t.NonUnionType.LiteralType != nil {
-			if t.NonUnionType.LiteralType.ObjectType != nil {
+		if t := t.NonUnionType.LiteralType; t != nil {
+			if t.ObjectType != nil {
 				return string(TsObject), nil
+			}
+
+			if t.FunctionType != nil {
+				return string(TsFunction), nil
 			}
 		}
 	}
