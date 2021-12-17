@@ -7,12 +7,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-func mangleTypeName(name string) string {
-	if asCoreType := (coreType)(name); asCoreType != "" {
+func isCoreType(s string) bool {
+	for _, t := range coreTypes {
+		if s == string(t) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func mangleTypeNamePtr(name string) string {
+	if name == string(TsVoid) {
 		return name
 	}
 
-	return fmt.Sprintf("ts_%s", name)
+	if isCoreType(name) {
+		return fmt.Sprintf("%s*", name)
+	}
+
+	return fmt.Sprintf("ts_%s*", name)
 }
 
 func mangleFunctionName(name string) string {

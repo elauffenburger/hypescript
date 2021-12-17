@@ -27,6 +27,8 @@ const (
 	TsVoid     coreType = "void"
 )
 
+var coreTypes = []coreType{TsObject, TsFunction, TsVoid}
+
 type Emitter interface {
 	Emit(ast *ast.TS) error
 }

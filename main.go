@@ -35,12 +35,11 @@ func main() {
 				foo: "bar", 
 				baz: 5, 
 				qux: { 
-					a: "a",
-					foo: blah
+					a: "a"
 				} 
 			};
 
-			obj.qux.foo = blah2;
+			obj.qux.a = "b";
 
 			blah();
 		}

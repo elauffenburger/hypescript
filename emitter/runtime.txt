@@ -3,10 +3,10 @@
 #include <stdio.h>
 
 // TODO: wow this is awful.
-const int TS_OBJECT_FIELD_NUM = 10;
+#define TS_OBJECT_FIELD_NUM 10
 
 // TODO: don't do this.
-const int UNDEFINED = 0xDEADBEEF;
+#define UNDEFINED 0xDEADBEEF
 
 // TODO: unify with ts_object.
 typedef struct ts_num {
@@ -18,6 +18,11 @@ typedef struct ts_string {
 	char* value;
 	int len;
 } ts_string;
+
+// TODO: unify with ts_object.
+typedef struct ts_function {
+	
+} ts_function;
 
 typedef struct ts_object_field_descriptor {
 	ts_string* name;
@@ -61,8 +66,13 @@ void* ts_object_get_field(ts_object* obj, ts_string* name) {
 	return obj->fields[field_number]->value;
 }
 
-void ts_object_set_field(ts_object* obj, ts_object_field_descriptor* field, void* value) {
-	int field_number = ts_object_get_field_number(obj, field->name);
+ts_object_field_descriptor* ts_object_get_field_descriptor(ts_object* obj, ts_string* field_name) {
+	return obj->fields[ts_object_get_field_number(obj, field_name)]->descriptor;
+}
+
+void ts_object_set_field(ts_object* obj, ts_string* field_name, void* value) {
+	ts_object_field_descriptor* field = ts_object_get_field_descriptor(obj, field_name);
+	int field_number = ts_object_get_field_number(obj, field_name);
 
 	// If there's no existing field, create one.
 	if (field_number == -1) {
@@ -84,12 +94,11 @@ void ts_object_set_field(ts_object* obj, ts_object_field_descriptor* field, void
 	obj->fields[field_number]->value = value;
 }
 
-ts_object* ts_object_new(ts_object_field* fields[]) {
+ts_object* ts_object_new(ts_object_field* fields[], int n) {
 	ts_object* obj = (ts_object*)malloc(sizeof(ts_object));
 	obj->next_field_index = 0;
 
-	size_t num_fields = sizeof(fields) / sizeof(ts_object_field*);
-	for (int i = 0; i < num_fields; i++) {
+	for (int i = 0; i < n; i++) {
 		int field_index = obj->next_field_index++;
 
 		obj->fields[field_index] = fields[i];

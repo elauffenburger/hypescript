@@ -95,7 +95,7 @@ func writeFunction(context *Context, function *ast.Function) error {
 	returnType := functionInfo.ImplicitReturnType
 
 	// DO NOT SUBMIT: this is super not guaranteed to be correct!
-	mangledReturnTypeName := mangleTypeName(*returnType.NonUnionType.TypeReference)
+	mangledReturnTypeName := mangleTypeNamePtr(*returnType.NonUnionType.TypeReference)
 	mangledFunctionName := mangleFunctionName(function.Name)
 
 	context.CurrentScope.AddIdentifer(function.Name, ast.Type{
@@ -114,7 +114,7 @@ func writeFunction(context *Context, function *ast.Function) error {
 	formattedArgs := strings.Builder{}
 	numArgs := len(function.Parameters)
 	for i, arg := range function.Parameters {
-		typeName, argName := mangleTypeName(*arg.Type.NonUnionType.TypeReference), arg.Name
+		typeName, argName := mangleTypeNamePtr(*arg.Type.NonUnionType.TypeReference), arg.Name
 
 		formattedArgs.WriteString(fmt.Sprintf("%s %s", typeName, argName))
 

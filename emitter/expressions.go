@@ -3,7 +3,6 @@ package emitter
 import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -45,9 +44,8 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 		var typeName string
 		if nonUnionType := letDeclType.NonUnionType; nonUnionType != nil {
 			if nonUnionType.TypeReference != nil {
-				typeName = mangleTypeName(*letDeclType.NonUnionType.TypeReference)
+				typeName = mangleTypeNamePtr(*letDeclType.NonUnionType.TypeReference)
 			} else if literalType := nonUnionType.LiteralType; literalType != nil {
-
 				if literalType.ObjectType != nil {
 					typeName = "ts_object*"
 				}
@@ -82,13 +80,6 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 	}
 
 	return fmt.Errorf("unknown statement type: %#v", stmt)
-}
-
-func writeAssignment(ctx *Context, stmt *ast.Assignment) error {
-	ctx.WriteString(" = ")
-
-	err := writeExpression(ctx, &stmt.Value)
-	return errors.Wrap(err, "failed to write assignment")
 }
 
 func writeExpression(ctx *Context, expr *ast.Expression) error {
@@ -139,183 +130,10 @@ func writeIdentAssignment(ctx *Context, asign *ast.IdentAssignment) error {
 		return errors.Wrap(err, "failed to write ident in ident assignment")
 	}
 
-	err = writeAssignment(ctx, &asign.Assignment)
-	return errors.Wrap(err, "failed to write assignment in ident assignment")
-}
+	ctx.WriteString(" = ")
 
-type chainedObjectOperationLink struct {
-	accessee     *ast.Accessable
-	accesseeType *ast.Type
-	operation    ast.ObjectOperation
-	next         *chainedObjectOperationLink
-	prev         *chainedObjectOperationLink
-}
-
-func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
-	if link.operation.Access != nil {
-		if t := link.accesseeType.NonUnionType; t != nil {
-			if t := t.LiteralType; t != nil {
-				if t := t.ObjectType; t != nil {
-					// TODO: this is not always correct!
-					fieldName := link.operation.Access.AccessedIdent
-					var field *ast.ObjectTypeField
-
-					for _, f := range t.Fields {
-						if f.Name == fieldName {
-							field = &f
-
-							break
-						}
-					}
-
-					if field == nil {
-						return fmt.Errorf("failed to find field %s in %#v", fieldName, link.accesseeType)
-					}
-
-					fieldType, err := getRuntimeTypeName(&field.Type)
-					if err != nil {
-						return errors.Wrap(err, "failed to find field type for object literal type")
-					}
-
-					ctx.WriteString(fmt.Sprintf("(%s*)ts_object_get_field(", mangleTypeName(fieldType)))
-
-					if link.prev != nil {
-						err = writeLink(ctx, link.prev)
-						if err != nil {
-							return errors.Wrap(err, "failed to write chained object link")
-						}
-					} else {
-						if link.accessee.Ident == nil {
-							return fmt.Errorf("expected ident for accessee: %#v", link)
-						}
-
-						ctx.WriteString(*link.accessee.Ident)
-					}
-
-					ctx.WriteString(fmt.Sprintf(", \"%s\")", field.Name))
-
-					return nil
-				}
-			}
-		}
-
-		return fmt.Errorf("unknown type in object access: %#v", link.accesseeType)
-	}
-
-	if link.operation.Invocation != nil {
-		if t := link.accesseeType.NonUnionType; t != nil {
-			if t := t.LiteralType; t != nil {
-				if t.FunctionType != nil {
-					ctx.WriteString(*link.accessee.Ident)
-
-					err := writeObjectInvocation(ctx, link.operation.Invocation)
-
-					return errors.Wrap(err, "failed to write object invocation")
-				}
-			}
-		}
-	}
-
-	return fmt.Errorf("unknown operation in chained object operation: %#v", link)
-}
-
-func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (lastLink *chainedObjectOperationLink, err error) {
-	accessee := &chainedOp.Accessee
-	var currentLink *chainedObjectOperationLink
-
-	for _, op := range chainedOp.Operations {
-		accesseeType, err := inferAccessableType(ctx, *accessee)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to infer accessable type during operation chain")
-		}
-
-		// Create a new link.
-		link := chainedObjectOperationLink{
-			accessee:     accessee,
-			accesseeType: accesseeType,
-			operation:    op,
-			prev:         currentLink,
-		}
-
-		// Link the current link (if any) to the new link.
-		if currentLink != nil {
-			currentLink.next = &link
-		}
-
-		// Make the current link the new link.
-		currentLink = &link
-
-		// Add "access" chain operation.
-		if access := op.Access; access != nil {
-			if t := accesseeType.NonUnionType; t != nil {
-				if t := t.LiteralType; t != nil {
-					if t := t.ObjectType; t != nil {
-						fieldName := access.AccessedIdent
-						var field *ast.ObjectTypeField
-
-						for _, f := range t.Fields {
-							if f.Name == fieldName {
-								field = &f
-
-								break
-							}
-						}
-
-						if field == nil {
-							return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
-						}
-
-						accessee, err = typeToAccessee(&field.Type)
-						if err != nil {
-							return nil, errors.Wrap(err, "failed to convert type to accessee for obj access")
-						}
-
-						continue
-					}
-				}
-			}
-
-			return nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
-		}
-
-		// Add "invocation" chain operation.
-		if objInvoc := op.Invocation; objInvoc != nil {
-			if t := accesseeType.NonUnionType; t != nil {
-				if t := t.LiteralType; t != nil {
-					accessee, err = typeToAccessee(accesseeType)
-					if err != nil {
-						return nil, errors.Wrap(err, "failed to convert type to accessee for obj invocation")
-					}
-
-					continue
-				}
-			}
-		}
-
-		return nil, fmt.Errorf("unknown operation in chained object operation: %#v", op)
-	}
-
-	return currentLink, nil
-}
-
-func writeChainedObjectOperation(ctx *Context, op *ast.ChainedObjectOperation) error {
-	lastLink, err := buildOperationChain(ctx, op)
-	if err != nil {
-		return errors.Wrap(err, "failed to build operation chain")
-	}
-
-	err = writeLink(ctx, lastLink)
-	if err != nil {
-		return errors.Wrap(err, "failed to write operation chain")
-	}
-
-	if asign := op.Assignment; asign != nil {
-		err = writeAssignment(ctx, asign)
-
-		return errors.Wrap(err, "failed to write assignment")
-	}
-
-	return nil
+	err = writeExpression(ctx, &asign.Assignment.Value)
+	return errors.Wrap(err, "failed to write ident assignment")
 }
 
 func typeToAccessee(t *ast.Type) (*ast.Accessable, error) {
@@ -352,13 +170,6 @@ func getRuntimeTypeName(t *ast.Type) (string, error) {
 	return "", fmt.Errorf("unknown type: %#v", t)
 }
 
-func writeObjectInvocation(ctx *Context, invocation *ast.ObjectInvocation) error {
-	// TODO: support arguments.
-	ctx.WriteString("()")
-
-	return nil
-}
-
 func inferAccessableType(ctx *Context, accessable ast.Accessable) (*ast.Type, error) {
 	if accessable.Ident != nil {
 		return ctx.TypeOf(*accessable.Ident)
@@ -369,46 +180,6 @@ func inferAccessableType(ctx *Context, accessable ast.Accessable) (*ast.Type, er
 	}
 
 	return nil, fmt.Errorf("unknown accessable type: %#v", accessable)
-}
-
-func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) error {
-	formattedFields := strings.Builder{}
-	for i, field := range objInst.Fields {
-		name := field.Name
-
-		fieldType, err := inferType(ctx, &field.Value)
-		if err != nil {
-			return errors.Wrap(err, "failed to infer type for field during obj instantiation")
-		}
-
-		typeId, err := getTypeIdFor(ctx, fieldType)
-		if err != nil {
-			return errors.Wrap(err, "failed to find type id for field type during obj instantiation")
-		}
-
-		// TODO: handle actual cases of types that need metadata.
-		metadata := "NULL"
-
-		fieldDescriptor := fmt.Sprintf("ts_object_field_descriptor_new(ts_string_new(\"%s\"), %d, %s)", name, typeId, metadata)
-
-		value, err := ctx.WithinPrintContext(func(printCtx *Context) error {
-			return writeExpression(printCtx, &field.Value)
-		})
-
-		if err != nil {
-			return errors.Wrap(err, "failed to write value for field during obj instantiation")
-		}
-
-		formattedFields.WriteString(fmt.Sprintf("ts_object_field_new(%s, %s)", fieldDescriptor, value))
-
-		if i != len(objInst.Fields)-1 {
-			formattedFields.WriteString(", ")
-		}
-	}
-
-	ctx.WriteString(fmt.Sprintf("ts_object_new((ts_object_field*[]){%s})", formattedFields.String()))
-
-	return nil
 }
 
 func writeIdent(ctx *Context, ident string) error {
