@@ -35,18 +35,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 			return err
 		}
 
-		var typeName string
-		if nonUnionType := letDeclType.NonUnionType; nonUnionType != nil {
-			if nonUnionType.TypeReference != nil {
-				typeName = mangleTypeNamePtr(*letDeclType.NonUnionType.TypeReference)
-			} else if literalType := nonUnionType.LiteralType; literalType != nil {
-				if literalType.ObjectType != nil {
-					typeName = "TsObject*"
-				}
-			}
-		}
-
-		ctx.WriteString(fmt.Sprintf("%s %s = ", typeName, letDecl.Name))
+		ctx.WriteString(fmt.Sprintf("auto %s = ", letDecl.Name))
 
 		err = writeExpression(ctx, &letDecl.Value)
 		if err != nil {
@@ -79,7 +68,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 func writeExpression(ctx *Context, expr *ast.Expression) error {
 	if expr.Number != nil {
 		if expr.Number.Integer != nil {
-			ctx.WriteString(fmt.Sprintf("ts_num_new(%d)", *expr.Number.Integer))
+			ctx.WriteString(fmt.Sprintf("std::make_shared<TsObject>(TsNum(%d))", *expr.Number.Integer))
 			return nil
 		}
 
@@ -87,7 +76,7 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 	}
 
 	if expr.String != nil {
-		ctx.WriteString(fmt.Sprintf("ts_string_new(%s)", *expr.String))
+		ctx.WriteString(fmt.Sprintf("std::make_shared<TsObject>(TsString(%s))", *expr.String))
 		return nil
 	}
 
