@@ -25,6 +25,17 @@ const (
 	TsVoid     coreType = "void"
 )
 
+type typeId int
+
+const (
+	TypeIdNone       typeId = 0
+	TypeIdTsObject   typeId = 2
+	TypeIdTsNum      typeId = 2
+	TypeIdTsString   typeId = 3
+	TypeIdTsFunction typeId = 4
+	TypeIdVoid       typeId = 5
+)
+
 var coreTypes = []coreType{TsObject, TsFunction, TsVoid}
 
 type Emitter interface {

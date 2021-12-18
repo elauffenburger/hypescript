@@ -68,7 +68,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 func writeExpression(ctx *Context, expr *ast.Expression) error {
 	if expr.Number != nil {
 		if expr.Number.Integer != nil {
-			ctx.WriteString(fmt.Sprintf("std::make_shared<TsObject>(TsNum(%d))", *expr.Number.Integer))
+			ctx.WriteString(fmt.Sprintf("std::make_shared<TsObject>(%d, TsNum(%d))", TypeIdTsNum, *expr.Number.Integer))
 			return nil
 		}
 
@@ -76,7 +76,7 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 	}
 
 	if expr.String != nil {
-		ctx.WriteString(fmt.Sprintf("std::make_shared<TsObject>(TsString(%s))", *expr.String))
+		ctx.WriteString(fmt.Sprintf("std::make_shared<TsObject>(%d, TsString(%s))", TypeIdTsString, *expr.String))
 		return nil
 	}
 

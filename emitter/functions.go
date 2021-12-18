@@ -146,14 +146,14 @@ func writeTsFunction(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error
 
 	formattedParams.WriteString(")")
 
-	ctx.WriteString(fmt.Sprintf("auto %s = TsFunction(\"%s\", %s, ", mangleFunctionName(fn.Name), fn.Name, formattedParams.String()))
+	ctx.WriteString(fmt.Sprintf("auto %s = std::make_shared<TsObject>(TsFunction(\"%s\", %s, ", mangleFunctionName(fn.Name), fn.Name, formattedParams.String()))
 
 	err := writeFunctionLambda(ctx, fn, fnInfo)
 	if err != nil {
 		return nil
 	}
 
-	ctx.WriteString(");")
+	ctx.WriteString("));")
 
 	return nil
 }

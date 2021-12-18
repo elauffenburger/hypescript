@@ -119,27 +119,14 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 						return fmt.Errorf("failed to find field %s in %#v", fieldName, link.accesseeType)
 					}
 
-					fieldType, err := getRuntimeTypeName(&field.Type)
-					if err != nil {
-						return err
-					}
-
-					ctx.WriteString(fmt.Sprintf("%s.getField(%s)", mangleTypeNamePtr(fieldType)))
+					ctx.WriteString(fmt.Sprintf("->getFieldValue(\"%s\")", field.Name))
 
 					if link.next != nil {
-						err = writeLink(ctx, link.next)
+						err := writeLink(ctx, link.next)
 						if err != nil {
 							return err
 						}
-					} else {
-						if link.accessee.Ident == nil {
-							return fmt.Errorf("expected ident for accessee: %#v", link)
-						}
-
-						writeIdent(ctx, *link.accessee.Ident)
 					}
-
-					ctx.WriteString(fmt.Sprintf(", ts_string_new(\"%s\"))", field.Name))
 
 					return nil
 				}
@@ -153,12 +140,7 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 		if t := link.accesseeType.NonUnionType; t != nil {
 			if t := t.LiteralType; t != nil {
 				if t.FunctionType != nil {
-					err := writeIdent(ctx, *link.accessee.Ident)
-					if err != nil {
-						return err
-					}
-
-					return writeObjectInvocation(ctx, link.operation.Invocation)
+					return writeObjectInvocation(ctx, link.accesseeType, link.operation.Invocation)
 				}
 			}
 		}
@@ -182,10 +164,7 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 			return err
 		}
 
-		// TODO: handle actual cases of types that need metadata.
-		metadata := "NULL"
-
-		fieldDescriptor := fmt.Sprintf("ts_object_field_descriptor_new(ts_string_new(\"%s\"), %d, %s)", name, typeId, metadata)
+		fieldDescriptor := fmt.Sprintf("TsObjectFieldDescriptor(TsString(\"%s\"), %d)", name, typeId)
 
 		value, err := ctx.WithinPrintContext(func(printCtx *Context) error {
 			return writeExpression(printCtx, &field.Value)
@@ -195,21 +174,54 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 			return err
 		}
 
-		formattedFields.WriteString(fmt.Sprintf("ts_object_field_new(%s, %s)", fieldDescriptor, value))
+		formattedFields.WriteString(
+			fmt.Sprintf(
+				"std::make_shared<TsObjectField>(TsObjectField(%s, %s))", fieldDescriptor,
+				value,
+			),
+		)
 
 		if i != len(objInst.Fields)-1 {
 			formattedFields.WriteString(", ")
 		}
 	}
 
-	ctx.WriteString(fmt.Sprintf("ts_object_new((ts_object_field*[]){%s}, %d)", formattedFields.String(), len(objInst.Fields)))
+	ctx.WriteString(
+		fmt.Sprintf(
+			"std::make_shared<TsObject>(TsObject(%d, TsCoreHelpers::toVector<std::shared_ptr<TsObjectField>>(%s)))",
+			TypeIdTsObject,
+			formattedFields.String(),
+		),
+	)
 
 	return nil
 }
 
-func writeObjectInvocation(ctx *Context, invocation *ast.ObjectInvocation) error {
-	// TODO: support arguments.
-	ctx.WriteString("()")
+func writeObjectInvocation(ctx *Context, accesseeType *ast.Type, invocation *ast.ObjectInvocation) error {
+	// TODO: this isn't always true!
+	fn := accesseeType.NonUnionType.LiteralType.FunctionType
+
+	// Write the args.
+	args := strings.Builder{}
+	numParams := len(fn.Parameters)
+	for i, param := range fn.Parameters {
+		arg := invocation.Arguments[i]
+
+		args.WriteString(fmt.Sprintf("TsFunctionArg(\"%s\"", param.Name))
+
+		err := writeExpression(ctx, &arg)
+		if err != nil {
+			return err
+		}
+
+		args.WriteString(")")
+
+		if i != numParams-1 {
+			args.WriteString(", ")
+		}
+	}
+
+	ctx.WriteString(fmt.Sprintf("->invoke(TsCoreHelpers::toVector<TsFunctionArg>(%s))", args.String()))
 
 	return nil
 }
@@ -220,13 +232,16 @@ func writeChainedObjectOperation(ctx *Context, op *ast.ChainedObjectOperation) e
 		return err
 	}
 
+	// TODO: this isn't always true!
+	writeIdent(ctx, *firstLink.accessee.Ident)
+
 	err = writeLink(ctx, firstLink)
 	if err != nil {
 		return err
 	}
 
 	if op.Assignment != nil {
-		ctx.WriteString(fmt.Sprintf(".setField(%s, ", lastLink.operation.Access.AccessedIdent))
+		ctx.WriteString(fmt.Sprintf("->setFieldValue(\"%s\", ", lastLink.operation.Access.AccessedIdent))
 		writeExpression(ctx, &op.Assignment.Value)
 		ctx.WriteString(")")
 	}
