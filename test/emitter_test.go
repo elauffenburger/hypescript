@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"elauffenburger/hypescript/emitter"
 	"elauffenburger/hypescript/parser"
+	"io"
 	"strings"
 	"testing"
 
 	_ "embed"
 
+	"github.com/pkg/errors"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
@@ -25,9 +28,8 @@ func TestEmitForComplexCode(t *testing.T) {
 
 		function blah() {
 			let foo = "asdf";
-
-			let bar = console;
-			bar = console;
+			let bar = foo;
+			bar = "bar";
 
 			return foo;
 		}
@@ -65,20 +67,32 @@ func assertCodeMatchesSnapshot(t *testing.T, code, snapshot string) {
 }
 
 func emitForString(t *testing.T, code string) string {
-	result := strings.Builder{}
-	e := emitter.New(&result)
+	e := emitter.New()
 
 	ast, err := parser.New().ParseString(code)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = e.Emit(ast)
+	files, err := e.Emit(ast)
 	if err != nil {
 		t.Error(err)
 	}
 
-	return result.String()
+	for _, file := range files {
+		if file.Filename == "main.cpp" {
+			reader := bufio.NewReader(file.Contents)
+
+			contents, err := io.ReadAll(reader)
+			if err != nil {
+				panic(errors.Wrap(err, "could not read main.cpp"))
+			}
+
+			return string(contents)
+		}
+	}
+
+	panic("no main.cpp emitted")
 }
 
 func normalizeCode(s string) string {
