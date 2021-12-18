@@ -1,6 +1,3 @@
-#ifndef RUNTIME_H
-#define RUNTIME_H
-
 #pragma once
 
 #include <stdlib.h>
@@ -17,15 +14,10 @@ template <typename T>
 class IntrinsicTsObject;
 
 class TsString;
-
 class TsFunctionParam;
-
 class TsFunctionArg;
-
 class TsFunction;
-
 class TsObjectFieldDescriptor;
-
 class TsObjectField;
 
 class TsCoreHelpers
@@ -85,7 +77,9 @@ class IntrinsicTsObject : public TsObject
 public:
     T value;
 
-    IntrinsicTsObject(T value) : value(value), TsObject(TypeIdIntrinsic) {}
+    IntrinsicTsObject(T value)
+        : value(value),
+          TsObject(TypeIdIntrinsic) {}
 
     bool operator==(const IntrinsicTsObject<T> &other) const
     {
@@ -100,9 +94,7 @@ public:
 
     TsNum(int num)
         : num(num),
-          TsObject(TypeIdTsNum)
-    {
-    }
+          TsObject(TypeIdTsNum) {}
 
     bool operator==(const TsNum &other) const
     {
@@ -117,9 +109,7 @@ public:
 
     TsString(std::string value)
         : value(value),
-          TsObject(TypeIdTsString)
-    {
-    }
+          TsObject(TypeIdTsString) {}
 
     bool operator==(const TsString &other) const
     {
@@ -183,9 +173,7 @@ public:
 
     TsObjectFieldDescriptor(TsString name, int typeId)
         : name(name),
-          typeId(typeId)
-    {
-    }
+          typeId(typeId) {}
 };
 
 class TsObjectField
@@ -203,5 +191,3 @@ public:
 };
 
 extern TsFunction *ts_fn_main;
-
-#endif

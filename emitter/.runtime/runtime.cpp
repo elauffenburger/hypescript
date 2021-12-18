@@ -11,7 +11,6 @@ template <class T>
 std::vector<T> TsCoreHelpers::toVector(std::initializer_list<T> args)
 {
 	auto result = std::vector<T>();
-
 	for (auto arg : args)
 	{
 		result.push_back(arg);
