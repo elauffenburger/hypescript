@@ -8,35 +8,62 @@
 // TODO: don't do this.
 #define UNDEFINED 0xDEADBEEF
 
-// TODO: unify with ts_object.
-typedef struct ts_num {
+typedef enum core_type
+{
+	not = 0,
+	ts_num = 1,
+	ts_string = 2,
+	ts_function = 3,
+} core_type;
+
+typedef struct ts_num
+{
 	int value;
 } ts_num;
 
-// TODO: unify with ts_object.
-typedef struct ts_string {
-	char* value;
+typedef struct ts_string
+{
+	char *value;
 	int len;
 } ts_string;
 
-// TODO: unify with ts_object.
-typedef struct ts_function {
-	
+typedef struct ts_function_param
+{
+	char *name;
+	int type_id;
+} ts_function_param;
+
+typedef struct ts_function
+{
+	int num_params;
+	ts_function_param params[];
 } ts_function;
 
-typedef struct ts_object_field_descriptor {
-	ts_string* name;
+typedef struct ts_object_field_descriptor
+{
+	ts_string *name;
 	int type_id;
-	void* metadata;
+	void *metadata;
 } ts_object_field_descriptor;
 
-typedef struct ts_object_field {
-	ts_object_field_descriptor* descriptor;
-	void* value;
+typedef struct ts_object_field
+{
+	ts_object_field_descriptor *descriptor;
+	void *value;
 } ts_object_field;
 
-typedef struct ts_object {
-	ts_object_field* fields[TS_OBJECT_FIELD_NUM];
+typedef struct ts_object
+{
+	ts_object_field *fields[TS_OBJECT_FIELD_NUM];
+
+	core_type core_type;
+
+	union
+	{
+		ts_num *num;
+		ts_string *str;
+		ts_function *func;
+	} core_type_value;
 
 	int next_field_index;
 } ts_object;
