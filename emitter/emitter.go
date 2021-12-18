@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:embed .runtime/runtime.c
+//go:embed .runtime/runtime.cpp
 var runtime string
 
 type primitiveType string
