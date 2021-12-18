@@ -4,11 +4,38 @@
 #include <vector>
 #include <algorithm>
 
-// TODO: wow this is awful.
-#define TS_OBJECT_FIELD_NUM 10
-
 // TODO: don't do this.
 #define UNDEFINED 0xDEADBEEF
+
+class TsCoreHelpers
+{
+public:
+	template <typename T>
+	static std::vector<T> toVector(T value...)
+	{
+		auto result = std::vector<T>();
+
+		va_list args;
+		va_start(args, value);
+
+		while (*value)
+		{
+			result.push_back(*value);
+
+			++value;
+		}
+
+		va_end(args);
+
+		return result;
+	}
+
+	template <typename T>
+	static std::vector<T> toVector()
+	{
+		return std::vector<T>();
+	}
+};
 
 enum CoreType
 {
@@ -62,15 +89,39 @@ public:
 
 class TsFunctionParam
 {
+public:
 	std::string name;
 	int type_id;
+
+	TsFunctionParam(std::string name, int type_id) : name(std::move(name)), type_id(std::move(type_id)) {}
 };
+
+class TsFunctionArg
+{
+public:
+	std::string name;
+	std::shared_ptr<TsObject> value;
+
+	TsFunctionArg(std::string name, std::shared_ptr<TsObject> value) : name(std::move(name)), value(value) {}
+
+	static const TsFunctionArg &findArg(const std::vector<TsFunctionArg> &args, const std::string &argName)
+	{
+		return *std::find_if(args.begin(), args.end(), [](auto arg)
+							 { return arg.name == argName; });
+	}
+};
+
+typedef std::shared_ptr<TsObject> (*TsFunctionFn)(std::vector<TsFunctionArg> args);
 
 class TsFunction : TsObject
 {
 public:
-	int num_params;
+	std::string name;
 	std::vector<TsFunctionParam> params;
+
+	TsFunctionFn fn;
+
+	TsFunction(std::string name, std::vector<TsFunctionParam> params, TsFunctionFn fn) : name(std::move(name)), params(std::move(params)), fn(fn) {}
 };
 
 class TsObjectFieldDescriptor

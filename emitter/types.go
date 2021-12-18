@@ -30,7 +30,7 @@ func mangleTypeNamePtr(name string) string {
 }
 
 func mangleFunctionName(name string) string {
-	return fmt.Sprintf("ts_%s", name)
+	return fmt.Sprintf("ts_fn_%s", name)
 }
 
 func mangleIdentName(name string, identType *ast.Type) string {

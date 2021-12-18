@@ -80,67 +80,100 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 	return &functionInfo, nil
 }
 
-func writeFunction(context *Context, function *ast.Function) error {
-	functionInfo, err := buildFunctionInfo(context, function)
+func (f *functionInfo) validate() error {
+	// Make sure the implicit return type matches the implicit one (if any).
+	if rtnType := f.ExplicitReturnType; rtnType != nil {
+		if !rtnType.Equals(f.ImplicitReturnType) {
+			return fmt.Errorf("implicit and explicit return types of function were not the same: %#v", *f)
+		}
+	}
+
+	return nil
+}
+
+func writeFunction(ctx *Context, fn *ast.Function) error {
+	// Build the complete info struct for this function.
+	fnInfo, err := buildFunctionInfo(ctx, fn)
 	if err != nil {
 		return errors.Wrap(err, "failed to build function info")
 	}
 
-	if functionInfo.ExplicitReturnType != nil {
-		if !functionInfo.ExplicitReturnType.Equals(functionInfo.ImplicitReturnType) {
-			return fmt.Errorf("implicit and explicit return types of function were not the same: %#v", *functionInfo)
-		}
+	if err = fnInfo.validate(); err != nil {
+		return errors.Wrap(err, "function failed validation")
 	}
 
-	returnType := functionInfo.ImplicitReturnType
+	returnType := fnInfo.ImplicitReturnType
 
-	// TODO: this is super not guaranteed to be correct!
-	mangledReturnTypeName := mangleTypeNamePtr(*returnType.NonUnionType.TypeReference)
-	mangledFunctionName := mangleFunctionName(function.Name)
-
-	context.CurrentScope.AddIdentifer(function.Name, ast.Type{
+	ctx.CurrentScope.AddIdentifer(fn.Name, ast.Type{
 		NonUnionType: &ast.NonUnionType{
 			LiteralType: &ast.LiteralType{
 				FunctionType: &ast.FunctionType{
-					Parameters: function.Parameters,
+					Parameters: fn.Parameters,
 					ReturnType: returnType,
 				},
 			},
 		},
 	})
 
-	context.EnterScope()
-
-	formattedArgs := strings.Builder{}
-	numArgs := len(function.Parameters)
-	for i, arg := range function.Parameters {
-		typeName, argName := mangleTypeNamePtr(*arg.Type.NonUnionType.TypeReference), arg.Name
-
-		formattedArgs.WriteString(fmt.Sprintf("%s %s", typeName, argName))
-
-		if i != numArgs-1 {
-			formattedArgs.WriteString(", ")
-		}
-
-		context.CurrentScope.AddIdentifer(arg.Name, arg.Type)
-	}
-
-	context.WriteString(fmt.Sprintf("%s %s(%s) {\n", mangledReturnTypeName, mangledFunctionName, formattedArgs.String()))
-
-	for _, statementOrExpression := range function.Body {
-		context.WriteString("\t")
-
-		err := writeStatementOrExpression(context, &statementOrExpression)
+	return ctx.WithinNewScope(func() error {
+		err = writeTsFunction(ctx, fn, fnInfo)
 		if err != nil {
-			return errors.Wrap(err, "failed to write function body")
+			return err
 		}
 
-		context.WriteString("\n")
+		ctx.WriteString("\n")
+
+		return nil
+	})
+}
+
+func writeTsFunction(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error {
+	// Format the function params.
+	formattedParams := strings.Builder{}
+	formattedParams.WriteString("TsCoreHelpers::toVector<TsFunctionParam>(")
+
+	numParams := len(fn.Parameters)
+	for i, param := range fn.Parameters {
+		typeId, err := getTypeIdFor(ctx, &param.Type)
+		if err != nil {
+			return err
+		}
+
+		formattedParams.WriteString(fmt.Sprintf("TsFunctionParam(\"%s\", %d)", param.Name, typeId))
+
+		if i != numParams-1 {
+			formattedParams.WriteString(", ")
+		}
 	}
 
-	context.WriteString("}")
+	formattedParams.WriteString(")")
 
-	context.ExitScope()
+	ctx.WriteString(fmt.Sprintf("auto %s = TsFunction(\"%s\", %s, ", mangleFunctionName(fn.Name), fn.Name, formattedParams.String()))
+
+	err := writeFunctionLambda(ctx, fn, fnInfo)
+	if err != nil {
+		return nil
+	}
+
+	ctx.WriteString(");")
+
+	return nil
+}
+
+func writeFunctionLambda(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error {
+	ctx.WriteString("[](std::vector<TsFunctionArg> args) -> std::shared_ptr<TsObject> {")
+
+	// Unpack each arg into local vars in the function.
+	for _, param := range fn.Parameters {
+		ctx.WriteString(fmt.Sprintf("auto %s = TsFunctionArg::findArg(args, \"%s\").value;", param.Name, param.Name))
+	}
+
+	// Write the body.
+	for _, exprOrStmt := range fn.Body {
+		writeStatementOrExpression(ctx, &exprOrStmt)
+	}
+
+	ctx.WriteString("}")
 
 	return nil
 }

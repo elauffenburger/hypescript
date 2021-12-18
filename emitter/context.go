@@ -34,6 +34,16 @@ func (ctx *Context) WithinPrintContext(operation func(*Context) error) (string, 
 	return output.String(), err
 }
 
+func (ctx *Context) WithinNewScope(operation func() error) error {
+	ctx.EnterScope()
+
+	err := operation()
+
+	ctx.ExitScope()
+
+	return err
+}
+
 type Scope struct {
 	IdentTypes map[string]ast.Type
 	Types      []ast.TypeDefinition

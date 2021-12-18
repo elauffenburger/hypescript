@@ -11,7 +11,7 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
-//go:embed snapshots/emitter_test/complex.c
+//go:embed snapshots/emitter_test/complex.cpp
 var testEmitForComplexCodeSnapshot string
 
 func TestEmitForComplexCode(t *testing.T) {
