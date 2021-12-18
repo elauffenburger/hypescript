@@ -14,14 +14,15 @@ type chainedObjectOperationLink struct {
 	prev         *chainedObjectOperationLink
 }
 
-func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (lastLink *chainedObjectOperationLink, err error) {
-	accessee := &chainedOp.Accessee
+func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (first, last *chainedObjectOperationLink, err error) {
+	var firstLink *chainedObjectOperationLink
 	var currentLink *chainedObjectOperationLink
 
+	accessee := &chainedOp.Accessee
 	for _, op := range chainedOp.Operations {
 		accesseeType, err := inferAccessableType(ctx, *accessee)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Create a new link.
@@ -30,6 +31,10 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 			accesseeType: accesseeType,
 			operation:    op,
 			prev:         currentLink,
+		}
+
+		if firstLink == nil {
+			firstLink = &link
 		}
 
 		// Link the current link (if any) to the new link.
@@ -57,12 +62,12 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 						}
 
 						if field == nil {
-							return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
+							return nil, nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
 						}
 
 						accessee, err = typeToAccessee(&field.Type)
 						if err != nil {
-							return nil, err
+							return nil, nil, err
 						}
 
 						continue
@@ -70,7 +75,7 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 				}
 			}
 
-			return nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
+			return nil, nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
 		}
 
 		// Add "invocation" chain operation.
@@ -79,7 +84,7 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 				if t := t.LiteralType; t != nil {
 					accessee, err = typeToAccessee(accesseeType)
 					if err != nil {
-						return nil, err
+						return nil, nil, err
 					}
 
 					continue
@@ -87,10 +92,10 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 			}
 		}
 
-		return nil, fmt.Errorf("unknown operation in chained object operation: %#v", op)
+		return nil, nil, fmt.Errorf("unknown operation in chained object operation: %#v", op)
 	}
 
-	return currentLink, nil
+	return firstLink, currentLink, nil
 }
 
 func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
@@ -119,10 +124,10 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 						return err
 					}
 
-					ctx.WriteString(fmt.Sprintf("(%s)ts_object_get_field(", mangleTypeNamePtr(fieldType)))
+					ctx.WriteString(fmt.Sprintf("%s.getField(%s)", mangleTypeNamePtr(fieldType)))
 
-					if link.prev != nil {
-						err = writeLink(ctx, link.prev)
+					if link.next != nil {
+						err = writeLink(ctx, link.next)
 						if err != nil {
 							return err
 						}
@@ -210,31 +215,19 @@ func writeObjectInvocation(ctx *Context, invocation *ast.ObjectInvocation) error
 }
 
 func writeChainedObjectOperation(ctx *Context, op *ast.ChainedObjectOperation) error {
-	lastLink, err := buildOperationChain(ctx, op)
+	firstLink, lastLink, err := buildOperationChain(ctx, op)
+	if err != nil {
+		return err
+	}
+
+	err = writeLink(ctx, firstLink)
 	if err != nil {
 		return err
 	}
 
 	if op.Assignment != nil {
-		ctx.WriteString("ts_object_set_field(")
-	}
-
-	var startLink *chainedObjectOperationLink
-	if op.Assignment == nil {
-		startLink = lastLink
-	} else {
-		startLink = lastLink.prev
-	}
-
-	err = writeLink(ctx, startLink)
-	if err != nil {
-		return err
-	}
-
-	if op.Assignment != nil {
-		ctx.WriteString(fmt.Sprintf(", ts_string_new(\"%s\"), ", lastLink.operation.Access.AccessedIdent))
+		ctx.WriteString(fmt.Sprintf(".setField(%s, ", lastLink.operation.Access.AccessedIdent))
 		writeExpression(ctx, &op.Assignment.Value)
-
 		ctx.WriteString(")")
 	}
 

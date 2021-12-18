@@ -86,7 +86,7 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 	}
 
 	if expr.ChainedObjectOperation != nil {
-		tail, err := buildOperationChain(ctx, expr.ChainedObjectOperation)
+		_, tail, err := buildOperationChain(ctx, expr.ChainedObjectOperation)
 		if err != nil {
 			return nil, err
 		}
