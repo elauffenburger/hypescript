@@ -24,10 +24,22 @@ class TsCoreHelpers
 {
 public:
     template <class T>
-    static std::vector<T> toVector(std::initializer_list<T> args);
+    static std::vector<T> toVector(std::initializer_list<T> args)
+    {
+        auto result = std::vector<T>();
+        for (auto arg : args)
+        {
+            result.push_back(arg);
+        }
+
+        return result;
+    }
 
     template <typename T>
-    static std::vector<T> toVector();
+    static std::vector<T> toVector()
+    {
+        return std::vector<T>();
+    }
 };
 
 enum TypeId

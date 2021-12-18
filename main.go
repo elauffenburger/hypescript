@@ -3,9 +3,10 @@ package main
 import (
 	"elauffenburger/hypescript/emitter"
 	"elauffenburger/hypescript/parser"
-	"fmt"
+	"io"
+	"log"
 	"os"
-	"strings"
+	"path"
 )
 
 func main() {
@@ -48,15 +49,28 @@ func main() {
 		panic(err)
 	}
 
-	output := strings.Builder{}
-	emitter := emitter.New(&output)
+	emitter := emitter.New()
 
-	err = emitter.Emit(ast)
+	files, err := emitter.Emit(ast)
 	if err != nil {
-		fmt.Printf("%+v\n", err)
-
-		os.Exit(1)
+		log.Fatalf("%+v\n", err)
 	}
 
-	fmt.Println(output.String())
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("%+v\n", err)
+	}
+
+	outputDir := path.Join(cwd, "./build")
+	for _, file := range files {
+		bytes, err := io.ReadAll(file.Contents)
+		if err != nil {
+			log.Fatalf("%+v\n", err)
+		}
+
+		err = os.WriteFile(path.Join(outputDir, file.Filename), bytes, 0777)
+		if err != nil {
+			log.Fatalf("%+v\n", err)
+		}
+	}
 }
