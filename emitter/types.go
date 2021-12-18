@@ -3,8 +3,6 @@ package emitter
 import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 func isCoreType(s string) bool {
@@ -67,7 +65,7 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 		for i, field := range expr.ObjectInstantiation.Fields {
 			fieldType, err := inferType(ctx, &field.Value)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to infer type for object field")
+				return nil, err
 			}
 
 			fields[i] = ast.ObjectTypeField{
@@ -90,7 +88,7 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 	if expr.ChainedObjectOperation != nil {
 		tail, err := buildOperationChain(ctx, expr.ChainedObjectOperation)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to build operation chain for chained obj operation")
+			return nil, err
 		}
 
 		return tail.accesseeType, nil

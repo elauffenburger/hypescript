@@ -4,8 +4,6 @@ import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type functionInfo struct {
@@ -38,7 +36,7 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 		if stmt.LetDecl != nil {
 			inferredType, err := inferType(context, &stmt.LetDecl.Value)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to infer type for value of let decl")
+				return nil, err
 			}
 
 			context.CurrentScope.AddIdentifer(stmt.LetDecl.Name, *inferredType)
@@ -50,7 +48,7 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 		if stmt.ReturnStmt != nil {
 			returnStmtType, err := inferType(context, stmt.ReturnStmt)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to infer type for return statement")
+				return nil, err
 			}
 
 			// If we don't have an implied type yet, use this return statement's.
@@ -95,11 +93,11 @@ func writeFunction(ctx *Context, fn *ast.Function) error {
 	// Build the complete info struct for this function.
 	fnInfo, err := buildFunctionInfo(ctx, fn)
 	if err != nil {
-		return errors.Wrap(err, "failed to build function info")
+		return err
 	}
 
 	if err = fnInfo.validate(); err != nil {
-		return errors.Wrap(err, "function failed validation")
+		return err
 	}
 
 	returnType := fnInfo.ImplicitReturnType

@@ -3,21 +3,15 @@ package emitter
 import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 func writeStatementOrExpression(ctx *Context, stmtOrExpr *ast.StatementOrExpression) error {
 	if stmtOrExpr.Statement != nil {
-		err := writeStatement(ctx, stmtOrExpr.Statement)
-
-		return errors.Wrap(err, "failed to write statement")
+		return writeStatement(ctx, stmtOrExpr.Statement)
 	}
 
 	if stmtOrExpr.Expression != nil {
-		err := writeExpression(ctx, stmtOrExpr.Expression)
-
-		return errors.Wrap(err, "failed to write expression")
+		return writeExpression(ctx, stmtOrExpr.Expression)
 	}
 
 	return fmt.Errorf("unknown StatementOrExpression: %#v", stmtOrExpr)
@@ -27,7 +21,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 	if exprStmt := stmt.ExpressionStmt; exprStmt != nil {
 		err := writeExpression(ctx, exprStmt)
 		if err != nil {
-			return errors.Wrap(err, "failed to write expression statement")
+			return err
 		}
 
 		ctx.WriteString(";")
@@ -38,7 +32,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 	if letDecl := stmt.LetDecl; letDecl != nil {
 		letDeclType, err := inferType(ctx, &letDecl.Value)
 		if err != nil {
-			return errors.Wrap(err, "failed to write let decl")
+			return err
 		}
 
 		var typeName string
@@ -47,7 +41,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 				typeName = mangleTypeNamePtr(*letDeclType.NonUnionType.TypeReference)
 			} else if literalType := nonUnionType.LiteralType; literalType != nil {
 				if literalType.ObjectType != nil {
-					typeName = "ts_object*"
+					typeName = "TsObject*"
 				}
 			}
 		}
@@ -56,7 +50,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 
 		err = writeExpression(ctx, &letDecl.Value)
 		if err != nil {
-			return errors.Wrap(err, "failed to write let decl")
+			return err
 		}
 
 		ctx.WriteString(";")
@@ -71,7 +65,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 
 		err := writeExpression(ctx, returnStmt)
 		if err != nil {
-			return errors.Wrap(err, "failed to write return statement")
+			return err
 		}
 
 		ctx.WriteString(";")
@@ -98,27 +92,19 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 	}
 
 	if objInst := expr.ObjectInstantiation; objInst != nil {
-		err := writeObjectInstantiation(ctx, objInst)
-
-		return errors.Wrap(err, "failed to write object instantiation")
+		return writeObjectInstantiation(ctx, objInst)
 	}
 
 	if chainedObjOperation := expr.ChainedObjectOperation; chainedObjOperation != nil {
-		err := writeChainedObjectOperation(ctx, chainedObjOperation)
-
-		return errors.Wrap(err, "failed to write chained object operation")
+		return writeChainedObjectOperation(ctx, chainedObjOperation)
 	}
 
 	if expr.Ident != nil {
-		err := writeIdent(ctx, *expr.Ident)
-
-		return errors.Wrap(err, "failed to write ident")
+		return writeIdent(ctx, *expr.Ident)
 	}
 
 	if expr.IdentAssignment != nil {
-		err := writeIdentAssignment(ctx, expr.IdentAssignment)
-
-		return errors.Wrap(err, "failed to write ident assignment")
+		return writeIdentAssignment(ctx, expr.IdentAssignment)
 	}
 
 	return fmt.Errorf("unknown expression type: %#v", expr)
@@ -127,13 +113,12 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 func writeIdentAssignment(ctx *Context, asign *ast.IdentAssignment) error {
 	err := writeIdent(ctx, asign.Ident)
 	if err != nil {
-		return errors.Wrap(err, "failed to write ident in ident assignment")
+		return err
 	}
 
 	ctx.WriteString(" = ")
 
-	err = writeExpression(ctx, &asign.Assignment.Value)
-	return errors.Wrap(err, "failed to write ident assignment")
+	return writeExpression(ctx, &asign.Assignment.Value)
 }
 
 func typeToAccessee(t *ast.Type) (*ast.Accessable, error) {

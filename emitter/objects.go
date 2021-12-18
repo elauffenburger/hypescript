@@ -4,8 +4,6 @@ import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type chainedObjectOperationLink struct {
@@ -23,7 +21,7 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 	for _, op := range chainedOp.Operations {
 		accesseeType, err := inferAccessableType(ctx, *accessee)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to infer accessable type during operation chain")
+			return nil, err
 		}
 
 		// Create a new link.
@@ -64,7 +62,7 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 
 						accessee, err = typeToAccessee(&field.Type)
 						if err != nil {
-							return nil, errors.Wrap(err, "failed to convert type to accessee for obj access")
+							return nil, err
 						}
 
 						continue
@@ -81,7 +79,7 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (l
 				if t := t.LiteralType; t != nil {
 					accessee, err = typeToAccessee(accesseeType)
 					if err != nil {
-						return nil, errors.Wrap(err, "failed to convert type to accessee for obj invocation")
+						return nil, err
 					}
 
 					continue
@@ -118,7 +116,7 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 
 					fieldType, err := getRuntimeTypeName(&field.Type)
 					if err != nil {
-						return errors.Wrap(err, "failed to find field type for object literal type")
+						return err
 					}
 
 					ctx.WriteString(fmt.Sprintf("(%s)ts_object_get_field(", mangleTypeNamePtr(fieldType)))
@@ -126,7 +124,7 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 					if link.prev != nil {
 						err = writeLink(ctx, link.prev)
 						if err != nil {
-							return errors.Wrap(err, "failed to write chained object link")
+							return err
 						}
 					} else {
 						if link.accessee.Ident == nil {
@@ -152,12 +150,10 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 				if t.FunctionType != nil {
 					err := writeIdent(ctx, *link.accessee.Ident)
 					if err != nil {
-						return errors.Wrap(err, "failed to write ident")
+						return err
 					}
 
-					err = writeObjectInvocation(ctx, link.operation.Invocation)
-
-					return errors.Wrap(err, "failed to write object invocation")
+					return writeObjectInvocation(ctx, link.operation.Invocation)
 				}
 			}
 		}
@@ -173,12 +169,12 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 
 		fieldType, err := inferType(ctx, &field.Value)
 		if err != nil {
-			return errors.Wrap(err, "failed to infer type for field during obj instantiation")
+			return err
 		}
 
 		typeId, err := getTypeIdFor(ctx, fieldType)
 		if err != nil {
-			return errors.Wrap(err, "failed to find type id for field type during obj instantiation")
+			return err
 		}
 
 		// TODO: handle actual cases of types that need metadata.
@@ -191,7 +187,7 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 		})
 
 		if err != nil {
-			return errors.Wrap(err, "failed to write value for field during obj instantiation")
+			return err
 		}
 
 		formattedFields.WriteString(fmt.Sprintf("ts_object_field_new(%s, %s)", fieldDescriptor, value))
@@ -216,7 +212,7 @@ func writeObjectInvocation(ctx *Context, invocation *ast.ObjectInvocation) error
 func writeChainedObjectOperation(ctx *Context, op *ast.ChainedObjectOperation) error {
 	lastLink, err := buildOperationChain(ctx, op)
 	if err != nil {
-		return errors.Wrap(err, "failed to build operation chain")
+		return err
 	}
 
 	if op.Assignment != nil {
@@ -232,7 +228,7 @@ func writeChainedObjectOperation(ctx *Context, op *ast.ChainedObjectOperation) e
 
 	err = writeLink(ctx, startLink)
 	if err != nil {
-		return errors.Wrap(err, "failed to write operation chain")
+		return err
 	}
 
 	if op.Assignment != nil {
