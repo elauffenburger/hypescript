@@ -128,7 +128,7 @@ func writeFunction(ctx *Context, fn *ast.Function) error {
 func writeTsFunction(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error {
 	// Format the function params.
 	formattedParams := strings.Builder{}
-	formattedParams.WriteString("TsCoreHelpers::toVector<TsFunctionParam>(")
+	formattedParams.WriteString("TsCoreHelpers::toVector<TsFunctionParam>({")
 
 	numParams := len(fn.Parameters)
 	for i, param := range fn.Parameters {
@@ -144,22 +144,22 @@ func writeTsFunction(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error
 		}
 	}
 
-	formattedParams.WriteString(")")
+	formattedParams.WriteString("})")
 
-	ctx.WriteString(fmt.Sprintf("auto %s = std::make_shared<TsObject>(TsFunction(\"%s\", %s, ", mangleFunctionName(fn.Name), fn.Name, formattedParams.String()))
+	ctx.WriteString(fmt.Sprintf("auto %s = new TsFunction(\"%s\", %s, ", mangleFunctionName(fn.Name), fn.Name, formattedParams.String()))
 
 	err := writeFunctionLambda(ctx, fn, fnInfo)
 	if err != nil {
 		return nil
 	}
 
-	ctx.WriteString("));")
+	ctx.WriteString(");")
 
 	return nil
 }
 
 func writeFunctionLambda(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error {
-	ctx.WriteString("[](std::vector<TsFunctionArg> args) -> std::shared_ptr<TsObject> {")
+	ctx.WriteString("[](std::vector<TsFunctionArg> args) -> TsObject* {")
 
 	// Unpack each arg into local vars in the function.
 	for _, param := range fn.Parameters {
@@ -169,6 +169,12 @@ func writeFunctionLambda(ctx *Context, fn *ast.Function, fnInfo *functionInfo) e
 	// Write the body.
 	for _, exprOrStmt := range fn.Body {
 		writeStatementOrExpression(ctx, &exprOrStmt)
+	}
+
+	if t := fnInfo.ImplicitReturnType.NonUnionType; t != nil {
+		if t := t.TypeReference; *t == string(TsVoid) {
+			ctx.WriteString("return NULL;")
+		}
 	}
 
 	ctx.WriteString("}")

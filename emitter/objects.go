@@ -98,7 +98,11 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (f
 	return firstLink, currentLink, nil
 }
 
-func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
+func writeLink(ctx *Context, link, endLink *chainedObjectOperationLink) error {
+	if link == endLink {
+		return nil
+	}
+
 	if link.operation.Access != nil {
 		if t := link.accesseeType.NonUnionType; t != nil {
 			if t := t.LiteralType; t != nil {
@@ -122,7 +126,7 @@ func writeLink(ctx *Context, link *chainedObjectOperationLink) error {
 					ctx.WriteString(fmt.Sprintf("->getFieldValue(\"%s\")", field.Name))
 
 					if link.next != nil {
-						err := writeLink(ctx, link.next)
+						err := writeLink(ctx, link.next, endLink)
 						if err != nil {
 							return err
 						}
@@ -176,7 +180,7 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 
 		formattedFields.WriteString(
 			fmt.Sprintf(
-				"std::make_shared<TsObjectField>(TsObjectField(%s, %s))", fieldDescriptor,
+				"new TsObjectField(%s, %s)", fieldDescriptor,
 				value,
 			),
 		)
@@ -188,7 +192,7 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 
 	ctx.WriteString(
 		fmt.Sprintf(
-			"std::make_shared<TsObject>(TsObject(%d, TsCoreHelpers::toVector<std::shared_ptr<TsObjectField>>(%s)))",
+			"new TsObject(%d, TsCoreHelpers::toVector<TsObjectField*>({%s}))",
 			TypeIdTsObject,
 			formattedFields.String(),
 		),
@@ -221,7 +225,7 @@ func writeObjectInvocation(ctx *Context, accesseeType *ast.Type, invocation *ast
 		}
 	}
 
-	ctx.WriteString(fmt.Sprintf("->invoke(TsCoreHelpers::toVector<TsFunctionArg>(%s))", args.String()))
+	ctx.WriteString(fmt.Sprintf("->invoke(TsCoreHelpers::toVector<TsFunctionArg>({%s}))", args.String()))
 
 	return nil
 }
@@ -235,7 +239,12 @@ func writeChainedObjectOperation(ctx *Context, op *ast.ChainedObjectOperation) e
 	// TODO: this isn't always true!
 	writeIdent(ctx, *firstLink.accessee.Ident)
 
-	err = writeLink(ctx, firstLink)
+	var endLink *chainedObjectOperationLink
+	if op.Assignment != nil {
+		endLink = lastLink
+	}
+
+	err = writeLink(ctx, firstLink, endLink)
 	if err != nil {
 		return err
 	}

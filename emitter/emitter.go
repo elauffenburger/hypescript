@@ -34,6 +34,7 @@ const (
 	TypeIdTsString   typeId = 3
 	TypeIdTsFunction typeId = 4
 	TypeIdVoid       typeId = 5
+	TypeIdIntrinsic  typeId = 6
 )
 
 var coreTypes = []coreType{TsObject, TsFunction, TsVoid}
