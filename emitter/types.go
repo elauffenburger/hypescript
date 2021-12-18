@@ -46,7 +46,7 @@ func mangleIdentName(name string, identType *ast.Type) string {
 }
 
 func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
-	// DO NOT SUBMIT -- need to actually impl!
+	// TODO -- need to actually impl!
 
 	if expr.String != nil {
 		t := string(TsString)

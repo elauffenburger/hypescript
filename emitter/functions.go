@@ -20,7 +20,7 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 
 	context.EnterScope()
 
-	// DO NOT SUBMIT: need to add the function as a known identifier to the current scope.
+	// TODO: need to add the function as a known identifier to the current scope.
 
 	for _, param := range function.Parameters {
 		context.CurrentScope.AddIdentifer(param.Name, param.Type)
@@ -94,7 +94,7 @@ func writeFunction(context *Context, function *ast.Function) error {
 
 	returnType := functionInfo.ImplicitReturnType
 
-	// DO NOT SUBMIT: this is super not guaranteed to be correct!
+	// TODO: this is super not guaranteed to be correct!
 	mangledReturnTypeName := mangleTypeNamePtr(*returnType.NonUnionType.TypeReference)
 	mangledFunctionName := mangleFunctionName(function.Name)
 

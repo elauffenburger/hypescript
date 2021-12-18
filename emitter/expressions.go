@@ -198,7 +198,7 @@ func writeIdent(ctx *Context, ident string) error {
 }
 
 func getTypeIdFor(ctx *Context, t *ast.Type) (int, error) {
-	// DO NOT SUBMIT; need to actually make this work!
+	// TODO; need to actually make this work!
 
 	return 0, nil
 }
