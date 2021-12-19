@@ -39,9 +39,10 @@ func main() {
 				} 
 			};
 
-			obj.qux.a = "b";
+			obj.qux.a = "hello, world!!\n";
 
-			blah();
+			console.log(obj.qux.a);
+
 		}
 	`)
 
@@ -62,6 +63,8 @@ func main() {
 	}
 
 	outputDir := path.Join(cwd, "./build")
+	os.Mkdir("./build", 0777)
+
 	for _, file := range files {
 		bytes, err := io.ReadAll(file.Contents)
 		if err != nil {

@@ -21,7 +21,7 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 	// TODO: need to add the function as a known identifier to the current scope.
 
 	for _, param := range function.Parameters {
-		context.CurrentScope.AddIdentifer(param.Name, param.Type)
+		context.CurrentScope.AddIdentifer(param.Name, &param.Type)
 	}
 
 	for _, stmtOrExpr := range function.Body {
@@ -39,7 +39,7 @@ func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo,
 				return nil, err
 			}
 
-			context.CurrentScope.AddIdentifer(stmt.LetDecl.Name, *inferredType)
+			context.CurrentScope.AddIdentifer(stmt.LetDecl.Name, inferredType)
 
 			continue
 		}
@@ -102,7 +102,7 @@ func writeFunction(ctx *Context, fn *ast.Function) error {
 
 	returnType := fnInfo.ImplicitReturnType
 
-	ctx.CurrentScope.AddIdentifer(fn.Name, ast.Type{
+	ctx.CurrentScope.AddIdentifer(fn.Name, &ast.Type{
 		NonUnionType: &ast.NonUnionType{
 			LiteralType: &ast.LiteralType{
 				FunctionType: &ast.FunctionType{
@@ -146,11 +146,11 @@ func writeTsFunction(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error
 
 	formattedParams.WriteString("})")
 
-	ctx.WriteString(fmt.Sprintf("auto %s = new TsFunction(\"%s\", %s, ", mangleFunctionName(fn.Name), fn.Name, formattedParams.String()))
+	ctx.WriteString(fmt.Sprintf("TsFunction* %s = new TsFunction(\"%s\", %s, ", mangleFunctionName(fn.Name), fn.Name, formattedParams.String()))
 
 	err := writeFunctionLambda(ctx, fn, fnInfo)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	ctx.WriteString(");")
@@ -163,12 +163,15 @@ func writeFunctionLambda(ctx *Context, fn *ast.Function, fnInfo *functionInfo) e
 
 	// Unpack each arg into local vars in the function.
 	for _, param := range fn.Parameters {
-		ctx.WriteString(fmt.Sprintf("auto %s = TsFunctionArg::findArg(args, \"%s\").value;", param.Name, param.Name))
+		ctx.WriteString(fmt.Sprintf("TsFunction* %s = (TsFunction*)TsFunctionArg::findArg(args, \"%s\").value;", param.Name, param.Name))
 	}
 
 	// Write the body.
 	for _, exprOrStmt := range fn.Body {
-		writeStatementOrExpression(ctx, &exprOrStmt)
+		err := writeStatementOrExpression(ctx, &exprOrStmt)
+		if err != nil {
+			return err
+		}
 	}
 
 	if t := fnInfo.ImplicitReturnType.NonUnionType; t != nil {

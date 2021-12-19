@@ -44,7 +44,7 @@ func writeStatement(ctx *Context, stmt *ast.Statement) error {
 
 		ctx.WriteString(";")
 
-		ctx.CurrentScope.AddIdentifer(letDecl.Name, *letDeclType)
+		ctx.CurrentScope.AddIdentifer(letDecl.Name, letDeclType)
 
 		return nil
 	}

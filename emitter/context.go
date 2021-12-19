@@ -8,7 +8,7 @@ import (
 )
 
 type Context struct {
-	scopes       []Scope
+	scopes       []*Scope
 	CurrentScope *Scope
 
 	Output *bufio.Writer
@@ -45,18 +45,18 @@ func (ctx *Context) WithinNewScope(operation func() error) error {
 }
 
 type Scope struct {
-	IdentTypes map[string]ast.Type
-	Types      []ast.TypeDefinition
+	IdentTypes map[string]*ast.Type
+	Types      []*ast.Type
 }
 
-func NewScope() Scope {
-	return Scope{
-		IdentTypes: make(map[string]ast.Type),
-		Types:      make([]ast.TypeDefinition, 0),
+func NewScope() *Scope {
+	return &Scope{
+		IdentTypes: make(map[string]*ast.Type),
+		Types:      make([]*ast.Type, 0),
 	}
 }
 
-func (scope *Scope) Clone() Scope {
+func (scope *Scope) Clone() *Scope {
 	newScope := NewScope()
 
 	for k, v := range scope.IdentTypes {
@@ -74,7 +74,7 @@ func (scope *Scope) TypeOf(ident string) (*ast.Type, error) {
 		return nil, fmt.Errorf("unknown identifier %s in scope: %#v", ident, scope)
 	}
 
-	return &t, nil
+	return t, nil
 }
 
 func (context *Context) TypeOf(ident string) (*ast.Type, error) {
@@ -82,7 +82,7 @@ func (context *Context) TypeOf(ident string) (*ast.Type, error) {
 }
 
 func (context *Context) EnterScope() *Scope {
-	var newScope Scope
+	var newScope *Scope
 	if context.CurrentScope != nil {
 		newScope = context.CurrentScope.Clone()
 	} else {
@@ -90,9 +90,9 @@ func (context *Context) EnterScope() *Scope {
 	}
 
 	context.scopes = append(context.scopes, newScope)
-	context.CurrentScope = &newScope
+	context.CurrentScope = newScope
 
-	return &newScope
+	return newScope
 }
 
 func (context *Context) ExitScope() {
@@ -103,15 +103,11 @@ func (context *Context) ExitScope() {
 		return
 	}
 
-	context.CurrentScope = &context.scopes[len(context.scopes)-1]
+	context.CurrentScope = context.scopes[len(context.scopes)-1]
 }
 
-func (scope *Scope) AddIdentifer(ident string, identType ast.Type) {
+func (scope *Scope) AddIdentifer(ident string, identType *ast.Type) {
 	scope.IdentTypes[ident] = identType
-}
-
-func (scope *Scope) AddType(t ast.TypeDefinition) {
-	scope.Types = append(scope.Types, t)
 }
 
 func NewContext(output *bufio.Writer) *Context {
@@ -121,19 +117,28 @@ func NewContext(output *bufio.Writer) *Context {
 
 	global := ctx.EnterScope()
 
-	global.AddType(ast.TypeDefinition{
-		InterfaceDefinition: &ast.InterfaceDefinition{
-			Name: "Console",
-			Members: []ast.InterfaceMemberDefinition{
-				{
-					Method: &ast.InterfaceMethodDefinition{
-						Name: "log",
-						Parameters: []ast.FunctionParameter{
-							{
-								Name: "message",
-								Type: ast.Type{
-									NonUnionType: &ast.NonUnionType{
-										TypeReference: strRef("any"),
+	global.AddIdentifer("Console", &ast.Type{
+		NonUnionType: &ast.NonUnionType{
+			LiteralType: &ast.LiteralType{
+				ObjectType: &ast.ObjectType{
+					Fields: []ast.ObjectTypeField{
+						{
+							Name: "log",
+							Type: ast.Type{
+								NonUnionType: &ast.NonUnionType{
+									LiteralType: &ast.LiteralType{
+										FunctionType: &ast.FunctionType{
+											Parameters: []ast.FunctionParameter{
+												{
+													Name: "fmt",
+													Type: ast.Type{
+														NonUnionType: &ast.NonUnionType{
+															TypeReference: strRef("any"),
+														},
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -144,7 +149,7 @@ func NewContext(output *bufio.Writer) *Context {
 		},
 	})
 
-	global.AddIdentifer("console", ast.Type{
+	global.AddIdentifer("console", &ast.Type{
 		NonUnionType: &ast.NonUnionType{
 			TypeReference: strRef("Console"),
 		},

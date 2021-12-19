@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
+#include <stdexcept>
 
 #include "runtime.hpp"
 
@@ -77,3 +78,16 @@ TsObject *TsFunction::invoke(std::vector<TsFunctionArg> args)
 {
 	return fn(args);
 }
+
+TsObject* console = new TsObject(TypeIdTsObject, TsCoreHelpers::toVector<TsObjectField *>({new TsObjectField(
+												TsObjectFieldDescriptor(TsString("log"), TypeIdTsFunction),
+												new TsFunction("log",
+															   TsCoreHelpers::toVector<TsFunctionParam>({}),
+															   [](std::vector<TsFunctionArg> args) -> TsObject *
+															   {
+																   auto fmt = dynamic_cast<TsString *>(args[0].value);
+
+																   printf(fmt->value.c_str());
+
+																   return NULL;
+															   }))}));

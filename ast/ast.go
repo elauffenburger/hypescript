@@ -7,8 +7,8 @@ type TypeDefinition struct {
 }
 
 type InterfaceDefinition struct {
-	Name    string                      `"interface" @Ident "{"`
-	Members []InterfaceMemberDefinition `(@@";")* "}"`
+	Name    string                       `"interface" @Ident "{"`
+	Members []*InterfaceMemberDefinition `(@@";")* "}"`
 }
 
 type InterfaceMemberDefinition struct {

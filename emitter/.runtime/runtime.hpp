@@ -203,3 +203,5 @@ public:
 };
 
 extern TsFunction *ts_fn_main;
+
+extern TsObject *console;
