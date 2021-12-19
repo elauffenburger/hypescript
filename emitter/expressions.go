@@ -19,14 +19,7 @@ func writeStatementOrExpression(ctx *Context, stmtOrExpr *ast.StatementOrExpress
 
 func writeStatement(ctx *Context, stmt *ast.Statement) error {
 	if fnInst := stmt.FunctionInstantiation; fnInst != nil {
-		err := writeFunctionDeclaration(ctx, fnInst)
-		if err != nil {
-			return err
-		}
-
-		ctx.WriteString(";")
-
-		return nil
+		return writeFunctionDeclaration(ctx, fnInst)
 	}
 
 	if exprStmt := stmt.ExpressionStmt; exprStmt != nil {

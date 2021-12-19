@@ -187,7 +187,7 @@ func writeFunctionLambda(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *fu
 
 	// Unpack each arg into local vars in the function.
 	for _, param := range fn.Parameters {
-		ctx.WriteString(fmt.Sprintf("TsFunction* %s = (TsFunction*)TsFunctionArg::findArg(args, \"%s\").value;", param.Name, param.Name))
+		ctx.WriteString(fmt.Sprintf("auto %s = (TsFunction*)TsFunctionArg::findArg(args, \"%s\").value;", param.Name, param.Name))
 	}
 
 	// Write the body.
