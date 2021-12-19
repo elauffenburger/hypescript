@@ -183,7 +183,7 @@ func writeFunction(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *function
 }
 
 func writeFunctionLambda(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *functionInfo) error {
-	ctx.WriteString("[](std::vector<TsFunctionArg> args) -> TsObject* {")
+	ctx.WriteString("[=](std::vector<TsFunctionArg> args) -> TsObject* {")
 
 	// Unpack each arg into local vars in the function.
 	for _, param := range fn.Parameters {

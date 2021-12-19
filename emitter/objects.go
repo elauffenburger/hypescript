@@ -138,17 +138,23 @@ func writeLink(ctx *Context, link, endLink *chainedObjectOperationLink) error {
 		ctx.WriteString(fmt.Sprintf("->getFieldValue(\"%s\")", access.AccessedIdent))
 
 		if link.next != nil {
-			err := writeLink(ctx, link.next, endLink)
-			if err != nil {
-				return err
-			}
+			return writeLink(ctx, link.next, endLink)
 		}
 
 		return nil
 	}
 
 	if link.operation.Invocation != nil {
-		return writeObjectInvocation(ctx, link.accesseeType, link.operation.Invocation)
+		err := writeObjectInvocation(ctx, link.accesseeType, link.operation.Invocation)
+		if err != nil {
+			return err
+		}
+
+		if link.next != nil {
+			return writeLink(ctx, link.next, endLink)
+		}
+
+		return nil
 	}
 
 	return fmt.Errorf("unknown operation in chained object operation: %#v", link)

@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
+#include <functional>
 
 // TODO: don't do this.
 #define UNDEFINED 0xDEADBEEF
@@ -158,17 +159,15 @@ public:
     static const TsFunctionArg &findArg(const std::vector<TsFunctionArg> &args, const std::string &argName);
 };
 
-typedef TsObject *(*TsFunctionFn)(std::vector<TsFunctionArg> args);
-
 class TsFunction : public TsObject
 {
 public:
     std::string name;
     std::vector<TsFunctionParam> params;
 
-    TsFunctionFn fn;
+    std::function<TsObject *(std::vector<TsFunctionArg> args)> fn;
 
-    TsFunction(std::string name, std::vector<TsFunctionParam> params, TsFunctionFn fn)
+    TsFunction(std::string name, std::vector<TsFunctionParam> params, std::function<TsObject *(std::vector<TsFunctionArg> args)> fn)
         : name(name),
           params(params),
           fn(fn),
@@ -201,7 +200,5 @@ public:
         : descriptor(descriptor),
           value(value) {}
 };
-
-extern TsFunction *ts_fn_main;
 
 extern TsObject *console;

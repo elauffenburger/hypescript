@@ -36,7 +36,7 @@ func main() {
 			};
 		}
 
-		function main(): void {
+		function run(): void {
 			function baz() {
 				console.log("in baz!");
 			}
@@ -61,6 +61,8 @@ func main() {
 
 			returnsFn()();
 		}
+
+		run();
 	`)
 
 	if err != nil {

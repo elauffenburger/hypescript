@@ -69,6 +69,8 @@ func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
 		return nil, err
 	}
 
+	ctx.WriteString("int main() { ")
+
 	for _, c := range ast.TopLevelConstructs {
 		if c.StatementOrExpression != nil {
 			err := writeStatementOrExpression(ctx, c.StatementOrExpression)
@@ -76,14 +78,9 @@ func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
 				return nil, err
 			}
 		}
-
-		// if c.FunctionInstantiation != nil {
-		// 	err := writeFunctionDeclaration(ctx, c.FunctionInstantiation)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-		// }
 	}
+
+	ctx.WriteString(`return 0; }`)
 
 	err = ctx.Output.Flush()
 	if err != nil {
@@ -124,14 +121,6 @@ func writePreamble(ctx *Context) error {
 		#include <memory>
 	
 		#include "runtime.hpp"
-
-		int main()
-		{
-			ts_fn_main->invoke(std::vector<TsFunctionArg>());
-
-			return 0;
-		}
-
 	`)
 
 	return nil

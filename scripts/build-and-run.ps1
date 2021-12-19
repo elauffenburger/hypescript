@@ -14,6 +14,9 @@ function Write-VsVars() {
 }
 
 go run .
+if ($LASTEXITCODE -ne 0) {
+    throw "Compilation failed!"
+}
 
 Write-VsVars
 

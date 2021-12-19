@@ -147,7 +147,6 @@ type ObjectFieldInstantiation struct {
 }
 
 type TopLevelConstruct struct {
-	// FunctionInstantiation *FunctionInstantiation `@@`
 	StatementOrExpression *StatementOrExpression `@@`
 }
 
