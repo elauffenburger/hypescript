@@ -199,7 +199,7 @@ func writeFunctionLambda(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *fu
 	}
 
 	if t := fnInfo.ImplicitReturnType.NonUnionType; t != nil {
-		if t := t.TypeReference; *t == string(TsVoid) {
+		if t := t.TypeReference; t != nil && *t == string(TsVoid) {
 			ctx.WriteString("return NULL;")
 		}
 	}

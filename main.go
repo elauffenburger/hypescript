@@ -30,6 +30,12 @@ func main() {
 
 		function blah2() {}
 
+		function returnsFn() {
+			return function() {
+				console.log("in nested!");
+			};
+		}
+
 		function main(): void {
 			function baz() {
 				console.log("in baz!");
@@ -52,6 +58,8 @@ func main() {
 			obj.qux.foo();
 
 			baz();
+
+			returnsFn()();
 		}
 	`)
 
