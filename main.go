@@ -13,7 +13,7 @@ func main() {
 	parser := parser.New()
 
 	ast, err := parser.ParseString(`
-		function foo(a: string, b: num): num {
+		function foo(a: string, b: number): number {
 			let ay = 5;
 			let bee = "bar";
 
@@ -35,14 +35,17 @@ func main() {
 				foo: "bar", 
 				baz: 5, 
 				qux: { 
-					a: "a"
+					a: "a",
+					foo: function() {
+						console.log("in foo!");
+					}
 				} 
 			};
 
 			obj.qux.a = "hello, world!!\n";
 
 			console.log(obj.qux.a);
-
+			obj.qux.foo();
 		}
 	`)
 

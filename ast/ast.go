@@ -27,8 +27,8 @@ type InterfaceMethodDefinition struct {
 	ReturnType *Type               `(":" @@)?;`
 }
 
-type Function struct {
-	Name       string                  `"function" @Ident`
+type FunctionInstantiation struct {
+	Name       *string                 `"function" @Ident?`
 	Parameters []FunctionParameter     `"(" (@@ ("," @@)*)? ")"`
 	ReturnType *Type                   `(":" @@)?`
 	Body       []StatementOrExpression `"{"@@*"}"`
@@ -82,6 +82,7 @@ type Expression struct {
 	Number                 *Number                 `@@`
 	String                 *string                 `| @String`
 	IdentAssignment        *IdentAssignment        `| @@`
+	FunctionInstantiation  *FunctionInstantiation  `| @@`
 	ChainedObjectOperation *ChainedObjectOperation `| @@`
 	ObjectInstantiation    *ObjectInstantiation    `| @@`
 	Ident                  *string                 `| @Ident`
@@ -145,7 +146,7 @@ type ObjectFieldInstantiation struct {
 }
 
 type TS struct {
-	Functions []Function `@@*`
+	Functions []FunctionInstantiation `@@*`
 }
 
 func (left *Type) Equals(right *Type) bool {

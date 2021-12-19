@@ -7,13 +7,13 @@ import (
 )
 
 type functionInfo struct {
-	Function *ast.Function
+	Function *ast.FunctionInstantiation
 
 	ExplicitReturnType *ast.Type
 	ImplicitReturnType *ast.Type
 }
 
-func buildFunctionInfo(context *Context, function *ast.Function) (*functionInfo, error) {
+func buildFunctionInfo(context *Context, function *ast.FunctionInstantiation) (*functionInfo, error) {
 	functionInfo := functionInfo{Function: function, ExplicitReturnType: function.ReturnType}
 
 	context.EnterScope()
@@ -89,7 +89,7 @@ func (f *functionInfo) validate() error {
 	return nil
 }
 
-func writeFunction(ctx *Context, fn *ast.Function) error {
+func writeFunctionDeclaration(ctx *Context, fn *ast.FunctionInstantiation) error {
 	// Build the complete info struct for this function.
 	fnInfo, err := buildFunctionInfo(ctx, fn)
 	if err != nil {
@@ -102,30 +102,41 @@ func writeFunction(ctx *Context, fn *ast.Function) error {
 
 	returnType := fnInfo.ImplicitReturnType
 
-	ctx.CurrentScope.AddIdentifer(fn.Name, &ast.Type{
-		NonUnionType: &ast.NonUnionType{
-			LiteralType: &ast.LiteralType{
-				FunctionType: &ast.FunctionType{
-					Parameters: fn.Parameters,
-					ReturnType: returnType,
+	if fn.Name != nil {
+		ctx.CurrentScope.AddIdentifer(*fn.Name, &ast.Type{
+			NonUnionType: &ast.NonUnionType{
+				LiteralType: &ast.LiteralType{
+					FunctionType: &ast.FunctionType{
+						Parameters: fn.Parameters,
+						ReturnType: returnType,
+					},
 				},
 			},
-		},
-	})
+		})
+	}
 
 	return ctx.WithinNewScope(func() error {
-		err = writeTsFunction(ctx, fn, fnInfo)
+		var fnName string
+		if fn.Name != nil {
+			fnName = *fn.Name
+		} else {
+			fnName = ctx.CurrentScope.NewIdent()
+		}
+
+		ctx.WriteString(fmt.Sprintf("TsFunction* %s = ", mangleFunctionName(fnName)))
+
+		err = writeFunction(ctx, fn, fnInfo)
 		if err != nil {
 			return err
 		}
 
-		ctx.WriteString("\n")
+		ctx.WriteString(";")
 
 		return nil
 	})
 }
 
-func writeTsFunction(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error {
+func writeFunction(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *functionInfo) error {
 	// Format the function params.
 	formattedParams := strings.Builder{}
 	formattedParams.WriteString("TsCoreHelpers::toVector<TsFunctionParam>({")
@@ -146,19 +157,32 @@ func writeTsFunction(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error
 
 	formattedParams.WriteString("})")
 
-	ctx.WriteString(fmt.Sprintf("TsFunction* %s = new TsFunction(\"%s\", %s, ", mangleFunctionName(fn.Name), fn.Name, formattedParams.String()))
+	var fnName string
+	if fn.Name != nil {
+		fnName = *fn.Name
+	} else {
+		fnName = ctx.CurrentScope.NewIdent()
+	}
+
+	ctx.WriteString(
+		fmt.Sprintf(
+			"new TsFunction(\"%s\", %s, ",
+			fnName,
+			formattedParams.String(),
+		),
+	)
 
 	err := writeFunctionLambda(ctx, fn, fnInfo)
 	if err != nil {
 		return err
 	}
 
-	ctx.WriteString(");")
+	ctx.WriteString(")")
 
 	return nil
 }
 
-func writeFunctionLambda(ctx *Context, fn *ast.Function, fnInfo *functionInfo) error {
+func writeFunctionLambda(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *functionInfo) error {
 	ctx.WriteString("[](std::vector<TsFunctionArg> args) -> TsObject* {")
 
 	// Unpack each arg into local vars in the function.

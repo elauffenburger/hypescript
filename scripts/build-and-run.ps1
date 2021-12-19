@@ -1,3 +1,5 @@
+$ErrorActionPreference = "Stop"
+
 function Write-VsVars() {
     pushd "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools"
     cmd /c "VsDevCmd.bat&set" |
@@ -15,8 +17,19 @@ go run .
 
 Write-VsVars
 
-$Srcs = Get-ChildItem "./build" -Filter "*.cpp" | %{ $_.FullName }
+$Srcs = Get-ChildItem "./build" -Filter "*.cpp" | % { $_.FullName }
 
-cl $Srcs /link /out:./build/main.exe
+pushd "./build"
 
-./build/main.exe
+try {
+    cl $Srcs /link /out:main.exe
+    if ($LASTEXITCODE -ne 0) {
+        throw "Compilation failed!"
+    }
+
+    ./main.exe
+}
+finally {
+    popd
+}
+

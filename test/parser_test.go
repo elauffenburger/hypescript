@@ -20,7 +20,7 @@ func TestParseSimpleFunction(t *testing.T) {
 	`, t)
 
 	assertEqual(t, parsed, &ast.TS{
-		Functions: []ast.Function{
+		Functions: []ast.FunctionInstantiation{
 			{
 				Name: "foo",
 				ReturnType: &ast.Type{

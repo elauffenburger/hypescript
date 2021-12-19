@@ -84,6 +84,15 @@ func writeExpression(ctx *Context, expr *ast.Expression) error {
 		return writeObjectInstantiation(ctx, objInst)
 	}
 
+	if fnInst := expr.FunctionInstantiation; fnInst != nil {
+		fnInfo, err := buildFunctionInfo(ctx, fnInst)
+		if err != nil {
+			return err
+		}
+
+		return writeFunction(ctx, fnInst, fnInfo)
+	}
+
 	if chainedObjOperation := expr.ChainedObjectOperation; chainedObjOperation != nil {
 		return writeChainedObjectOperation(ctx, chainedObjOperation)
 	}

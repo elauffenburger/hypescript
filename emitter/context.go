@@ -47,6 +47,8 @@ func (ctx *Context) WithinNewScope(operation func() error) error {
 type Scope struct {
 	IdentTypes map[string]*ast.Type
 	Types      []*ast.Type
+
+	nextIdentNum int
 }
 
 func NewScope() *Scope {
@@ -75,6 +77,13 @@ func (scope *Scope) TypeOf(ident string) (*ast.Type, error) {
 	}
 
 	return t, nil
+}
+
+func (scope *Scope) NewIdent() string {
+	ident := scope.nextIdentNum
+	scope.nextIdentNum++
+
+	return fmt.Sprintf("ident%d", ident)
 }
 
 func (context *Context) TypeOf(ident string) (*ast.Type, error) {

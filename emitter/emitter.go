@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"elauffenburger/hypescript/ast"
 	"embed"
-	_ "embed"
 	"io"
 
 	"github.com/pkg/errors"
@@ -18,7 +17,7 @@ type primitiveType string
 
 const (
 	TsString primitiveType = "string"
-	TsNum    primitiveType = "num"
+	TsNumber primitiveType = "number"
 )
 
 type coreType string
@@ -71,7 +70,7 @@ func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
 	}
 
 	for _, fn := range ast.Functions {
-		err := writeFunction(ctx, &fn)
+		err := writeFunctionDeclaration(ctx, &fn)
 		if err != nil {
 			return nil, err
 		}

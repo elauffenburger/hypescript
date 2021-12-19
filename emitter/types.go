@@ -52,12 +52,25 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 	}
 
 	if expr.Number != nil {
-		t := string(TsNum)
+		t := string(TsNumber)
 		return &ast.Type{NonUnionType: &ast.NonUnionType{TypeReference: &t}}, nil
 	}
 
 	if expr.Ident != nil {
 		return ctx.TypeOf(*expr.Ident)
+	}
+
+	if expr.FunctionInstantiation != nil {
+		return &ast.Type{
+			NonUnionType: &ast.NonUnionType{
+				LiteralType: &ast.LiteralType{
+					FunctionType: &ast.FunctionType{
+						Parameters: expr.FunctionInstantiation.Parameters,
+						ReturnType: expr.FunctionInstantiation.ReturnType,
+					},
+				},
+			},
+		}, nil
 	}
 
 	if expr.ObjectInstantiation != nil {
