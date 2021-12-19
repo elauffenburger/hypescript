@@ -127,9 +127,10 @@ type LetDecl struct {
 }
 
 type Statement struct {
-	ExpressionStmt *Expression `@@ ";"`
-	LetDecl        *LetDecl    `| @@ ";"`
-	ReturnStmt     *Expression `| "return" @@ ";"`
+	FunctionInstantiation *FunctionInstantiation `@@ ";"?`
+	ExpressionStmt        *Expression            `| @@ ";"`
+	LetDecl               *LetDecl               `| @@ ";"`
+	ReturnStmt            *Expression            `| "return" @@ ";"`
 }
 
 type Assignment struct {
@@ -145,8 +146,13 @@ type ObjectFieldInstantiation struct {
 	Value Expression `@@`
 }
 
+type TopLevelConstruct struct {
+	// FunctionInstantiation *FunctionInstantiation `@@`
+	StatementOrExpression *StatementOrExpression `@@`
+}
+
 type TS struct {
-	Functions []FunctionInstantiation `@@*`
+	TopLevelConstructs []TopLevelConstruct `@@*`
 }
 
 func (left *Type) Equals(right *Type) bool {

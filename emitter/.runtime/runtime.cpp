@@ -87,7 +87,7 @@ TsObject* console = new TsObject(TypeIdTsObject, TsCoreHelpers::toVector<TsObjec
 															   {
 																   auto fmt = dynamic_cast<TsString *>(args[0].value);
 
-																   printf(fmt->value.c_str());
+																   printf("%s\n", fmt->value.c_str());
 
 																   return NULL;
 															   }))}));

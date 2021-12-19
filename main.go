@@ -31,6 +31,10 @@ func main() {
 		function blah2() {}
 
 		function main(): void {
+			function baz() {
+				console.log("in baz!");
+			}
+
 			let obj = { 
 				foo: "bar", 
 				baz: 5, 
@@ -42,15 +46,17 @@ func main() {
 				} 
 			};
 
-			obj.qux.a = "hello, world!!\n";
+			obj.qux.a = "hello, world!!";
 
 			console.log(obj.qux.a);
 			obj.qux.foo();
+
+			baz();
 		}
 	`)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("%+v\n", err)
 	}
 
 	emitter := emitter.New()

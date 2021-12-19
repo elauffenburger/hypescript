@@ -69,13 +69,20 @@ func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
 		return nil, err
 	}
 
-	for _, fn := range ast.Functions {
-		err := writeFunctionDeclaration(ctx, &fn)
-		if err != nil {
-			return nil, err
+	for _, c := range ast.TopLevelConstructs {
+		if c.StatementOrExpression != nil {
+			err := writeStatementOrExpression(ctx, c.StatementOrExpression)
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		ctx.WriteString("\n\n")
+		// if c.FunctionInstantiation != nil {
+		// 	err := writeFunctionDeclaration(ctx, c.FunctionInstantiation)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
+		// }
 	}
 
 	err = ctx.Output.Flush()
@@ -124,6 +131,7 @@ func writePreamble(ctx *Context) error {
 
 			return 0;
 		}
+
 	`)
 
 	return nil
