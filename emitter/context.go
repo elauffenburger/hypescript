@@ -45,6 +45,8 @@ func (ctx *Context) WithinNewScope(operation func() error) error {
 }
 
 type Scope struct {
+	Parent *Scope
+
 	IdentTypes map[string]*ast.Type
 	Types      []*ast.Type
 
@@ -72,11 +74,15 @@ func (scope *Scope) Clone() *Scope {
 
 func (scope *Scope) TypeOf(ident string) (*ast.Type, error) {
 	t, ok := scope.IdentTypes[ident]
-	if !ok {
+	if ok {
+		return t, nil
+	}
+
+	if scope.Parent == nil {
 		return nil, fmt.Errorf("unknown identifier %s in scope: %#v", ident, scope)
 	}
 
-	return t, nil
+	return scope.Parent.TypeOf(ident)
 }
 
 func (scope *Scope) NewIdent() string {
@@ -94,6 +100,8 @@ func (context *Context) EnterScope() *Scope {
 	var newScope *Scope
 	if context.CurrentScope != nil {
 		newScope = context.CurrentScope.Clone()
+
+		newScope.Parent = context.CurrentScope
 	} else {
 		newScope = NewScope()
 	}
