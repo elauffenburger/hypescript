@@ -47,16 +47,16 @@ func (ctx *Context) WithinNewScope(operation func() error) error {
 type Scope struct {
 	Parent *Scope
 
-	IdentTypes map[string]*TypeDefinition
-	Types      []*TypeDefinition
+	IdentTypes map[string]*TypeSpec
+	Types      []*TypeSpec
 
 	nextIdentNum int
 }
 
 func NewScope() *Scope {
 	return &Scope{
-		IdentTypes: make(map[string]*TypeDefinition),
-		Types:      make([]*TypeDefinition, 0),
+		IdentTypes: make(map[string]*TypeSpec),
+		Types:      make([]*TypeSpec, 0),
 	}
 }
 
@@ -72,7 +72,7 @@ func (scope *Scope) Clone() *Scope {
 	return newScope
 }
 
-func (scope *Scope) TypeOf(ident string) (*TypeDefinition, error) {
+func (scope *Scope) TypeOf(ident string) (*TypeSpec, error) {
 	t, ok := scope.IdentTypes[ident]
 	if ok {
 		return t, nil
@@ -92,7 +92,7 @@ func (scope *Scope) NewIdent() string {
 	return fmt.Sprintf("ident%d", ident)
 }
 
-func (context *Context) TypeOf(ident string) (*TypeDefinition, error) {
+func (context *Context) TypeOf(ident string) (*TypeSpec, error) {
 	return context.CurrentScope.TypeOf(ident)
 }
 
@@ -123,7 +123,7 @@ func (context *Context) ExitScope() {
 	context.CurrentScope = context.scopes[len(context.scopes)-1]
 }
 
-func (scope *Scope) AddIdentifer(ident string, identType *TypeDefinition) {
+func (scope *Scope) AddIdentifer(ident string, identType *TypeSpec) {
 	scope.IdentTypes[ident] = identType
 }
 
@@ -134,7 +134,7 @@ func NewContext(output *bufio.Writer) *Context {
 
 	global := ctx.EnterScope()
 
-	global.AddIdentifer("Console", &TypeDefinition{
+	global.AddIdentifer("Console", &TypeSpec{
 		ObjectType: &ast.ObjectType{
 			Fields: []ast.ObjectTypeField{
 				{
@@ -162,7 +162,7 @@ func NewContext(output *bufio.Writer) *Context {
 		},
 	})
 
-	global.AddIdentifer("console", &TypeDefinition{TypeReference: strRef("Console")})
+	global.AddIdentifer("console", &TypeSpec{TypeReference: strRef("Console")})
 
 	return &ctx
 }

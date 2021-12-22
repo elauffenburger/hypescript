@@ -47,7 +47,7 @@ type Emitter interface {
 	Emit(ast *ast.TS) ([]EmittedFile, error)
 }
 
-type TypeDefinition struct {
+type TypeSpec struct {
 	FunctionType        *ast.FunctionType
 	ObjectType          *ast.ObjectType
 	InterfaceDefinition *ast.InterfaceDefinition
@@ -55,7 +55,7 @@ type TypeDefinition struct {
 	UnionType           *ast.UnionType
 }
 
-func (t *TypeDefinition) Equals(other *TypeDefinition) bool {
+func (t *TypeSpec) Equals(other *TypeSpec) bool {
 	return reflect.DeepEqual(t, other)
 }
 

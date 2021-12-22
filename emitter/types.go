@@ -31,7 +31,7 @@ func mangleFunctionName(name string) string {
 	return fmt.Sprintf("%s", name)
 }
 
-func mangleIdentName(name string, identType *TypeDefinition) string {
+func mangleIdentName(name string, identType *TypeSpec) string {
 	if identType.FunctionType != nil {
 		return mangleFunctionName(name)
 	}
@@ -39,19 +39,19 @@ func mangleIdentName(name string, identType *TypeDefinition) string {
 	return name
 }
 
-func inferType(ctx *Context, expr *ast.Expression) (*TypeDefinition, error) {
+func inferType(ctx *Context, expr *ast.Expression) (*TypeSpec, error) {
 	// TODO -- need to actually impl!
 
 	if expr.String != nil {
 		t := string(TsString)
 
-		return &TypeDefinition{TypeReference: &t}, nil
+		return &TypeSpec{TypeReference: &t}, nil
 	}
 
 	if expr.Number != nil {
 		t := string(TsNumber)
 
-		return &TypeDefinition{TypeReference: &t}, nil
+		return &TypeSpec{TypeReference: &t}, nil
 	}
 
 	if expr.Ident != nil {
@@ -59,7 +59,7 @@ func inferType(ctx *Context, expr *ast.Expression) (*TypeDefinition, error) {
 	}
 
 	if expr.FunctionInstantiation != nil {
-		return &TypeDefinition{
+		return &TypeSpec{
 			FunctionType: &ast.FunctionType{
 				Parameters: expr.FunctionInstantiation.Parameters,
 				ReturnType: expr.FunctionInstantiation.ReturnType,
@@ -86,7 +86,7 @@ func inferType(ctx *Context, expr *ast.Expression) (*TypeDefinition, error) {
 			}
 		}
 
-		return &TypeDefinition{
+		return &TypeSpec{
 			ObjectType: &ast.ObjectType{
 				Fields: fields,
 			},
@@ -105,7 +105,7 @@ func inferType(ctx *Context, expr *ast.Expression) (*TypeDefinition, error) {
 	return nil, fmt.Errorf("could not infer type of %#v", *expr)
 }
 
-func (t *TypeDefinition) toAstTypeIdentifier() (*ast.TypeIdentifier, error) {
+func (t *TypeSpec) toAstTypeIdentifier() (*ast.TypeIdentifier, error) {
 	// TODO: handle errors during mapping.
 	return &ast.TypeIdentifier{
 		NonUnionType: &ast.NonUnionType{
@@ -119,7 +119,7 @@ func (t *TypeDefinition) toAstTypeIdentifier() (*ast.TypeIdentifier, error) {
 	}, nil
 }
 
-func fromAstTypeIdentifier(t *ast.TypeIdentifier) (*TypeDefinition, error) {
+func fromAstTypeIdentifier(t *ast.TypeIdentifier) (*TypeSpec, error) {
 	if t == nil {
 		return nil, nil
 	}
@@ -127,23 +127,23 @@ func fromAstTypeIdentifier(t *ast.TypeIdentifier) (*TypeDefinition, error) {
 	if t := t.NonUnionType; t != nil {
 		if t := t.LiteralType; t != nil {
 			if t.FunctionType != nil {
-				return &TypeDefinition{FunctionType: t.FunctionType}, nil
+				return &TypeSpec{FunctionType: t.FunctionType}, nil
 			}
 
 			if t.ObjectType != nil {
-				return &TypeDefinition{ObjectType: t.ObjectType}, nil
+				return &TypeSpec{ObjectType: t.ObjectType}, nil
 			}
 		}
 
 		if t := t.TypeReference; t != nil {
-			return &TypeDefinition{TypeReference: t}, nil
+			return &TypeSpec{TypeReference: t}, nil
 		}
 	}
 
 	return nil, fmt.Errorf("unknown type identifier %v", t)
 }
 
-func createUnionType(left, right *TypeDefinition) (*TypeDefinition, error) {
+func createUnionType(left, right *TypeSpec) (*TypeSpec, error) {
 	leftT, err := left.toAstTypeIdentifier()
 	if err != nil {
 		return nil, err
@@ -154,5 +154,5 @@ func createUnionType(left, right *TypeDefinition) (*TypeDefinition, error) {
 		return nil, err
 	}
 
-	return &TypeDefinition{UnionType: ast.CreateUnionType(leftT, rightT)}, nil
+	return &TypeSpec{UnionType: ast.CreateUnionType(leftT, rightT)}, nil
 }

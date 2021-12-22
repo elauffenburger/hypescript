@@ -8,7 +8,7 @@ import (
 
 type chainedObjectOperationLink struct {
 	accessee     *ast.Accessable
-	accesseeType *TypeDefinition
+	accesseeType *TypeSpec
 	operation    ast.ObjectOperation
 	next         *chainedObjectOperationLink
 	prev         *chainedObjectOperationLink
@@ -71,7 +71,7 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (f
 	return firstLink, currentLink, nil
 }
 
-func buildObjectAccessOperation(ctx *Context, access *ast.ObjectAccess, accessee *ast.Accessable, accesseeType *TypeDefinition) (nextAccessee *ast.Accessable, err error) {
+func buildObjectAccessOperation(ctx *Context, access *ast.ObjectAccess, accessee *ast.Accessable, accesseeType *TypeSpec) (nextAccessee *ast.Accessable, err error) {
 	if t := accesseeType.ObjectType; t != nil {
 		fieldName := access.AccessedIdent
 		var field *ast.ObjectTypeField
@@ -103,7 +103,7 @@ func buildObjectAccessOperation(ctx *Context, access *ast.ObjectAccess, accessee
 	return nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
 }
 
-func buildObjectInvocationOperation(ctx *Context, invoc *ast.ObjectInvocation, accessee *ast.Accessable, accesseeType *TypeDefinition) (nextAccessee *ast.Accessable, err error) {
+func buildObjectInvocationOperation(ctx *Context, invoc *ast.ObjectInvocation, accessee *ast.Accessable, accesseeType *TypeSpec) (nextAccessee *ast.Accessable, err error) {
 	if t := accesseeType.FunctionType; t != nil {
 		t, err := accesseeType.toAstTypeIdentifier()
 		if err != nil {
@@ -205,7 +205,7 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 	return nil
 }
 
-func writeObjectInvocation(ctx *Context, accesseeType *TypeDefinition, invocation *ast.ObjectInvocation) error {
+func writeObjectInvocation(ctx *Context, accesseeType *TypeSpec, invocation *ast.ObjectInvocation) error {
 	// TODO: this isn't always true!
 	fn := accesseeType.FunctionType
 

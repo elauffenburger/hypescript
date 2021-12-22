@@ -9,8 +9,8 @@ import (
 type functionInfo struct {
 	Function *ast.FunctionInstantiation
 
-	ExplicitReturnType *TypeDefinition
-	ImplicitReturnType *TypeDefinition
+	ExplicitReturnType *TypeSpec
+	ImplicitReturnType *TypeSpec
 }
 
 func buildFunctionInfo(context *Context, function *ast.FunctionInstantiation) (*functionInfo, error) {
@@ -83,7 +83,7 @@ func buildFunctionInfo(context *Context, function *ast.FunctionInstantiation) (*
 	}
 
 	if fnInfo.ImplicitReturnType == nil {
-		fnInfo.ImplicitReturnType = &TypeDefinition{TypeReference: strRef("void")}
+		fnInfo.ImplicitReturnType = &TypeSpec{TypeReference: strRef("void")}
 	}
 
 	context.ExitScope()
@@ -119,7 +119,7 @@ func writeFunctionDeclaration(ctx *Context, fn *ast.FunctionInstantiation) error
 	}
 
 	if fn.Name != nil {
-		ctx.CurrentScope.AddIdentifer(*fn.Name, &TypeDefinition{
+		ctx.CurrentScope.AddIdentifer(*fn.Name, &TypeSpec{
 			FunctionType: &ast.FunctionType{
 				Parameters: fn.Parameters,
 				ReturnType: rtnType,

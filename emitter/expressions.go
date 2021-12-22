@@ -157,18 +157,18 @@ func getRuntimeTypeName(t *ast.TypeIdentifier) (string, error) {
 	return "", fmt.Errorf("unknown type: %#v", t)
 }
 
-func inferAccessableType(ctx *Context, accessable ast.Accessable) (*TypeDefinition, error) {
+func inferAccessableType(ctx *Context, accessable ast.Accessable) (*TypeSpec, error) {
 	if accessable.Ident != nil {
 		return ctx.TypeOf(*accessable.Ident)
 	}
 
 	if lit := accessable.LiteralType; lit != nil {
 		if lit.FunctionType != nil {
-			return &TypeDefinition{FunctionType: lit.FunctionType}, nil
+			return &TypeSpec{FunctionType: lit.FunctionType}, nil
 		}
 
 		if lit.ObjectType != nil {
-			return &TypeDefinition{ObjectType: lit.ObjectType}, nil
+			return &TypeSpec{ObjectType: lit.ObjectType}, nil
 		}
 	}
 
@@ -190,7 +190,7 @@ func writeIdent(ctx *Context, ident string) error {
 	return nil
 }
 
-func getTypeIdFor(ctx *Context, t *TypeDefinition) (int, error) {
+func getTypeIdFor(ctx *Context, t *TypeSpec) (int, error) {
 	// TODO; need to actually make this work!
 
 	return 0, nil
