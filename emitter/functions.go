@@ -212,7 +212,7 @@ func writeFunctionLambda(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *fu
 		}
 	}
 
-	if t := fnInfo.ImplicitReturnType.TypeReference; t != nil && *t == string(TsVoid) {
+	if t := fnInfo.ImplicitReturnType.TypeReference; t != nil && *t == string(RtTsVoid) {
 		ctx.WriteString("return NULL;")
 	}
 

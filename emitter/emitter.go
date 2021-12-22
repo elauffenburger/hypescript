@@ -19,15 +19,20 @@ type primitiveType string
 const (
 	TsString primitiveType = "string"
 	TsNumber primitiveType = "number"
+	TsVoid   primitiveType = "void"
 )
 
-type coreType string
+var primitiveTypes = []primitiveType{TsString, TsNumber, TsVoid}
+
+type runtimeType string
 
 const (
-	TsObject   coreType = "TsObject"
-	TsFunction coreType = "TsFunction"
-	TsVoid     coreType = "void"
+	RtTsObject   runtimeType = "TsObject"
+	RtTsFunction runtimeType = "TsFunction"
+	RtTsVoid     runtimeType = "void"
 )
+
+var runtimeTypes = []runtimeType{RtTsObject, RtTsFunction, RtTsVoid}
 
 type typeId int
 
@@ -41,8 +46,6 @@ const (
 	TypeIdIntrinsic  typeId = 6
 )
 
-var coreTypes = []coreType{TsObject, TsFunction, TsVoid}
-
 type Emitter interface {
 	Emit(ast *ast.TS) ([]EmittedFile, error)
 }
@@ -52,6 +55,7 @@ type TypeSpec struct {
 	ObjectType          *ast.ObjectType
 	InterfaceDefinition *ast.InterfaceDefinition
 	TypeReference       *string
+	PrimitiveType       *primitiveType
 	UnionType           *ast.UnionType
 }
 
@@ -94,10 +98,13 @@ func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
 			continue
 		}
 
-		if c.InterfaceDefinition != nil {
-			ctx.CurrentScope.AddIdentifer(c.InterfaceDefinition.Name, &TypeSpec{
-				InterfaceDefinition: c.InterfaceDefinition,
-			})
+		if intdef := c.InterfaceDefinition; intdef != nil {
+			ctx.CurrentScope.AddType(&TypeSpec{InterfaceDefinition: intdef})
+
+			err := validateInterface(ctx, intdef)
+			if err != nil {
+				return nil, err
+			}
 
 			continue
 		}

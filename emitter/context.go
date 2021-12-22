@@ -5,6 +5,8 @@ import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Context struct {
@@ -79,10 +81,20 @@ func (scope *Scope) TypeOf(ident string) (*TypeSpec, error) {
 	}
 
 	if scope.Parent == nil {
-		return nil, fmt.Errorf("unknown identifier %s in scope: %#v", ident, scope)
+		return nil, errors.WithStack(fmt.Errorf("unknown identifier %s in scope: %#v", ident, scope))
 	}
 
 	return scope.Parent.TypeOf(ident)
+}
+
+func (s *Scope) ContainsIdent(ident string) bool {
+	_, ok := s.IdentTypes[ident]
+
+	if !ok && s.Parent != nil {
+		return s.Parent.ContainsIdent(ident)
+	}
+
+	return false
 }
 
 func (scope *Scope) NewIdent() string {
@@ -90,6 +102,48 @@ func (scope *Scope) NewIdent() string {
 	scope.nextIdentNum++
 
 	return fmt.Sprintf("ident%d", ident)
+}
+
+func (s *Scope) GetNamedType(name string) (*TypeSpec, error) {
+	for _, t := range s.Types {
+		if t.InterfaceDefinition != nil && t.InterfaceDefinition.Name == name {
+			return t, nil
+		}
+
+		if t.PrimitiveType != nil && string(*t.PrimitiveType) == name {
+			return t, nil
+		}
+	}
+
+	if s.Parent != nil {
+		return s.Parent.GetNamedType(name)
+	}
+
+	return nil, fmt.Errorf("failed to find type %s in scope", name)
+}
+
+func (s *Scope) ContainsType(t *TypeSpec) bool {
+	if t.InterfaceDefinition != nil {
+		i, _ := s.GetNamedType(t.InterfaceDefinition.Name)
+
+		return i != nil
+	}
+
+	if t.TypeReference != nil {
+		i, _ := s.GetNamedType(*t.TypeReference)
+
+		return i != nil
+	}
+
+	return false
+}
+
+func (s *Scope) ValidateHasType(t *TypeSpec) error {
+	if !s.ContainsType(t) {
+		return errors.WithStack(fmt.Errorf("unknown type %#v in current scope", t))
+	}
+
+	return nil
 }
 
 func (context *Context) TypeOf(ident string) (*TypeSpec, error) {
@@ -134,24 +188,19 @@ func NewContext(output *bufio.Writer) *Context {
 
 	global := ctx.EnterScope()
 
-	global.AddIdentifer("Console", &TypeSpec{
-		ObjectType: &ast.ObjectType{
-			Fields: []ast.ObjectTypeField{
+	global.AddType(&TypeSpec{
+		InterfaceDefinition: &ast.InterfaceDefinition{
+			Name: "Console",
+			Members: []*ast.InterfaceMemberDefinition{
 				{
-					Name: "log",
-					Type: ast.TypeIdentifier{
-						NonUnionType: &ast.NonUnionType{
-							LiteralType: &ast.LiteralType{
-								FunctionType: &ast.FunctionType{
-									Parameters: []ast.FunctionParameter{
-										{
-											Name: "fmt",
-											Type: ast.TypeIdentifier{
-												NonUnionType: &ast.NonUnionType{
-													TypeReference: strRef("any"),
-												},
-											},
-										},
+					Method: &ast.InterfaceMethodDefinition{
+						Name: "log",
+						Parameters: []ast.FunctionParameter{
+							{
+								Name: "fmt",
+								Type: ast.TypeIdentifier{
+									NonUnionType: &ast.NonUnionType{
+										TypeReference: strRef("any"),
 									},
 								},
 							},
@@ -164,7 +213,19 @@ func NewContext(output *bufio.Writer) *Context {
 
 	global.AddIdentifer("console", &TypeSpec{TypeReference: strRef("Console")})
 
+	for _, t := range primitiveTypes {
+		global.addPrimitiveType(t)
+	}
+
 	return &ctx
+}
+
+func (s *Scope) AddType(t *TypeSpec) {
+	s.Types = append(s.Types, t)
+}
+
+func (s *Scope) addPrimitiveType(t primitiveType) {
+	s.AddType(&TypeSpec{PrimitiveType: &t})
 }
 
 func strRef(str string) *string {

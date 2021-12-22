@@ -145,11 +145,11 @@ func getRuntimeTypeName(t *ast.TypeIdentifier) (string, error) {
 
 		if t := t.NonUnionType.LiteralType; t != nil {
 			if t.ObjectType != nil {
-				return string(TsObject), nil
+				return string(RtTsObject), nil
 			}
 
 			if t.FunctionType != nil {
-				return string(TsFunction), nil
+				return string(RtTsFunction), nil
 			}
 		}
 	}

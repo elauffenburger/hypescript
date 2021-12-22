@@ -74,30 +74,47 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (f
 func buildObjectAccessOperation(ctx *Context, access *ast.ObjectAccess, accessee *ast.Accessable, accesseeType *TypeSpec) (nextAccessee *ast.Accessable, err error) {
 	if t := accesseeType.ObjectType; t != nil {
 		fieldName := access.AccessedIdent
-		var field *ast.ObjectTypeField
 
 		for _, f := range t.Fields {
 			if f.Name == fieldName {
-				field = &f
-
-				break
+				return typeToAccessee(&f.Type)
 			}
 		}
 
-		if field == nil {
-			return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
-		}
+		return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
 
-		return typeToAccessee(&field.Type)
 	}
 
 	if t := accesseeType.TypeReference; t != nil {
-		referencedType, err := ctx.TypeOf(*t)
+		referencedType, err := ctx.CurrentScope.GetNamedType(*t)
 		if err != nil {
 			return nil, err
 		}
 
 		return buildObjectAccessOperation(ctx, access, accessee, referencedType)
+	}
+
+	if t := accesseeType.InterfaceDefinition; t != nil {
+		ident := access.AccessedIdent
+
+		for _, m := range t.Members {
+			if m.Field != nil && m.Field.Name == ident {
+				return typeToAccessee(&m.Field.Type)
+			}
+
+			if m.Method != nil && m.Method.Name == ident {
+				return &ast.Accessable{
+					LiteralType: &ast.LiteralType{
+						FunctionType: &ast.FunctionType{
+							Parameters: m.Method.Parameters,
+							ReturnType: m.Method.ReturnType,
+						},
+					},
+				}, nil
+			}
+		}
+
+		return nil, fmt.Errorf("failed to find member %s in %#v", ident, t)
 	}
 
 	return nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
@@ -114,7 +131,7 @@ func buildObjectInvocationOperation(ctx *Context, invoc *ast.ObjectInvocation, a
 	}
 
 	if t := accesseeType.TypeReference; t != nil {
-		referencedType, err := ctx.TypeOf(*t)
+		referencedType, err := ctx.CurrentScope.GetNamedType(*t)
 		if err != nil {
 			return nil, err
 		}

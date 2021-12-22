@@ -5,8 +5,8 @@ import (
 	"fmt"
 )
 
-func isCoreType(s string) bool {
-	for _, t := range coreTypes {
+func isRuntimeType(s string) bool {
+	for _, t := range runtimeTypes {
 		if s == string(t) {
 			return true
 		}
@@ -16,11 +16,11 @@ func isCoreType(s string) bool {
 }
 
 func mangleTypeNamePtr(name string) string {
-	if name == string(TsVoid) {
+	if name == string(RtTsVoid) {
 		return name
 	}
 
-	if isCoreType(name) {
+	if isRuntimeType(name) {
 		return fmt.Sprintf("%s*", name)
 	}
 
@@ -140,7 +140,7 @@ func fromAstTypeIdentifier(t *ast.TypeIdentifier) (*TypeSpec, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("unknown type identifier %v", t)
+	return nil, fmt.Errorf("unknown type identifier %#v", t)
 }
 
 func createUnionType(left, right *TypeSpec) (*TypeSpec, error) {
