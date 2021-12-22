@@ -95,10 +95,9 @@ func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
 		}
 
 		if c.InterfaceDefinition != nil {
-			err := addInterfaceDefinition(ctx, c.InterfaceDefinition)
-			if err != nil {
-				return nil, err
-			}
+			ctx.CurrentScope.AddIdentifer(c.InterfaceDefinition.Name, &TypeSpec{
+				InterfaceDefinition: c.InterfaceDefinition,
+			})
 
 			continue
 		}
