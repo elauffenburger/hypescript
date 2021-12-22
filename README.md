@@ -9,6 +9,7 @@ It compiles to standardized C++ so as long as your platform has a standards-comp
 - `function`s
     - [x] Named
     - [x] Anonymous
+    - [ ] Hoisting
 - Objects
     - [x] literals
     - [x] chained access
