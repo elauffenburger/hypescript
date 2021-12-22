@@ -9,19 +9,29 @@ import (
 type functionInfo struct {
 	Function *ast.FunctionInstantiation
 
-	ExplicitReturnType *ast.Type
-	ImplicitReturnType *ast.Type
+	ExplicitReturnType *TypeDefinition
+	ImplicitReturnType *TypeDefinition
 }
 
 func buildFunctionInfo(context *Context, function *ast.FunctionInstantiation) (*functionInfo, error) {
-	functionInfo := functionInfo{Function: function, ExplicitReturnType: function.ReturnType}
+	expRtnType, err := fromAstTypeIdentifier(function.ReturnType)
+	if err != nil {
+		return nil, err
+	}
+
+	fnInfo := functionInfo{Function: function, ExplicitReturnType: expRtnType}
 
 	context.EnterScope()
 
 	// TODO: need to add the function as a known identifier to the current scope.
 
 	for _, param := range function.Parameters {
-		context.CurrentScope.AddIdentifer(param.Name, &param.Type)
+		t, err := fromAstTypeIdentifier(&param.Type)
+		if err != nil {
+			return nil, err
+		}
+
+		context.CurrentScope.AddIdentifer(param.Name, t)
 	}
 
 	for _, stmtOrExpr := range function.Body {
@@ -46,38 +56,39 @@ func buildFunctionInfo(context *Context, function *ast.FunctionInstantiation) (*
 
 		// If this is a return stmt, update the implicit return type.
 		if stmt.ReturnStmt != nil {
-			returnStmtType, err := inferType(context, stmt.ReturnStmt)
+			rtnStmtType, err := inferType(context, stmt.ReturnStmt)
 			if err != nil {
 				return nil, err
 			}
 
 			// If we don't have an implied type yet, use this return statement's.
-			if functionInfo.ImplicitReturnType == nil {
-				functionInfo.ImplicitReturnType = returnStmtType
+			if fnInfo.ImplicitReturnType == nil {
+				fnInfo.ImplicitReturnType = rtnStmtType
 				continue
 			}
 
 			// ...otherwise, if the return types match, bail out.
-			if functionInfo.ImplicitReturnType == returnStmtType {
+			if fnInfo.ImplicitReturnType == rtnStmtType {
 				continue
 			}
 
 			// ...otherwise, we need to treat this as a union of the existing type and this type.
-			functionInfo.ImplicitReturnType = ast.CreateUnionType(functionInfo.ImplicitReturnType, returnStmtType)
+			unionT, err := createUnionType(fnInfo.ImplicitReturnType, rtnStmtType)
+			if err != nil {
+				return nil, err
+			}
+
+			fnInfo.ImplicitReturnType = unionT
 		}
 	}
 
-	if functionInfo.ImplicitReturnType == nil {
-		functionInfo.ImplicitReturnType = &ast.Type{
-			NonUnionType: &ast.NonUnionType{
-				TypeReference: strRef("void"),
-			},
-		}
+	if fnInfo.ImplicitReturnType == nil {
+		fnInfo.ImplicitReturnType = &TypeDefinition{TypeReference: strRef("void")}
 	}
 
 	context.ExitScope()
 
-	return &functionInfo, nil
+	return &fnInfo, nil
 }
 
 func (f *functionInfo) validate() error {
@@ -102,17 +113,16 @@ func writeFunctionDeclaration(ctx *Context, fn *ast.FunctionInstantiation) error
 		return err
 	}
 
-	returnType := fnInfo.ImplicitReturnType
+	rtnType, err := fnInfo.ImplicitReturnType.toAstTypeIdentifier()
+	if err != nil {
+		return err
+	}
 
 	if fn.Name != nil {
-		ctx.CurrentScope.AddIdentifer(*fn.Name, &ast.Type{
-			NonUnionType: &ast.NonUnionType{
-				LiteralType: &ast.LiteralType{
-					FunctionType: &ast.FunctionType{
-						Parameters: fn.Parameters,
-						ReturnType: returnType,
-					},
-				},
+		ctx.CurrentScope.AddIdentifer(*fn.Name, &TypeDefinition{
+			FunctionType: &ast.FunctionType{
+				Parameters: fn.Parameters,
+				ReturnType: rtnType,
 			},
 		})
 	}
@@ -145,7 +155,9 @@ func writeFunction(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *function
 
 	numParams := len(fn.Parameters)
 	for i, param := range fn.Parameters {
-		typeId, err := getTypeIdFor(ctx, &param.Type)
+		paramType, err := fromAstTypeIdentifier(&param.Type)
+
+		typeId, err := getTypeIdFor(ctx, paramType)
 		if err != nil {
 			return err
 		}
@@ -200,10 +212,8 @@ func writeFunctionLambda(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *fu
 		}
 	}
 
-	if t := fnInfo.ImplicitReturnType.NonUnionType; t != nil {
-		if t := t.TypeReference; t != nil && *t == string(TsVoid) {
-			ctx.WriteString("return NULL;")
-		}
+	if t := fnInfo.ImplicitReturnType.TypeReference; t != nil && *t == string(TsVoid) {
+		ctx.WriteString("return NULL;")
 	}
 
 	ctx.WriteString("}")

@@ -6,6 +6,7 @@ import (
 	"elauffenburger/hypescript/ast"
 	"embed"
 	"io"
+	"reflect"
 
 	"github.com/pkg/errors"
 )
@@ -46,6 +47,18 @@ type Emitter interface {
 	Emit(ast *ast.TS) ([]EmittedFile, error)
 }
 
+type TypeDefinition struct {
+	FunctionType        *ast.FunctionType
+	ObjectType          *ast.ObjectType
+	InterfaceDefinition *ast.InterfaceDefinition
+	TypeReference       *string
+	UnionType           *ast.UnionType
+}
+
+func (t *TypeDefinition) Equals(other *TypeDefinition) bool {
+	return reflect.DeepEqual(t, other)
+}
+
 type emitter struct{}
 
 type EmittedFile struct {
@@ -77,7 +90,20 @@ func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
 			if err != nil {
 				return nil, err
 			}
+
+			continue
 		}
+
+		if c.InterfaceDefinition != nil {
+			err := addInterfaceDefinition(ctx, c.InterfaceDefinition)
+			if err != nil {
+				return nil, err
+			}
+
+			continue
+		}
+
+		return nil, errors.Errorf("unknown top-level construct: %v", c)
 	}
 
 	ctx.WriteString(`return 0; }`)

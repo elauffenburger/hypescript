@@ -47,16 +47,16 @@ func (ctx *Context) WithinNewScope(operation func() error) error {
 type Scope struct {
 	Parent *Scope
 
-	IdentTypes map[string]*ast.Type
-	Types      []*ast.Type
+	IdentTypes map[string]*TypeDefinition
+	Types      []*TypeDefinition
 
 	nextIdentNum int
 }
 
 func NewScope() *Scope {
 	return &Scope{
-		IdentTypes: make(map[string]*ast.Type),
-		Types:      make([]*ast.Type, 0),
+		IdentTypes: make(map[string]*TypeDefinition),
+		Types:      make([]*TypeDefinition, 0),
 	}
 }
 
@@ -72,7 +72,7 @@ func (scope *Scope) Clone() *Scope {
 	return newScope
 }
 
-func (scope *Scope) TypeOf(ident string) (*ast.Type, error) {
+func (scope *Scope) TypeOf(ident string) (*TypeDefinition, error) {
 	t, ok := scope.IdentTypes[ident]
 	if ok {
 		return t, nil
@@ -92,7 +92,7 @@ func (scope *Scope) NewIdent() string {
 	return fmt.Sprintf("ident%d", ident)
 }
 
-func (context *Context) TypeOf(ident string) (*ast.Type, error) {
+func (context *Context) TypeOf(ident string) (*TypeDefinition, error) {
 	return context.CurrentScope.TypeOf(ident)
 }
 
@@ -123,7 +123,7 @@ func (context *Context) ExitScope() {
 	context.CurrentScope = context.scopes[len(context.scopes)-1]
 }
 
-func (scope *Scope) AddIdentifer(ident string, identType *ast.Type) {
+func (scope *Scope) AddIdentifer(ident string, identType *TypeDefinition) {
 	scope.IdentTypes[ident] = identType
 }
 
@@ -134,25 +134,21 @@ func NewContext(output *bufio.Writer) *Context {
 
 	global := ctx.EnterScope()
 
-	global.AddIdentifer("Console", &ast.Type{
-		NonUnionType: &ast.NonUnionType{
-			LiteralType: &ast.LiteralType{
-				ObjectType: &ast.ObjectType{
-					Fields: []ast.ObjectTypeField{
-						{
-							Name: "log",
-							Type: ast.Type{
-								NonUnionType: &ast.NonUnionType{
-									LiteralType: &ast.LiteralType{
-										FunctionType: &ast.FunctionType{
-											Parameters: []ast.FunctionParameter{
-												{
-													Name: "fmt",
-													Type: ast.Type{
-														NonUnionType: &ast.NonUnionType{
-															TypeReference: strRef("any"),
-														},
-													},
+	global.AddIdentifer("Console", &TypeDefinition{
+		ObjectType: &ast.ObjectType{
+			Fields: []ast.ObjectTypeField{
+				{
+					Name: "log",
+					Type: ast.TypeIdentifier{
+						NonUnionType: &ast.NonUnionType{
+							LiteralType: &ast.LiteralType{
+								FunctionType: &ast.FunctionType{
+									Parameters: []ast.FunctionParameter{
+										{
+											Name: "fmt",
+											Type: ast.TypeIdentifier{
+												NonUnionType: &ast.NonUnionType{
+													TypeReference: strRef("any"),
 												},
 											},
 										},
@@ -166,11 +162,7 @@ func NewContext(output *bufio.Writer) *Context {
 		},
 	})
 
-	global.AddIdentifer("console", &ast.Type{
-		NonUnionType: &ast.NonUnionType{
-			TypeReference: strRef("Console"),
-		},
-	})
+	global.AddIdentifer("console", &TypeDefinition{TypeReference: strRef("Console")})
 
 	return &ctx
 }

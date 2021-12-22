@@ -123,7 +123,7 @@ func writeIdentAssignment(ctx *Context, asign *ast.IdentAssignment) error {
 	return writeExpression(ctx, &asign.Assignment.Value)
 }
 
-func typeToAccessee(t *ast.Type) (*ast.Accessable, error) {
+func typeToAccessee(t *ast.TypeIdentifier) (*ast.Accessable, error) {
 	if t := t.NonUnionType; t != nil {
 		if t := t.LiteralType; t != nil {
 			return &ast.Accessable{LiteralType: t}, nil
@@ -137,7 +137,7 @@ func typeToAccessee(t *ast.Type) (*ast.Accessable, error) {
 	return nil, fmt.Errorf("could not convert type to accessee: %#v", t)
 }
 
-func getRuntimeTypeName(t *ast.Type) (string, error) {
+func getRuntimeTypeName(t *ast.TypeIdentifier) (string, error) {
 	if t.NonUnionType != nil {
 		if t.NonUnionType.TypeReference != nil {
 			return *t.NonUnionType.TypeReference, nil
@@ -157,13 +157,19 @@ func getRuntimeTypeName(t *ast.Type) (string, error) {
 	return "", fmt.Errorf("unknown type: %#v", t)
 }
 
-func inferAccessableType(ctx *Context, accessable ast.Accessable) (*ast.Type, error) {
+func inferAccessableType(ctx *Context, accessable ast.Accessable) (*TypeDefinition, error) {
 	if accessable.Ident != nil {
 		return ctx.TypeOf(*accessable.Ident)
 	}
 
-	if accessable.LiteralType != nil {
-		return &ast.Type{NonUnionType: &ast.NonUnionType{LiteralType: accessable.LiteralType}}, nil
+	if lit := accessable.LiteralType; lit != nil {
+		if lit.FunctionType != nil {
+			return &TypeDefinition{FunctionType: lit.FunctionType}, nil
+		}
+
+		if lit.ObjectType != nil {
+			return &TypeDefinition{ObjectType: lit.ObjectType}, nil
+		}
 	}
 
 	return nil, fmt.Errorf("unknown accessable type: %#v", accessable)
@@ -184,7 +190,7 @@ func writeIdent(ctx *Context, ident string) error {
 	return nil
 }
 
-func getTypeIdFor(ctx *Context, t *ast.Type) (int, error) {
+func getTypeIdFor(ctx *Context, t *TypeDefinition) (int, error) {
 	// TODO; need to actually make this work!
 
 	return 0, nil

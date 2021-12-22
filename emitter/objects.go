@@ -8,7 +8,7 @@ import (
 
 type chainedObjectOperationLink struct {
 	accessee     *ast.Accessable
-	accesseeType *ast.Type
+	accesseeType *TypeDefinition
 	operation    ast.ObjectOperation
 	next         *chainedObjectOperationLink
 	prev         *chainedObjectOperationLink
@@ -71,58 +71,55 @@ func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (f
 	return firstLink, currentLink, nil
 }
 
-func buildObjectAccessOperation(ctx *Context, access *ast.ObjectAccess, accessee *ast.Accessable, accesseeType *ast.Type) (nextAccessee *ast.Accessable, err error) {
-	if t := accesseeType.NonUnionType; t != nil {
-		if t := t.LiteralType; t != nil {
-			if t := t.ObjectType; t != nil {
-				fieldName := access.AccessedIdent
-				var field *ast.ObjectTypeField
+func buildObjectAccessOperation(ctx *Context, access *ast.ObjectAccess, accessee *ast.Accessable, accesseeType *TypeDefinition) (nextAccessee *ast.Accessable, err error) {
+	if t := accesseeType.ObjectType; t != nil {
+		fieldName := access.AccessedIdent
+		var field *ast.ObjectTypeField
 
-				for _, f := range t.Fields {
-					if f.Name == fieldName {
-						field = &f
+		for _, f := range t.Fields {
+			if f.Name == fieldName {
+				field = &f
 
-						break
-					}
-				}
-
-				if field == nil {
-					return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
-				}
-
-				return typeToAccessee(&field.Type)
+				break
 			}
 		}
 
-		if t := t.TypeReference; t != nil {
-			referencedType, err := ctx.TypeOf(*t)
-			if err != nil {
-				return nil, err
-			}
-
-			return buildObjectAccessOperation(ctx, access, accessee, referencedType)
+		if field == nil {
+			return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
 		}
+
+		return typeToAccessee(&field.Type)
+	}
+
+	if t := accesseeType.TypeReference; t != nil {
+		referencedType, err := ctx.TypeOf(*t)
+		if err != nil {
+			return nil, err
+		}
+
+		return buildObjectAccessOperation(ctx, access, accessee, referencedType)
 	}
 
 	return nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
 }
 
-func buildObjectInvocationOperation(ctx *Context, invoc *ast.ObjectInvocation, accessee *ast.Accessable, accesseeType *ast.Type) (nextAccessee *ast.Accessable, err error) {
-	if t := accesseeType.NonUnionType; t != nil {
-		if t := t.LiteralType; t != nil {
-			if t := t.FunctionType; t != nil {
-				return typeToAccessee(accesseeType)
-			}
+func buildObjectInvocationOperation(ctx *Context, invoc *ast.ObjectInvocation, accessee *ast.Accessable, accesseeType *TypeDefinition) (nextAccessee *ast.Accessable, err error) {
+	if t := accesseeType.FunctionType; t != nil {
+		t, err := accesseeType.toAstTypeIdentifier()
+		if err != nil {
+			return nil, err
 		}
 
-		if t := t.TypeReference; t != nil {
-			referencedType, err := ctx.TypeOf(*t)
-			if err != nil {
-				return nil, err
-			}
+		return typeToAccessee(t)
+	}
 
-			return buildObjectInvocationOperation(ctx, invoc, accessee, referencedType)
+	if t := accesseeType.TypeReference; t != nil {
+		referencedType, err := ctx.TypeOf(*t)
+		if err != nil {
+			return nil, err
 		}
+
+		return buildObjectInvocationOperation(ctx, invoc, accessee, referencedType)
 	}
 
 	return nil, fmt.Errorf("unknown type in object invocation: %#v", accesseeType)
@@ -208,9 +205,9 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 	return nil
 }
 
-func writeObjectInvocation(ctx *Context, accesseeType *ast.Type, invocation *ast.ObjectInvocation) error {
+func writeObjectInvocation(ctx *Context, accesseeType *TypeDefinition, invocation *ast.ObjectInvocation) error {
 	// TODO: this isn't always true!
-	fn := accesseeType.NonUnionType.LiteralType.FunctionType
+	fn := accesseeType.FunctionType
 
 	// Write the args.
 	args := strings.Builder{}

@@ -23,19 +23,19 @@ func TestParseSimpleFunction(t *testing.T) {
 		Functions: []ast.FunctionInstantiation{
 			{
 				Name: "foo",
-				ReturnType: &ast.Type{
+				ReturnType: &ast.TypeIdentifier{
 					NonUnionType: &ast.NonUnionType{TypeReference: strRef("num")},
 				},
 				Parameters: []ast.FunctionParameter{
 					{
 						Name: "bar",
-						Type: ast.Type{
+						Type: ast.TypeIdentifier{
 							NonUnionType: &ast.NonUnionType{TypeReference: strRef("string")},
 						},
 					},
 					{
 						Name: "baz",
-						Type: ast.Type{
+						Type: ast.TypeIdentifier{
 							NonUnionType: &ast.NonUnionType{TypeReference: strRef("num")},
 						},
 					},

@@ -8,7 +8,7 @@ type TypeDefinition struct {
 
 type InterfaceDefinition struct {
 	Name    string                       `"interface" @Ident "{"`
-	Members []*InterfaceMemberDefinition `(@@";")* "}"`
+	Members []*InterfaceMemberDefinition `@@* "}"`
 }
 
 type InterfaceMemberDefinition struct {
@@ -17,24 +17,24 @@ type InterfaceMemberDefinition struct {
 }
 
 type InterfaceFieldDefinition struct {
-	Name string `@Ident`
-	Type Type   `":" @@`
+	Name string         `@Ident`
+	Type TypeIdentifier `":" @@ ";"`
 }
 
 type InterfaceMethodDefinition struct {
 	Name       string              `@Ident`
 	Parameters []FunctionParameter `"(" (@@ ("," @@)*)? ")"`
-	ReturnType *Type               `(":" @@)?;`
+	ReturnType *TypeIdentifier     `(":" @@)? ";"`
 }
 
 type FunctionInstantiation struct {
 	Name       *string                 `"function" @Ident?`
 	Parameters []FunctionParameter     `"(" (@@ ("," @@)*)? ")"`
-	ReturnType *Type                   `(":" @@)?`
+	ReturnType *TypeIdentifier         `(":" @@)?`
 	Body       []StatementOrExpression `"{"@@*"}"`
 }
 
-type Type struct {
+type TypeIdentifier struct {
 	NonUnionType *NonUnionType `@@`
 	UnionType    *UnionType    `| @@`
 }
@@ -51,7 +51,7 @@ type LiteralType struct {
 
 type FunctionType struct {
 	Parameters []FunctionParameter `"(" (@@ ("," @@)*)? ")"`
-	ReturnType *Type               `"=>" @@`
+	ReturnType *TypeIdentifier     `"=>" @@`
 }
 
 type ObjectType struct {
@@ -59,8 +59,8 @@ type ObjectType struct {
 }
 
 type ObjectTypeField struct {
-	Name string `(@Ident | ("\""@Ident"\"")) ":"`
-	Type Type   `":" @@`
+	Name string         `(@Ident | ("\""@Ident"\"")) ":"`
+	Type TypeIdentifier `":" @@`
 }
 
 type UnionType struct {
@@ -69,8 +69,8 @@ type UnionType struct {
 }
 
 type FunctionParameter struct {
-	Name string `@Ident`
-	Type Type   `":" @@`
+	Name string         `@Ident`
+	Type TypeIdentifier `":" @@`
 }
 
 type StatementOrExpression struct {
@@ -147,14 +147,15 @@ type ObjectFieldInstantiation struct {
 }
 
 type TopLevelConstruct struct {
-	StatementOrExpression *StatementOrExpression `@@`
+	InterfaceDefinition   *InterfaceDefinition   `@@`
+	StatementOrExpression *StatementOrExpression `| @@`
 }
 
 type TS struct {
 	TopLevelConstructs []TopLevelConstruct `@@*`
 }
 
-func (left *Type) Equals(right *Type) bool {
+func (left *TypeIdentifier) Equals(right *TypeIdentifier) bool {
 	if right == nil {
 		return false
 	}
@@ -170,11 +171,11 @@ func (left *Type) Equals(right *Type) bool {
 	panic(fmt.Sprintf("Unsupported type comparison between %#v and %#v", left, right))
 }
 
-func CreateUnionType(left, right *Type) *Type {
+func CreateUnionType(left, right *TypeIdentifier) *UnionType {
 	if left.NonUnionType != nil && right.NonUnionType != nil {
 		left, right := left.NonUnionType, right.NonUnionType
 
-		return &Type{UnionType: &UnionType{Head: left, Tail: []NonUnionType{*right}}}
+		return &UnionType{Head: left, Tail: []NonUnionType{*right}}
 	}
 
 	panic(fmt.Errorf("Union type creation for %#v and %#v not implemented!", left, right))

@@ -15,7 +15,10 @@ It compiles to standardized C++ so as long as your platform has a standards-comp
     - [x] invocation
     - [ ] methods
 - [x] Closures
-- [x] `let` declarations
+- Variables
+    - [x] `let` declarations
+    - [ ] `const` declarations
+    - [ ] `var` declarations
 - Types
     - [x] `function` params
     - [ ] variable types

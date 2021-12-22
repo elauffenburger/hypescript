@@ -31,29 +31,27 @@ func mangleFunctionName(name string) string {
 	return fmt.Sprintf("%s", name)
 }
 
-func mangleIdentName(name string, identType *ast.Type) string {
-	if identType.NonUnionType != nil {
-		if identType.NonUnionType.LiteralType != nil {
-			if identType.NonUnionType.LiteralType.FunctionType != nil {
-				return mangleFunctionName(name)
-			}
-		}
+func mangleIdentName(name string, identType *TypeDefinition) string {
+	if identType.FunctionType != nil {
+		return mangleFunctionName(name)
 	}
 
 	return name
 }
 
-func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
+func inferType(ctx *Context, expr *ast.Expression) (*TypeDefinition, error) {
 	// TODO -- need to actually impl!
 
 	if expr.String != nil {
 		t := string(TsString)
-		return &ast.Type{NonUnionType: &ast.NonUnionType{TypeReference: &t}}, nil
+
+		return &TypeDefinition{TypeReference: &t}, nil
 	}
 
 	if expr.Number != nil {
 		t := string(TsNumber)
-		return &ast.Type{NonUnionType: &ast.NonUnionType{TypeReference: &t}}, nil
+
+		return &TypeDefinition{TypeReference: &t}, nil
 	}
 
 	if expr.Ident != nil {
@@ -61,14 +59,10 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 	}
 
 	if expr.FunctionInstantiation != nil {
-		return &ast.Type{
-			NonUnionType: &ast.NonUnionType{
-				LiteralType: &ast.LiteralType{
-					FunctionType: &ast.FunctionType{
-						Parameters: expr.FunctionInstantiation.Parameters,
-						ReturnType: expr.FunctionInstantiation.ReturnType,
-					},
-				},
+		return &TypeDefinition{
+			FunctionType: &ast.FunctionType{
+				Parameters: expr.FunctionInstantiation.Parameters,
+				ReturnType: expr.FunctionInstantiation.ReturnType,
 			},
 		}, nil
 	}
@@ -81,19 +75,20 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 				return nil, err
 			}
 
+			fieldTypeIdent, err := fieldType.toAstTypeIdentifier()
+			if err != nil {
+				return nil, err
+			}
+
 			fields[i] = ast.ObjectTypeField{
 				Name: field.Name,
-				Type: *fieldType,
+				Type: *fieldTypeIdent,
 			}
 		}
 
-		return &ast.Type{
-			NonUnionType: &ast.NonUnionType{
-				LiteralType: &ast.LiteralType{
-					ObjectType: &ast.ObjectType{
-						Fields: fields,
-					},
-				},
+		return &TypeDefinition{
+			ObjectType: &ast.ObjectType{
+				Fields: fields,
 			},
 		}, nil
 	}
@@ -108,4 +103,56 @@ func inferType(ctx *Context, expr *ast.Expression) (*ast.Type, error) {
 	}
 
 	return nil, fmt.Errorf("could not infer type of %#v", *expr)
+}
+
+func (t *TypeDefinition) toAstTypeIdentifier() (*ast.TypeIdentifier, error) {
+	// TODO: handle errors during mapping.
+	return &ast.TypeIdentifier{
+		NonUnionType: &ast.NonUnionType{
+			LiteralType: &ast.LiteralType{
+				FunctionType: t.FunctionType,
+				ObjectType:   t.ObjectType,
+			},
+			TypeReference: t.TypeReference,
+		},
+		UnionType: t.UnionType,
+	}, nil
+}
+
+func fromAstTypeIdentifier(t *ast.TypeIdentifier) (*TypeDefinition, error) {
+	if t == nil {
+		return nil, nil
+	}
+
+	if t := t.NonUnionType; t != nil {
+		if t := t.LiteralType; t != nil {
+			if t.FunctionType != nil {
+				return &TypeDefinition{FunctionType: t.FunctionType}, nil
+			}
+
+			if t.ObjectType != nil {
+				return &TypeDefinition{ObjectType: t.ObjectType}, nil
+			}
+		}
+
+		if t := t.TypeReference; t != nil {
+			return &TypeDefinition{TypeReference: t}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unknown type identifier %v", t)
+}
+
+func createUnionType(left, right *TypeDefinition) (*TypeDefinition, error) {
+	leftT, err := left.toAstTypeIdentifier()
+	if err != nil {
+		return nil, err
+	}
+
+	rightT, err := right.toAstTypeIdentifier()
+	if err != nil {
+		return nil, err
+	}
+
+	return &TypeDefinition{UnionType: ast.CreateUnionType(leftT, rightT)}, nil
 }

@@ -13,6 +13,16 @@ func main() {
 	parser := parser.New()
 
 	ast, err := parser.ParseString(`
+		interface Bar {
+			str: string;
+		}
+
+		interface Foo {
+			str: string;
+			num: number;
+			bar: Bar;
+		}
+
 		function foo(a: string, b: number): number {
 			let ay = 5;
 			let bee = "bar";
