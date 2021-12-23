@@ -2,7 +2,6 @@ package emitter
 
 import (
 	"bufio"
-	"elauffenburger/hypescript/ast"
 	"strings"
 )
 
@@ -33,6 +32,34 @@ func (ctx *Context) WithinPrintContext(operation func(*Context) error) (string, 
 	return output.String(), err
 }
 
+func (ctx *Context) WithinScope(s *Scope, op func() error) error {
+	oldScope := ctx.CurrentScope
+
+	ctx.CurrentScope = s
+	err := op()
+	ctx.CurrentScope = oldScope
+
+	return err
+}
+
+func (ctx *Context) WithinTempScope(operation func() (interface{}, error)) (interface{}, error) {
+	var scope *Scope
+	if ctx.CurrentScope != nil {
+		scope = ctx.CurrentScope.Clone()
+		scope.Parent = ctx.CurrentScope
+	} else {
+		scope = NewScope()
+	}
+
+	ctx.CurrentScope = scope
+
+	result, err := operation()
+
+	ctx.CurrentScope = scope.Parent
+
+	return result, err
+}
+
 func (ctx *Context) WithinNewScope(operation func() error) error {
 	ctx.EnterScope()
 
@@ -41,10 +68,6 @@ func (ctx *Context) WithinNewScope(operation func() error) error {
 	ctx.ExitScope()
 
 	return err
-}
-
-func (ctx *Context) TypeOf(ident string) (*TypeSpec, error) {
-	return ctx.CurrentScope.TypeOf(ident)
 }
 
 func (ctx *Context) EnterScope() *Scope {
@@ -68,27 +91,25 @@ func (ctx *Context) ExitScope() {
 	ctx.CurrentScope = ctx.CurrentScope.Parent
 }
 
-func NewContext(output *bufio.Writer) *Context {
+func NewContext(w *bufio.Writer) *Context {
 	ctx := Context{
-		Output: output,
+		Output: w,
 	}
 
 	global := ctx.EnterScope()
 
 	global.AddType(&TypeSpec{
-		InterfaceDefinition: &ast.InterfaceDefinition{
+		Interface: &Interface{
 			Name: "Console",
-			Members: []*ast.InterfaceMemberDefinition{
+			Members: []*InterfaceMember{
 				{
-					Method: &ast.InterfaceMethodDefinition{
+					Method: &InterfaceMethod{
 						Name: "log",
-						Parameters: []ast.FunctionParameter{
+						Parameters: []*FunctionParameter{
 							{
 								Name: "fmt",
-								Type: ast.TypeIdentifier{
-									NonUnionType: &ast.NonUnionType{
-										TypeReference: strRef("any"),
-									},
+								Type: &TypeSpec{
+									TypeReference: strRef("any"),
 								},
 							},
 						},

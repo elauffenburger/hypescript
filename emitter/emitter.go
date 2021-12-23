@@ -49,12 +49,154 @@ type Emitter interface {
 }
 
 type TypeSpec struct {
-	FunctionType        *ast.FunctionType
-	ObjectType          *ast.ObjectType
-	InterfaceDefinition *ast.InterfaceDefinition
-	TypeReference       *string
-	PrimitiveType       *primitiveType
-	UnionType           *ast.UnionType
+	Function      *Function
+	Object        *Object
+	Interface     *Interface
+	TypeReference *string
+	Primitive     *primitiveType
+	Union         *Union
+
+	Unresolved bool
+	Source     interface{}
+}
+
+type Function struct {
+	Name               *string
+	Parameters         []*FunctionParameter
+	ImplicitReturnType *TypeSpec
+	ExplicitReturnType *TypeSpec
+	Body               []*StatementOrExpression
+}
+
+type StatementOrExpression struct {
+	Statement  *Statement
+	Expression *Expression
+
+	Scope *Scope
+}
+
+type Expression struct {
+	Number                 *Number
+	String                 *string
+	IdentAssignment        *IdentAssignment
+	FunctionInstantiation  *Function
+	ChainedObjectOperation *ChainedObjectOperation
+	ObjectInstantiation    *ObjectInstantiation
+	Ident                  *string
+}
+
+type Object struct {
+	Fields []*ObjectTypeField
+}
+
+type ObjectTypeField struct {
+	Name string
+	Type *TypeSpec
+}
+
+type Interface struct {
+	Name    string
+	Members []*InterfaceMember
+}
+
+type InterfaceMember struct {
+	Field  *InterfaceField
+	Method *InterfaceMethod
+}
+
+type InterfaceField struct {
+	Name string
+	Type *TypeSpec
+}
+
+type InterfaceMethod struct {
+	Name       string
+	Parameters []*FunctionParameter
+	ReturnType *TypeSpec
+}
+
+type FunctionParameter struct {
+	Name string
+	Type *TypeSpec
+}
+
+type Union struct {
+	Head *TypeSpec
+	Tail []*TypeSpec
+}
+
+type IdentAssignment struct {
+	Ident      string
+	Assignment Assignment
+}
+
+type ChainedObjectOperation struct {
+	First *ObjectOperation
+	Last  *ObjectOperation
+}
+
+type ObjectOperation struct {
+	Accessee *Accessable
+
+	Access     *ObjectAccess
+	Invocation *ObjectInvocation
+	Assignment *Assignment
+
+	Next *ObjectOperation
+	Prev *ObjectOperation
+}
+
+type ObjectInvocation struct {
+	Accessee  *Accessable
+	Arguments []*Expression
+}
+
+type ObjectAccess struct {
+	AccessedIdent string
+}
+
+type Accessable struct {
+	Ident *string
+	Type  *TypeSpec
+}
+
+type Number struct {
+	Integer *int
+}
+
+type LetDecl struct {
+	Name  string
+	Value *Expression
+}
+
+type Statement struct {
+	FunctionInstantiation *Function
+	ExpressionStmt        *Expression
+	LetDecl               *LetDecl
+	ReturnStmt            *Expression
+}
+
+type Assignment struct {
+	Value *Expression
+}
+
+type ObjectInstantiation struct {
+	Fields []*ObjectFieldInstantiation
+}
+
+type ObjectFieldInstantiation struct {
+	Name  string
+	Type  *TypeSpec
+	Value *Expression
+}
+
+type TopLevelConstruct struct {
+	InterfaceDefinition   *Interface
+	StatementOrExpression *StatementOrExpression
+}
+
+type TS struct {
+	TopLevelConstructs []TopLevelConstruct
 }
 
 func (t *TypeSpec) Equals(other *TypeSpec) bool {
@@ -68,27 +210,12 @@ type EmittedFile struct {
 	Contents io.Reader
 }
 
-func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
-	contentBuffer := bytes.Buffer{}
-	contentWriter := bufio.NewReadWriter(bufio.NewReader(&contentBuffer), bufio.NewWriter(&contentBuffer))
-
-	runtime, err := emitRuntime()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to write runtime")
-	}
-
-	ctx := NewContext(contentWriter.Writer)
-
-	err = writePreamble(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx.WriteString("int main() { ")
+func (e emitter) buildContext(ast *ast.TS, output *bufio.Writer) (*Context, error) {
+	ctx := NewContext(output)
 
 	for _, c := range ast.TopLevelConstructs {
 		if c.StatementOrExpression != nil {
-			err := writeStatementOrExpression(ctx, c.StatementOrExpression)
+			_, err := ctx.registerStatementOrExpression(c.StatementOrExpression)
 			if err != nil {
 				return nil, err
 			}
@@ -97,12 +224,7 @@ func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
 		}
 
 		if intdef := c.InterfaceDefinition; intdef != nil {
-			ctx.CurrentScope.AddType(&TypeSpec{InterfaceDefinition: intdef})
-
-			err := validateInterface(ctx, intdef)
-			if err != nil {
-				return nil, err
-			}
+			ctx.registerInterface(intdef)
 
 			continue
 		}
@@ -110,14 +232,52 @@ func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
 		return nil, errors.Errorf("unknown top-level construct: %v", c)
 	}
 
+	return ctx, nil
+}
+
+func (e emitter) Emit(ast *ast.TS) ([]EmittedFile, error) {
+	buf := bytes.Buffer{}
+	rw := bufio.NewReadWriter(bufio.NewReader(&buf), bufio.NewWriter(&buf))
+
+	runtime, err := emitRuntime()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to write runtime")
+	}
+
+	ctx, err := e.buildContext(ast, rw.Writer)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = writePreamble(ctx); err != nil {
+		return nil, err
+	}
+
+	ctx.WriteString("int main() { ")
+
+	err = writeScope(ctx, ctx.CurrentScope)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx.WriteString(`return 0; }`)
 
-	err = ctx.Output.Flush()
-	if err != nil {
+	if err = ctx.Output.Flush(); err != nil {
 		return nil, errors.Wrap(err, "failed to write main.cpp")
 	}
 
-	return append(runtime, EmittedFile{Filename: "main.cpp", Contents: contentWriter.Reader}), nil
+	return append(runtime, EmittedFile{Filename: "main.cpp", Contents: rw.Reader}), nil
+}
+
+func writeScope(ctx *Context, s *Scope) error {
+	// Write statements & expressions.
+	for _, stmtOrExpr := range s.StatementsOrExpressions {
+		if err := writeStatementOrExpression(ctx, stmtOrExpr); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func New() Emitter {

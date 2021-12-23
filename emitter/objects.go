@@ -4,207 +4,167 @@ import (
 	"elauffenburger/hypescript/ast"
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
-type chainedObjectOperationLink struct {
-	accessee     *ast.Accessable
-	accesseeType *TypeSpec
-	operation    ast.ObjectOperation
-	next         *chainedObjectOperationLink
-	prev         *chainedObjectOperationLink
-}
+func chainedObjOperationFromAst(ctx *Context, chainedOp *ast.ChainedObjectOperation) (*ChainedObjectOperation, error) {
+	var firstLink *ObjectOperation
+	var currentLink *ObjectOperation
 
-func buildOperationChain(ctx *Context, chainedOp *ast.ChainedObjectOperation) (first, last *chainedObjectOperationLink, err error) {
-	var firstLink *chainedObjectOperationLink
-	var currentLink *chainedObjectOperationLink
+	accessee, err := fromAstAccessible(ctx, chainedOp.Accessee)
+	if err != nil {
+		return nil, err
+	}
 
-	accessee := &chainedOp.Accessee
-	for _, op := range chainedOp.Operations {
-		accesseeType, err := inferAccessableType(ctx, *accessee)
-		if err != nil {
-			return nil, nil, err
-		}
-
+	for _, astOp := range chainedOp.Operations {
 		// Create a new link.
-		link := chainedObjectOperationLink{
-			accessee:     accessee,
-			accesseeType: accesseeType,
-			operation:    op,
-			prev:         currentLink,
+		link := &ObjectOperation{
+			Accessee: accessee,
+			Prev:     currentLink,
 		}
 
 		if firstLink == nil {
-			firstLink = &link
+			firstLink = link
 		}
 
 		// Link the current link (if any) to the new link.
 		if currentLink != nil {
-			currentLink.next = &link
+			currentLink.Next = link
 		}
 
 		// Make the current link the new link.
-		currentLink = &link
+		currentLink = link
 
 		// Add "access" chain operation.
-		if access := op.Access; access != nil {
-			accessee, err = buildObjectAccessOperation(ctx, access, accessee, accesseeType)
-			if err != nil {
-				return nil, nil, err
+		if access := astOp.Access; access != nil {
+			link.Access = &ObjectAccess{
+				AccessedIdent: access.AccessedIdent,
 			}
+
+			accessee = &Accessable{Ident: &access.AccessedIdent}
 
 			continue
 		}
 
 		// Add "invocation" chain operation.
-		if invoc := op.Invocation; invoc != nil {
-			accessee, err = buildObjectInvocationOperation(ctx, invoc, accessee, accesseeType)
+		if astInvoc := astOp.Invocation; astInvoc != nil {
+			invoc, err := invocationFromAst(ctx, accessee, astInvoc)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
+			}
+
+			link.Invocation = invoc
+
+			if accessee.Ident != nil {
+				accessee = &Accessable{Ident: accessee.Ident}
+			} else if t := accessee.Type; t != nil {
+				if fn := accessee.Type.Function; fn != nil {
+					accessee = &Accessable{Type: fn.ImplicitReturnType}
+				} else {
+					accessee = &Accessable{Type: t}
+				}
 			}
 
 			continue
 		}
 
-		return nil, nil, fmt.Errorf("unknown operation in chained object operation: %#v", op)
+		return nil, fmt.Errorf("unknown operation in chained object operation: %#v", astOp)
 	}
 
-	return firstLink, currentLink, nil
-}
-
-func buildObjectAccessOperation(ctx *Context, access *ast.ObjectAccess, accessee *ast.Accessable, accesseeType *TypeSpec) (nextAccessee *ast.Accessable, err error) {
-	if t := accesseeType.ObjectType; t != nil {
-		fieldName := access.AccessedIdent
-
-		for _, f := range t.Fields {
-			if f.Name == fieldName {
-				return typeToAccessee(&f.Type)
-			}
-		}
-
-		return nil, fmt.Errorf("failed to find field %s in %#v", fieldName, accesseeType)
-
-	}
-
-	if t := accesseeType.TypeReference; t != nil {
-		referencedType, err := ctx.CurrentScope.GetNamedType(*t)
+	// Check if there's an assignment.
+	if assign := chainedOp.Assignment; assign != nil {
+		expr, err := expressionFromAst(ctx, &assign.Value)
 		if err != nil {
 			return nil, err
 		}
 
-		return buildObjectAccessOperation(ctx, access, accessee, referencedType)
-	}
-
-	if t := accesseeType.InterfaceDefinition; t != nil {
-		ident := access.AccessedIdent
-
-		for _, m := range t.Members {
-			if m.Field != nil && m.Field.Name == ident {
-				return typeToAccessee(&m.Field.Type)
-			}
-
-			if m.Method != nil && m.Method.Name == ident {
-				return &ast.Accessable{
-					LiteralType: &ast.LiteralType{
-						FunctionType: &ast.FunctionType{
-							Parameters: m.Method.Parameters,
-							ReturnType: m.Method.ReturnType,
-						},
-					},
-				}, nil
-			}
+		link := &ObjectOperation{
+			Accessee: accessee,
+			Assignment: &Assignment{
+				Value: expr,
+			},
 		}
 
-		return nil, fmt.Errorf("failed to find member %s in %#v", ident, t)
+		// This is a little weird, but we want to remove the
+		// previous link in the case of an assignment because
+		// the last link would have _looked_ like an access, but
+		// it's actually an assignment.
+		//
+		// i.e. `[access foo]->[access bar on foo]->[assign bar on bar "baz"]` becomes:
+		//      `[access foo]->[assign bar on foo "baz"]`
+		if currentLink != nil {
+			link.Prev = currentLink.Prev
+			currentLink.Prev.Next = link
+		}
+
+		currentLink = link
 	}
 
-	return nil, fmt.Errorf("unknown type in object access: %#v", accesseeType)
+	return &ChainedObjectOperation{First: firstLink, Last: currentLink}, nil
 }
 
-func buildObjectInvocationOperation(ctx *Context, invoc *ast.ObjectInvocation, accessee *ast.Accessable, accesseeType *TypeSpec) (nextAccessee *ast.Accessable, err error) {
-	if t := accesseeType.FunctionType; t != nil {
-		t, err := accesseeType.toAstTypeIdentifier()
-		if err != nil {
-			return nil, err
-		}
-
-		return typeToAccessee(t)
-	}
-
-	if t := accesseeType.TypeReference; t != nil {
-		referencedType, err := ctx.CurrentScope.GetNamedType(*t)
-		if err != nil {
-			return nil, err
-		}
-
-		return buildObjectInvocationOperation(ctx, invoc, accessee, referencedType)
-	}
-
-	return nil, fmt.Errorf("unknown type in object invocation: %#v", accesseeType)
-}
-
-func writeLink(ctx *Context, link, endLink *chainedObjectOperationLink) error {
-	if link == endLink {
-		return nil
-	}
-
-	if access := link.operation.Access; access != nil {
+func writeObjectOperation(ctx *Context, op *ObjectOperation) error {
+	if access := op.Access; access != nil {
 		// TODO: this won't always work!
 		ctx.WriteString(fmt.Sprintf("->getFieldValue(\"%s\")", access.AccessedIdent))
 
-		if link.next != nil {
-			return writeLink(ctx, link.next, endLink)
+		if op.Next != nil {
+			return writeObjectOperation(ctx, op.Next)
 		}
 
 		return nil
 	}
 
-	if link.operation.Invocation != nil {
-		err := writeObjectInvocation(ctx, link.accesseeType, link.operation.Invocation)
+	if op.Invocation != nil {
+		err := writeObjectInvocation(ctx, op.Accessee.Type, op.Invocation)
 		if err != nil {
 			return err
 		}
 
-		if link.next != nil {
-			return writeLink(ctx, link.next, endLink)
+		if op.Next != nil {
+			return writeObjectOperation(ctx, op.Next)
 		}
 
 		return nil
 	}
 
-	return fmt.Errorf("unknown operation in chained object operation: %#v", link)
+	if op.Assignment != nil {
+		ctx.WriteString(fmt.Sprintf("->setFieldValue(\"%s\", ", *op.Accessee.Ident))
+		writeExpression(ctx, op.Assignment.Value)
+		ctx.WriteString(")")
+
+		if op.Next != nil {
+			return fmt.Errorf("unexpected next operation after assignment on op %#v", op)
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("unknown operation in chained object operation: %#v", op)
 }
 
-func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) error {
+func writeObjectInstantiation(ctx *Context, objInst *ObjectInstantiation) error {
 	formattedFields := strings.Builder{}
-	for i, field := range objInst.Fields {
-		name := field.Name
+	for i, f := range objInst.Fields {
+		name := f.Name
 
-		fieldType, err := inferType(ctx, &field.Value)
+		typeId, err := getTypeIdFor(ctx, f.Type)
 		if err != nil {
 			return err
 		}
 
-		typeId, err := getTypeIdFor(ctx, fieldType)
-		if err != nil {
-			return err
-		}
-
-		fieldDescriptor := fmt.Sprintf("TsObjectFieldDescriptor(TsString(\"%s\"), %d)", name, typeId)
+		descriptor := fmt.Sprintf("TsObjectFieldDescriptor(TsString(\"%s\"), %d)", name, typeId)
 
 		value, err := ctx.WithinPrintContext(func(printCtx *Context) error {
-			return writeExpression(printCtx, &field.Value)
+			return writeExpression(printCtx, f.Value)
 		})
 
 		if err != nil {
 			return err
 		}
 
-		formattedFields.WriteString(
-			fmt.Sprintf(
-				"new TsObjectField(%s, %s)", fieldDescriptor,
-				value,
-			),
-		)
+		formattedFields.WriteString(fmt.Sprintf("new TsObjectField(%s, %s)", descriptor, value))
 
 		if i != len(objInst.Fields)-1 {
 			formattedFields.WriteString(", ")
@@ -222,9 +182,9 @@ func writeObjectInstantiation(ctx *Context, objInst *ast.ObjectInstantiation) er
 	return nil
 }
 
-func writeObjectInvocation(ctx *Context, accesseeType *TypeSpec, invocation *ast.ObjectInvocation) error {
+func writeObjectInvocation(ctx *Context, accesseeType *TypeSpec, invocation *ObjectInvocation) error {
 	// TODO: this isn't always true!
-	fn := accesseeType.FunctionType
+	fn := accesseeType.Function
 
 	// Write the args.
 	args := strings.Builder{}
@@ -233,7 +193,7 @@ func writeObjectInvocation(ctx *Context, accesseeType *TypeSpec, invocation *ast
 		arg := invocation.Arguments[i]
 
 		expr, err := ctx.WithinPrintContext(func(printCtx *Context) error {
-			return writeExpression(printCtx, &arg)
+			return writeExpression(printCtx, arg)
 		})
 
 		if err != nil {
@@ -252,30 +212,116 @@ func writeObjectInvocation(ctx *Context, accesseeType *TypeSpec, invocation *ast
 	return nil
 }
 
-func writeChainedObjectOperation(ctx *Context, op *ast.ChainedObjectOperation) error {
-	firstLink, lastLink, err := buildOperationChain(ctx, op)
-	if err != nil {
-		return err
-	}
-
+func writeChainedObjectOperation(ctx *Context, op *ChainedObjectOperation) error {
 	// TODO: this isn't always true!
-	writeIdent(ctx, *firstLink.accessee.Ident)
+	writeIdent(ctx, *op.First.Accessee.Ident)
 
-	var endLink *chainedObjectOperationLink = nil
-	if op.Assignment != nil {
-		endLink = lastLink
+	if err := rectifyChainedOperation(ctx, op); err != nil {
+		return err
 	}
 
-	err = writeLink(ctx, firstLink, endLink)
+	return writeObjectOperation(ctx, op.First)
+}
+
+func rectifyChainedOperation(ctx *Context, op *ChainedObjectOperation) error {
+	// TODO: this won't always be true!
+	// Figure out the type of the base object.
+	t, err := ctx.CurrentScope.GetResolvedType(*op.First.Accessee.Ident)
 	if err != nil {
 		return err
 	}
 
-	if op.Assignment != nil {
-		ctx.WriteString(fmt.Sprintf("->setFieldValue(\"%s\", ", lastLink.operation.Access.AccessedIdent))
-		writeExpression(ctx, &op.Assignment.Value)
-		ctx.WriteString(")")
+	// Attach the type.
+	op.First.Accessee.Type = t
+
+	currentOp := op.First
+	for currentOp != nil {
+		if currentOp.Access != nil {
+			if currentOp.Next == nil {
+				break
+			}
+
+			// Figure out the type of the field.
+			t, err = getFieldType(ctx, currentOp.Accessee.Type, currentOp.Access.AccessedIdent)
+			if err != nil {
+				return err
+			}
+
+			// Append the type for ourselves on the next chained op.
+			currentOp.Next.Accessee.Type = t
+		}
+
+		if currentOp.Invocation != nil {
+			if prev := currentOp.Prev; prev != nil {
+				// If the previous op was an access, move the type over.
+				if prev.Access != nil {
+					t, err = getFieldType(ctx, currentOp.Prev.Accessee.Type, *currentOp.Invocation.Accessee.Ident)
+					if err != nil {
+						return err
+					}
+
+					currentOp.Accessee.Type = t
+				}
+
+				// If the previous op was an invocation, grab the return type of the invoked
+				// object.
+				if prev.Invocation != nil {
+					// TODO: this won't always be true!
+					t := currentOp.Prev.Invocation.Accessee.Type.Function.ImplicitReturnType
+
+					currentOp.Invocation.Accessee.Type = t
+				}
+			}
+		}
+
+		currentOp = currentOp.Next
 	}
 
 	return nil
+}
+
+func getFieldType(ctx *Context, t *TypeSpec, field string) (*TypeSpec, error) {
+	if t.Object != nil {
+		for _, f := range t.Object.Fields {
+			if f.Name == field {
+				return ctx.CurrentScope.ResolveType(f.Type)
+			}
+		}
+	}
+
+	if t := t.Interface; t != nil {
+		for _, m := range t.Members {
+			if m.Field != nil && m.Field.Name == field {
+				return m.Field.Type, nil
+			}
+
+			if m.Method != nil && m.Method.Name == field {
+				return &TypeSpec{
+					Function: &Function{
+						Parameters: m.Method.Parameters,
+						// TODO: attach methods.
+					},
+				}, nil
+			}
+		}
+	}
+
+	return nil, errors.WithStack(fmt.Errorf("failed to resolve field type of %s on %#v", field, t))
+}
+
+func invocationFromAst(ctx *Context, accessee *Accessable, invoc *ast.ObjectInvocation) (*ObjectInvocation, error) {
+	args := make([]*Expression, len(invoc.Arguments))
+	for i, a := range invoc.Arguments {
+		expr, err := expressionFromAst(ctx, &a)
+		if err != nil {
+			return nil, err
+		}
+
+		args[i] = expr
+	}
+
+	return &ObjectInvocation{
+		Accessee:  accessee,
+		Arguments: args,
+	}, nil
 }

@@ -12,7 +12,7 @@ func validateInterface(ctx *Context, intdef *ast.InterfaceDefinition) error {
 
 	for _, member := range intdef.Members {
 		if member.Field != nil {
-			t, err := fromAstTypeIdentifier(&member.Field.Type)
+			t, err := fromAstTypeIdentifier(ctx, &member.Field.Type)
 			if err != nil {
 				return err
 			}
@@ -22,7 +22,7 @@ func validateInterface(ctx *Context, intdef *ast.InterfaceDefinition) error {
 			}
 		} else if m := member.Method; m != nil {
 			for _, param := range m.Parameters {
-				paramType, err := fromAstTypeIdentifier(&param.Type)
+				paramType, err := fromAstTypeIdentifier(ctx, &param.Type)
 				if err != nil {
 					return err
 				}
@@ -32,7 +32,7 @@ func validateInterface(ctx *Context, intdef *ast.InterfaceDefinition) error {
 				}
 			}
 
-			rtnType, err := fromAstTypeIdentifier(m.ReturnType)
+			rtnType, err := fromAstTypeIdentifier(ctx, m.ReturnType)
 			if err != nil {
 				return err
 			}

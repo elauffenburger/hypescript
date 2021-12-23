@@ -25,7 +25,7 @@ $Srcs = Get-ChildItem "./build" -Filter "*.cpp" | % { $_.FullName }
 pushd "./build"
 
 try {
-    cl $Srcs /link /out:main.exe
+    cl $Srcs /link /DEBUG:FULL /out:main.exe
     if ($LASTEXITCODE -ne 0) {
         throw "Compilation failed!"
     }

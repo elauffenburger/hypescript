@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "windows": {
+    "options": {
+      "shell": {
+        "executable": "cmd.exe",
+        "args": [
+          "/C",
+          "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017/\\Community\\Common7\\Tools\\VsDevCmd.bat\"",
+          "&&"
+        ]
+      }
+    }
+  },
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "run compiler",
+      "command": "go",
+      "args": ["run", "."]
+    },
+    {
+      "type": "shell",
+      "label": "build main.exe",
+      "command": "cl.exe",
+      "args": [
+        "/Zi",
+        "/EHsc",
+        "/Fe:",
+        "./build/main.exe",
+        "./build/main.cpp",
+        "./build/runtime.cpp"
+      ],
+      "problemMatcher": ["$msCompile"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "dependsOn": ["run compiler"]
+    }
+  ]
+}

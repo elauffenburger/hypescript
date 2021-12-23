@@ -28,10 +28,10 @@ type InterfaceMethodDefinition struct {
 }
 
 type FunctionInstantiation struct {
-	Name       *string                 `"function" @Ident?`
-	Parameters []FunctionParameter     `"(" (@@ ("," @@)*)? ")"`
-	ReturnType *TypeIdentifier         `(":" @@)?`
-	Body       []StatementOrExpression `"{"@@*"}"`
+	Name       *string                  `"function" @Ident?`
+	Parameters []*FunctionParameter     `"(" (@@ ("," @@)*)? ")"`
+	ReturnType *TypeIdentifier          `(":" @@)?`
+	Body       []*StatementOrExpression `"{"@@*"}"`
 }
 
 type TypeIdentifier struct {
@@ -50,12 +50,12 @@ type LiteralType struct {
 }
 
 type FunctionType struct {
-	Parameters []FunctionParameter `"(" (@@ ("," @@)*)? ")"`
-	ReturnType *TypeIdentifier     `"=>" @@`
+	Parameters []*FunctionParameter `"(" (@@ ("," @@)*)? ")"`
+	ReturnType *TypeIdentifier      `"=>" @@`
 }
 
 type ObjectType struct {
-	Fields []ObjectTypeField `"{" @@? ("," @@)* ","? "}"`
+	Fields []*ObjectTypeField `"{" @@? ("," @@)* ","? "}"`
 }
 
 type ObjectTypeField struct {
@@ -138,7 +138,7 @@ type Assignment struct {
 }
 
 type ObjectInstantiation struct {
-	Fields []ObjectFieldInstantiation `"{" @@? ("," @@)* ","? "}"`
+	Fields []*ObjectFieldInstantiation `"{" @@? ("," @@)* ","? "}"`
 }
 
 type ObjectFieldInstantiation struct {

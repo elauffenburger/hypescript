@@ -1,171 +1,53 @@
 package emitter
 
 import (
-	"elauffenburger/hypescript/ast"
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
-type functionInfo struct {
-	Function *ast.FunctionInstantiation
-
-	ExplicitReturnType *TypeSpec
-	ImplicitReturnType *TypeSpec
-}
-
-func buildFunctionInfo(context *Context, function *ast.FunctionInstantiation) (*functionInfo, error) {
-	expRtnType, err := fromAstTypeIdentifier(function.ReturnType)
-	if err != nil {
-		return nil, err
-	}
-
-	fnInfo := functionInfo{Function: function, ExplicitReturnType: expRtnType}
-
-	context.EnterScope()
-
-	// TODO: need to add the function as a known identifier to the current scope.
-
-	for _, param := range function.Parameters {
-		t, err := fromAstTypeIdentifier(&param.Type)
-		if err != nil {
-			return nil, err
-		}
-
-		context.CurrentScope.AddIdentifer(param.Name, t)
-	}
-
-	for _, stmtOrExpr := range function.Body {
-		// Expressions can't produce identifiers, so we can skip them.
-		if stmtOrExpr.Statement == nil {
-			continue
-		}
-
-		stmt := stmtOrExpr.Statement
-
-		// If this is a let decl, add the ident to the current scope.
-		if stmt.LetDecl != nil {
-			inferredType, err := inferType(context, &stmt.LetDecl.Value)
-			if err != nil {
-				return nil, err
-			}
-
-			context.CurrentScope.AddIdentifer(stmt.LetDecl.Name, inferredType)
-
-			continue
-		}
-
-		// If this is a return stmt, update the implicit return type.
-		if stmt.ReturnStmt != nil {
-			rtnStmtType, err := inferType(context, stmt.ReturnStmt)
-			if err != nil {
-				return nil, err
-			}
-
-			// If we don't have an implied type yet, use this return statement's.
-			if fnInfo.ImplicitReturnType == nil {
-				fnInfo.ImplicitReturnType = rtnStmtType
-				continue
-			}
-
-			// ...otherwise, if the return types match, bail out.
-			if fnInfo.ImplicitReturnType == rtnStmtType {
-				continue
-			}
-
-			// ...otherwise, we need to treat this as a union of the existing type and this type.
-			unionT, err := createUnionType(fnInfo.ImplicitReturnType, rtnStmtType)
-			if err != nil {
-				return nil, err
-			}
-
-			fnInfo.ImplicitReturnType = unionT
-		}
-	}
-
-	if fnInfo.ImplicitReturnType == nil {
-		fnInfo.ImplicitReturnType = &TypeSpec{TypeReference: strRef("void")}
-	}
-
-	context.ExitScope()
-
-	return &fnInfo, nil
-}
-
-func (f *functionInfo) validate() error {
+func (f *Function) validate() error {
 	// Make sure the implicit return type matches the implicit one (if any).
 	if rtnType := f.ExplicitReturnType; rtnType != nil {
 		if !rtnType.Equals(f.ImplicitReturnType) {
-			return fmt.Errorf("implicit and explicit return types of function were not the same: %#v", *f)
+			return errors.WithStack(fmt.Errorf("implicit and explicit return types of function were not the same: %#v", *f))
 		}
 	}
 
 	return nil
 }
 
-func writeFunctionDeclaration(ctx *Context, fn *ast.FunctionInstantiation) error {
-	// Build the complete info struct for this function.
-	fnInfo, err := buildFunctionInfo(ctx, fn)
+func writeFunctionDeclaration(ctx *Context, fn *Function) error {
+	if err := fn.validate(); err != nil {
+		return err
+	}
+
+	ctx.WriteString(fmt.Sprintf("TsFunction* %s = ", mangleFunctionName(*fn.Name)))
+
+	err := writeFunction(ctx, fn)
 	if err != nil {
 		return err
 	}
 
-	if err = fnInfo.validate(); err != nil {
-		return err
-	}
+	ctx.WriteString(";")
 
-	rtnType, err := fnInfo.ImplicitReturnType.toAstTypeIdentifier()
-	if err != nil {
-		return err
-	}
-
-	if fn.Name != nil {
-		ctx.CurrentScope.AddIdentifer(*fn.Name, &TypeSpec{
-			FunctionType: &ast.FunctionType{
-				Parameters: fn.Parameters,
-				ReturnType: rtnType,
-			},
-		})
-	}
-
-	return ctx.WithinNewScope(func() error {
-		var fnName string
-		if fn.Name != nil {
-			fnName = *fn.Name
-		} else {
-			fnName = ctx.CurrentScope.NewIdent()
-		}
-
-		ctx.WriteString(fmt.Sprintf("TsFunction* %s = ", mangleFunctionName(fnName)))
-
-		err = writeFunction(ctx, fn, fnInfo)
-		if err != nil {
-			return err
-		}
-
-		ctx.WriteString(";")
-
-		return nil
-	})
+	return nil
 }
 
-func writeFunction(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *functionInfo) error {
+func writeFunction(ctx *Context, fn *Function) error {
 	// Format the function params.
 	formattedParams := strings.Builder{}
 	formattedParams.WriteString("TsCoreHelpers::toVector<TsFunctionParam>({")
 
 	numParams := len(fn.Parameters)
-	for i, param := range fn.Parameters {
-		paramType, err := fromAstTypeIdentifier(&param.Type)
+	for i, p := range fn.Parameters {
+		typeId, err := getTypeIdFor(ctx, p.Type)
 		if err != nil {
 			return err
 		}
 
-		typeId, err := getTypeIdFor(ctx, paramType)
-		if err != nil {
-			return err
-		}
-
-		formattedParams.WriteString(fmt.Sprintf("TsFunctionParam(\"%s\", %d)", param.Name, typeId))
+		formattedParams.WriteString(fmt.Sprintf("TsFunctionParam(\"%s\", %d)", p.Name, typeId))
 
 		if i != numParams-1 {
 			formattedParams.WriteString(", ")
@@ -189,7 +71,7 @@ func writeFunction(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *function
 		),
 	)
 
-	err := writeFunctionLambda(ctx, fn, fnInfo)
+	err := writeFunctionLambda(ctx, fn)
 	if err != nil {
 		return err
 	}
@@ -199,7 +81,7 @@ func writeFunction(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *function
 	return nil
 }
 
-func writeFunctionLambda(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *functionInfo) error {
+func writeFunctionLambda(ctx *Context, fn *Function) error {
 	ctx.WriteString("[=](std::vector<TsFunctionArg> args) -> TsObject* {")
 
 	// Unpack each arg into local vars in the function.
@@ -208,14 +90,14 @@ func writeFunctionLambda(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *fu
 	}
 
 	// Write the body.
-	for _, exprOrStmt := range fn.Body {
-		err := writeStatementOrExpression(ctx, &exprOrStmt)
+	for _, stmtOrExpr := range fn.Body {
+		err := writeStatementOrExpression(ctx, stmtOrExpr)
 		if err != nil {
 			return err
 		}
 	}
 
-	if t := fnInfo.ImplicitReturnType.TypeReference; t != nil && *t == string(RtTsVoid) {
+	if t := fn.ImplicitReturnType.TypeReference; t != nil && *t == string(RtTsVoid) {
 		ctx.WriteString("return NULL;")
 	}
 
