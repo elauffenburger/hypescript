@@ -5,28 +5,6 @@ import (
 	"fmt"
 )
 
-func isRuntimeType(s string) bool {
-	for _, t := range runtimeTypes {
-		if s == string(t) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func mangleTypeNamePtr(name string) string {
-	if name == string(RtTsVoid) {
-		return name
-	}
-
-	if isRuntimeType(name) {
-		return fmt.Sprintf("%s*", name)
-	}
-
-	return fmt.Sprintf("ts_%s*", name)
-}
-
 func mangleFunctionName(name string) string {
 	return fmt.Sprintf("%s", name)
 }
@@ -155,4 +133,8 @@ func createUnionType(left, right *TypeSpec) (*TypeSpec, error) {
 	}
 
 	return &TypeSpec{UnionType: ast.CreateUnionType(leftT, rightT)}, nil
+}
+
+func strRef(str string) *string {
+	return &str
 }

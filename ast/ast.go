@@ -168,7 +168,7 @@ func (left *TypeIdentifier) Equals(right *TypeIdentifier) bool {
 		}
 	}
 
-	panic(fmt.Sprintf("Unsupported type comparison between %#v and %#v", left, right))
+	panic(fmt.Errorf("unsupported type comparison between %#v and %#v", left, right))
 }
 
 func CreateUnionType(left, right *TypeIdentifier) *UnionType {
@@ -178,5 +178,5 @@ func CreateUnionType(left, right *TypeIdentifier) *UnionType {
 		return &UnionType{Head: left, Tail: []NonUnionType{*right}}
 	}
 
-	panic(fmt.Errorf("Union type creation for %#v and %#v not implemented!", left, right))
+	panic(fmt.Errorf("union type creation for %#v and %#v not implemented", left, right))
 }
