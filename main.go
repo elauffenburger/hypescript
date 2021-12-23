@@ -62,7 +62,7 @@ func main() {
 				} 
 			};
 
-			obj.qux.a = "hello, world!!";
+			obj.qux.a = "hello, world!";
 
 			console.log(obj.qux.a);
 			obj.qux.foo();

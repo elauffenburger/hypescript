@@ -1,4 +1,4 @@
-package emitter
+package core
 
 import (
 	"fmt"
@@ -29,6 +29,39 @@ func NewScope() *Scope {
 	}
 }
 
+func NewGlobalScope() *Scope {
+	scope := NewScope()
+
+	scope.AddType(&TypeSpec{
+		Interface: &Interface{
+			Name: "Console",
+			Members: []*InterfaceMember{
+				{
+					Method: &InterfaceMethod{
+						Name: "log",
+						Parameters: []*FunctionParameter{
+							{
+								Name: "fmt",
+								Type: &TypeSpec{
+									TypeReference: strRef("any"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	scope.AddIdentifer("console", &TypeSpec{TypeReference: strRef("Console")})
+
+	for _, t := range PrimitiveTypes {
+		scope.AddPrimitiveType(t)
+	}
+
+	return scope
+}
+
 func (s *Scope) Clone() *Scope {
 	newScope := NewScope()
 
@@ -54,6 +87,14 @@ func (s *Scope) AddStmtOrExpr(stmtOrExpr *StatementOrExpression) *StatementOrExp
 	s.StatementsOrExpressions = append(s.StatementsOrExpressions, stmtOrExpr)
 
 	return stmtOrExpr
+}
+
+func (s *Scope) AddType(t *TypeSpec) {
+	s.Types = append(s.Types, t)
+}
+
+func (s *Scope) AddIdentifer(ident string, identType *TypeSpec) {
+	s.IdentTypes[ident] = identType
 }
 
 func (s *Scope) RegisteredTypeOf(ident string) *TypeSpec {
@@ -184,20 +225,62 @@ func (s *Scope) ValidateHasType(t *TypeSpec) error {
 	return nil
 }
 
-func (s *Scope) AddType(t *TypeSpec) {
-	s.Types = append(s.Types, t)
-}
-
-func (s *Scope) addPrimitiveType(t primitiveType) {
-	s.AddType(&TypeSpec{Primitive: &t})
-}
-
-func (s *Scope) AddIdentifer(ident string, identType *TypeSpec) {
-	s.IdentTypes[ident] = identType
-}
-
 func (s *Scope) NewPlaceholderTypeExpression(source interface{}) *TypeSpec {
 	t := &TypeSpec{Unresolved: true, Source: source}
 
 	return t
+}
+
+func (s *Scope) AddPrimitiveType(t PrimitiveType) {
+	s.AddType(&TypeSpec{Primitive: &t})
+}
+
+func (s *Scope) GetTypeIdFor(t *TypeSpec) (int, error) {
+	// TODO; need to actually make this work!
+
+	return 0, nil
+}
+
+func (s *Scope) InferType(expr *Expression) (*TypeSpec, error) {
+	if expr.String != nil {
+		t := string(TsString)
+
+		return &TypeSpec{TypeReference: &t}, nil
+	}
+
+	if expr.Number != nil {
+		t := string(TsNumber)
+
+		return &TypeSpec{TypeReference: &t}, nil
+	}
+
+	if expr.Ident != nil {
+		return s.TypeOf(*expr.Ident)
+	}
+
+	if fn := expr.FunctionInstantiation; fn != nil {
+		return &TypeSpec{Function: fn}, nil
+	}
+
+	if objInst := expr.ObjectInstantiation; objInst != nil {
+		fields := make([]*ObjectTypeField, len(objInst.Fields))
+		for i, f := range objInst.Fields {
+			fields[i] = &ObjectTypeField{
+				Name: f.Name,
+				Type: f.Type,
+			}
+		}
+
+		return &TypeSpec{Object: &Object{Fields: fields}}, nil
+	}
+
+	if chain := expr.ChainedObjectOperation; chain != nil {
+		return chain.Last.Accessee.Type, nil
+	}
+
+	return nil, fmt.Errorf("unable to infer type")
+}
+
+func strRef(str string) *string {
+	return &str
 }

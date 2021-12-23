@@ -1,13 +1,14 @@
-package emitter
+package writepass
 
 import (
+	"elauffenburger/hypescript/emitter/core"
 	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
 )
 
-func (f *Function) validate() error {
+func validate(f *core.Function) error {
 	// Make sure the implicit return type matches the implicit one (if any).
 	if rtnType := f.ExplicitReturnType; rtnType != nil {
 		if !rtnType.Equals(f.ImplicitReturnType) {
@@ -18,14 +19,14 @@ func (f *Function) validate() error {
 	return nil
 }
 
-func writeFunctionDeclaration(ctx *Context, fn *Function) error {
-	if err := fn.validate(); err != nil {
+func (ctx *Context) writeFunctionDeclaration(fn *core.Function) error {
+	if err := validate(fn); err != nil {
 		return err
 	}
 
 	ctx.WriteString(fmt.Sprintf("TsFunction* %s = ", mangleFunctionName(*fn.Name)))
 
-	err := writeFunction(ctx, fn)
+	err := ctx.writeFunction(fn)
 	if err != nil {
 		return err
 	}
@@ -35,14 +36,14 @@ func writeFunctionDeclaration(ctx *Context, fn *Function) error {
 	return nil
 }
 
-func writeFunction(ctx *Context, fn *Function) error {
+func (ctx *Context) writeFunction(fn *core.Function) error {
 	// Format the function params.
 	formattedParams := strings.Builder{}
 	formattedParams.WriteString("TsCoreHelpers::toVector<TsFunctionParam>({")
 
 	numParams := len(fn.Parameters)
 	for i, p := range fn.Parameters {
-		typeId, err := getTypeIdFor(ctx, p.Type)
+		typeId, err := ctx.currentScope().GetTypeIdFor(p.Type)
 		if err != nil {
 			return err
 		}
@@ -60,7 +61,7 @@ func writeFunction(ctx *Context, fn *Function) error {
 	if fn.Name != nil {
 		fnName = *fn.Name
 	} else {
-		fnName = ctx.CurrentScope.NewIdent()
+		fnName = ctx.currentScope().NewIdent()
 	}
 
 	ctx.WriteString(
@@ -71,7 +72,7 @@ func writeFunction(ctx *Context, fn *Function) error {
 		),
 	)
 
-	err := writeFunctionLambda(ctx, fn)
+	err := ctx.writeFunctionLambda(fn)
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func writeFunction(ctx *Context, fn *Function) error {
 	return nil
 }
 
-func writeFunctionLambda(ctx *Context, fn *Function) error {
+func (ctx *Context) writeFunctionLambda(fn *core.Function) error {
 	ctx.WriteString("[=](std::vector<TsFunctionArg> args) -> TsObject* {")
 
 	// Unpack each arg into local vars in the function.
@@ -91,13 +92,13 @@ func writeFunctionLambda(ctx *Context, fn *Function) error {
 
 	// Write the body.
 	for _, stmtOrExpr := range fn.Body {
-		err := writeStatementOrExpression(ctx, stmtOrExpr)
+		err := ctx.writeStatementOrExpression(stmtOrExpr)
 		if err != nil {
 			return err
 		}
 	}
 
-	if t := fn.ImplicitReturnType.TypeReference; t != nil && *t == string(RtTsVoid) {
+	if t := fn.ImplicitReturnType.TypeReference; t != nil && *t == string(core.RtTsVoid) {
 		ctx.WriteString("return NULL;")
 	}
 
