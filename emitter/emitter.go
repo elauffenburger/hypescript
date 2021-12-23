@@ -38,7 +38,7 @@ type typeId int
 
 const (
 	TypeIdNone       typeId = 0
-	TypeIdTsObject   typeId = 2
+	TypeIdTsObject   typeId = 1
 	TypeIdTsNum      typeId = 2
 	TypeIdTsString   typeId = 3
 	TypeIdTsFunction typeId = 4
