@@ -137,26 +137,6 @@ func typeToAccessee(t *ast.TypeIdentifier) (*ast.Accessable, error) {
 	return nil, fmt.Errorf("could not convert type to accessee: %#v", t)
 }
 
-func getRuntimeTypeName(t *ast.TypeIdentifier) (string, error) {
-	if t.NonUnionType != nil {
-		if t.NonUnionType.TypeReference != nil {
-			return *t.NonUnionType.TypeReference, nil
-		}
-
-		if t := t.NonUnionType.LiteralType; t != nil {
-			if t.ObjectType != nil {
-				return string(RtTsObject), nil
-			}
-
-			if t.FunctionType != nil {
-				return string(RtTsFunction), nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("unknown type: %#v", t)
-}
-
 func inferAccessableType(ctx *Context, accessable ast.Accessable) (*TypeSpec, error) {
 	if accessable.Ident != nil {
 		return ctx.TypeOf(*accessable.Ident)

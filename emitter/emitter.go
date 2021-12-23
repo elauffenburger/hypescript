@@ -32,8 +32,6 @@ const (
 	RtTsVoid     runtimeType = "void"
 )
 
-var runtimeTypes = []runtimeType{RtTsObject, RtTsFunction, RtTsVoid}
-
 type typeId int
 
 const (

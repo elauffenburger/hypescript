@@ -6,7 +6,7 @@ import (
 )
 
 func mangleFunctionName(name string) string {
-	return fmt.Sprintf("%s", name)
+	return name
 }
 
 func mangleIdentName(name string, identType *TypeSpec) string {

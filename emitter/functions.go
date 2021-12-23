@@ -156,6 +156,9 @@ func writeFunction(ctx *Context, fn *ast.FunctionInstantiation, fnInfo *function
 	numParams := len(fn.Parameters)
 	for i, param := range fn.Parameters {
 		paramType, err := fromAstTypeIdentifier(&param.Type)
+		if err != nil {
+			return err
+		}
 
 		typeId, err := getTypeIdFor(ctx, paramType)
 		if err != nil {
