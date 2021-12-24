@@ -30,19 +30,39 @@ func TestEmitForComplexCode(t *testing.T) {
 
 		function blah2() {}
 
-		function main(): void {
+		function returnsFn() {
+			return function() {
+				console.log("in nested!");
+			};
+		}
+
+		function run(): void {
+			function baz() {
+				console.log("in baz!");
+			}
+
 			let obj = { 
 				foo: "bar", 
 				baz: 5, 
 				qux: { 
-					a: "a"
+					a: "a",
+					foo: function() {
+						console.log("in foo!");
+					}
 				} 
 			};
 
-			obj.qux.a = "b";
+			obj.qux.a = "hello, world!";
 
-			blah();
+			console.log(obj.qux.a);
+			obj.qux.foo();
+
+			baz();
+
+			returnsFn()();
 		}
+
+		run();
 	`
 
 	assertCodeMatchesSnapshot(t, code)
@@ -51,7 +71,10 @@ func TestEmitForComplexCode(t *testing.T) {
 func assertCodeMatchesSnapshot(t *testing.T, code string) {
 	emitted := emitForString(t, code)
 
-	cupaloy.Snapshot(t, emitted)
+	err := cupaloy.Snapshot(emitted)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func emitForString(t *testing.T, code string) string {
