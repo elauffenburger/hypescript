@@ -1,0 +1,235 @@
+(*testing.T)({
+  common: (testing.common) {
+    mu: (sync.RWMutex) {
+      w: (sync.Mutex) {
+        state: (int32) 0,
+        sema: (uint32) 0
+      },
+      writerSem: (uint32) 0,
+      readerSem: (uint32) 0,
+      readerCount: (int32) 0,
+      readerWait: (int32) 0
+    },
+    output: ([]uint8) <nil>,
+    w: (testing.indenter) {
+      c: (*testing.common)(<already shown>)
+    },
+    ran: (bool) false,
+    failed: (bool) false,
+    skipped: (bool) false,
+    done: (bool) false,
+    helperPCs: (map[uintptr]struct {}) <nil>,
+    helperNames: (map[string]struct {}) <nil>,
+    cleanups: ([]func()) <nil>,
+    cleanupName: (string) "",
+    cleanupPc: ([]uintptr) <nil>,
+    finished: (bool) false,
+    chatty: (*testing.chattyPrinter)(<nil>),
+    bench: (bool) false,
+    hasSub: (int32) 0,
+    raceErrors: (int) 0,
+    runner: (string) (len=15) "testing.tRunner",
+    parent: (*testing.common)({
+      mu: (sync.RWMutex) {
+        w: (sync.Mutex) {
+          state: (int32) 0,
+          sema: (uint32) 0
+        },
+        writerSem: (uint32) 0,
+        readerSem: (uint32) 0,
+        readerCount: (int32) 0,
+        readerWait: (int32) 0
+      },
+      output: ([]uint8) <nil>,
+      w: (*os.File)({
+        file: (*os.file)({
+          pfd: (poll.FD) {
+            fdmu: (poll.fdMutex) {
+              state: (uint64) 0,
+              rsema: (uint32) 0,
+              wsema: (uint32) 0
+            },
+            Sysfd: (syscall.Handle) 0x27c,
+            rop: (poll.operation) {
+              o: (syscall.Overlapped) {
+                Internal: (uintptr) <nil>,
+                InternalHigh: (uintptr) <nil>,
+                Offset: (uint32) 0,
+                OffsetHigh: (uint32) 0,
+                HEvent: (syscall.Handle) <nil>
+              },
+              runtimeCtx: (uintptr) <nil>,
+              mode: (int32) 114,
+              errno: (int32) 0,
+              qty: (uint32) 0,
+              fd: (*poll.FD)(<already shown>),
+              buf: (syscall.WSABuf) {
+                Len: (uint32) 0,
+                Buf: (*uint8)(<nil>)
+              },
+              msg: (windows.WSAMsg) {
+                Name: (syscall.Pointer)(<nil>),
+                Namelen: (int32) 0,
+                Buffers: (*syscall.WSABuf)(<nil>),
+                BufferCount: (uint32) 0,
+                Control: (syscall.WSABuf) {
+                  Len: (uint32) 0,
+                  Buf: (*uint8)(<nil>)
+                },
+                Flags: (uint32) 0
+              },
+              sa: (syscall.Sockaddr) <nil>,
+              rsa: (*syscall.RawSockaddrAny)(<nil>),
+              rsan: (int32) 0,
+              handle: (syscall.Handle) <nil>,
+              flags: (uint32) 0,
+              bufs: ([]syscall.WSABuf) <nil>
+            },
+            wop: (poll.operation) {
+              o: (syscall.Overlapped) {
+                Internal: (uintptr) <nil>,
+                InternalHigh: (uintptr) <nil>,
+                Offset: (uint32) 0,
+                OffsetHigh: (uint32) 0,
+                HEvent: (syscall.Handle) <nil>
+              },
+              runtimeCtx: (uintptr) <nil>,
+              mode: (int32) 119,
+              errno: (int32) 0,
+              qty: (uint32) 0,
+              fd: (*poll.FD)(<already shown>),
+              buf: (syscall.WSABuf) {
+                Len: (uint32) 0,
+                Buf: (*uint8)(<nil>)
+              },
+              msg: (windows.WSAMsg) {
+                Name: (syscall.Pointer)(<nil>),
+                Namelen: (int32) 0,
+                Buffers: (*syscall.WSABuf)(<nil>),
+                BufferCount: (uint32) 0,
+                Control: (syscall.WSABuf) {
+                  Len: (uint32) 0,
+                  Buf: (*uint8)(<nil>)
+                },
+                Flags: (uint32) 0
+              },
+              sa: (syscall.Sockaddr) <nil>,
+              rsa: (*syscall.RawSockaddrAny)(<nil>),
+              rsan: (int32) 0,
+              handle: (syscall.Handle) <nil>,
+              flags: (uint32) 0,
+              bufs: ([]syscall.WSABuf) <nil>
+            },
+            pd: (poll.pollDesc) {
+              runtimeCtx: (uintptr) <nil>
+            },
+            l: (sync.Mutex) {
+              state: (int32) 0,
+              sema: (uint32) 0
+            },
+            lastbits: ([]uint8) <nil>,
+            readuint16: ([]uint16) <nil>,
+            readbyte: ([]uint8) <nil>,
+            readbyteOffset: (int) 0,
+            csema: (uint32) 0,
+            skipSyncNotif: (bool) false,
+            IsStream: (bool) true,
+            ZeroReadIsEOF: (bool) true,
+            isFile: (bool) true,
+            kind: (poll.fileKind) 4
+          },
+          name: (string) (len=11) "/dev/stdout",
+          dirinfo: (*os.dirInfo)(<nil>),
+          appendMode: (bool) false
+        })
+      }),
+      ran: (bool) false,
+      failed: (bool) false,
+      skipped: (bool) false,
+      done: (bool) false,
+      helperPCs: (map[uintptr]struct {}) <nil>,
+      helperNames: (map[string]struct {}) <nil>,
+      cleanups: ([]func()) <nil>,
+      cleanupName: (string) "",
+      cleanupPc: ([]uintptr) <nil>,
+      finished: (bool) false,
+      chatty: (*testing.chattyPrinter)(<nil>),
+      bench: (bool) false,
+      hasSub: (int32) 1,
+      raceErrors: (int) 0,
+      runner: (string) (len=15) "testing.tRunner",
+      parent: (*testing.common)(<nil>),
+      level: (int) 0,
+      creator: ([]uintptr) <nil>,
+      name: (string) "",
+      start: (time.Time) 2021-12-23 16:01:44.0070485 -0800 PST m=+0.005336301,
+      duration: (time.Duration) 0s,
+      barrier: (chan bool) 0xc0000be1e0,
+      signal: (chan bool) 0xc0000b81c0,
+      sub: ([]*testing.T) <nil>,
+      tempDirMu: (sync.Mutex) {
+        state: (int32) 0,
+        sema: (uint32) 0
+      },
+      tempDir: (string) "",
+      tempDirErr: (error) <nil>,
+      tempDirSeq: (int32) 0
+    }),
+    level: (int) 1,
+    creator: ([]uintptr) (len=7) {
+      (uintptr) 0x81feae,
+      (uintptr) 0x81d6a2,
+      (uintptr) 0x81fd5f,
+      (uintptr) 0x81eabd,
+      (uintptr) 0x8b7c6b,
+      (uintptr) 0x77ab77,
+      (uintptr) 0x7a6c01
+    },
+    name: (string) (len=22) "TestEmitForComplexCode",
+    start: (time.Time) 2021-12-23 16:01:44.0070485 -0800 PST m=+0.005336301,
+    duration: (time.Duration) 0s,
+    barrier: (chan bool) 0xc0000be240,
+    signal: (chan bool) 0xc0000b8230,
+    sub: ([]*testing.T) <nil>,
+    tempDirMu: (sync.Mutex) {
+      state: (int32) 0,
+      sema: (uint32) 0
+    },
+    tempDir: (string) "",
+    tempDirErr: (error) <nil>,
+    tempDirSeq: (int32) 0
+  },
+  isParallel: (bool) false,
+  isEnvSet: (bool) false,
+  context: (*testing.testContext)({
+    match: (*testing.matcher)({
+      filter: ([]string) <nil>,
+      matchFunc: (func(string, string) (bool, error)) 0x8212a0,
+      mu: (sync.Mutex) {
+        state: (int32) 0,
+        sema: (uint32) 0
+      },
+      subNames: (map[string]int64) {
+      }
+    }),
+    deadline: (time.Time) 2021-12-23 16:11:44.0070485 -0800 PST m=+600.005336301,
+    mu: (sync.Mutex) {
+      state: (int32) 0,
+      sema: (uint32) 0
+    },
+    startParallel: (chan bool) 0xc0000be180,
+    running: (int) 1,
+    numWaiting: (int) 0,
+    maxParallel: (int) 4
+  })
+})
+
+		#include <stdlib.h>
+		#include <stdio.h>
+		#include <string>
+		#include <vector>
+		#include <algorithm>
+		#include <memory>
+	
+		#include "runtime.hpp"
+	int main() { TsFunction* foo = new TsFunction("foo", TsCoreHelpers::toVector<TsFunctionParam>({TsFunctionParam("a", 0), TsFunctionParam("b", 0)}), [=](std::vector<TsFunctionArg> args) -> TsObject* {auto a = TsFunctionArg::findArg(args, "a").value;auto b = TsFunctionArg::findArg(args, "b").value;auto ay = new TsNum(5);auto bee = new TsString("bar");return ay;});TsFunction* blah = new TsFunction("blah", TsCoreHelpers::toVector<TsFunctionParam>({}), [=](std::vector<TsFunctionArg> args) -> TsObject* {auto foo = new TsString("asdf");auto bar = foo;bar = new TsString("bar");return foo;});TsFunction* blah2 = new TsFunction("blah2", TsCoreHelpers::toVector<TsFunctionParam>({}), [=](std::vector<TsFunctionArg> args) -> TsObject* {return NULL;});TsFunction* main = new TsFunction("main", TsCoreHelpers::toVector<TsFunctionParam>({}), [=](std::vector<TsFunctionArg> args) -> TsObject* {auto obj = new TsObject(1, TsCoreHelpers::toVector<TsObjectField*>({new TsObjectField(TsObjectFieldDescriptor(TsString("foo"), 0), new TsString("bar")), new TsObjectField(TsObjectFieldDescriptor(TsString("baz"), 0), new TsNum(5)), new TsObjectField(TsObjectFieldDescriptor(TsString("qux"), 0), new TsObject(1, TsCoreHelpers::toVector<TsObjectField*>({new TsObjectField(TsObjectFieldDescriptor(TsString("a"), 0), new TsString("a"))})))}));obj->getFieldValue("qux")->setFieldValue("a", new TsString("b"));blah->invoke(TsCoreHelpers::toVector<TsFunctionArg>({}));return NULL;});return 0; }

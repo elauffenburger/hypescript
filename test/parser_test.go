@@ -20,48 +20,54 @@ func TestParseSimpleFunction(t *testing.T) {
 	`, t)
 
 	assertEqual(t, parsed, &ast.TS{
-		Functions: []ast.FunctionInstantiation{
+		TopLevelConstructs: []ast.TopLevelConstruct{
 			{
-				Name: "foo",
-				ReturnType: &ast.TypeIdentifier{
-					NonUnionType: &ast.NonUnionType{TypeReference: strRef("num")},
-				},
-				Parameters: []ast.FunctionParameter{
-					{
-						Name: "bar",
-						Type: ast.TypeIdentifier{
-							NonUnionType: &ast.NonUnionType{TypeReference: strRef("string")},
-						},
-					},
-					{
-						Name: "baz",
-						Type: ast.TypeIdentifier{
-							NonUnionType: &ast.NonUnionType{TypeReference: strRef("num")},
-						},
-					},
-				},
-				Body: []ast.StatementOrExpression{
-					{
-						Statement: &ast.Statement{
-							LetDecl: &ast.LetDecl{
-								Name: "foo",
-								Value: ast.Expression{
-									Number: &ast.Number{Integer: intRef(5)},
+				StatementOrExpression: &ast.StatementOrExpression{
+					Statement: &ast.Statement{
+						FunctionInstantiation: &ast.FunctionInstantiation{
+							Name: strRef("foo"),
+							ReturnType: &ast.TypeIdentifier{
+								NonUnionType: &ast.NonUnionType{TypeReference: strRef("num")},
+							},
+							Parameters: []*ast.FunctionParameter{
+								{
+									Name: "bar",
+									Type: ast.TypeIdentifier{
+										NonUnionType: &ast.NonUnionType{TypeReference: strRef("string")},
+									},
+								},
+								{
+									Name: "baz",
+									Type: ast.TypeIdentifier{
+										NonUnionType: &ast.NonUnionType{TypeReference: strRef("num")},
+									},
 								},
 							},
-						},
-					},
-					{
-						Statement: &ast.Statement{
-							LetDecl: &ast.LetDecl{
-								Name:  "bar",
-								Value: ast.Expression{String: strRef("bar")},
+							Body: []*ast.StatementOrExpression{
+								{
+									Statement: &ast.Statement{
+										LetDecl: &ast.LetDecl{
+											Name: "foo",
+											Value: ast.Expression{
+												Number: &ast.Number{Integer: intRef(5)},
+											},
+										},
+									},
+								},
+								{
+									Statement: &ast.Statement{
+										LetDecl: &ast.LetDecl{
+											Name:  "bar",
+											Value: ast.Expression{String: strRef("bar")},
+										},
+									},
+								},
+								{
+									Statement: &ast.Statement{
+										ReturnStmt: &ast.Expression{Ident: strRef("foo")},
+									},
+								},
 							},
-						},
-					},
-					{
-						Statement: &ast.Statement{
-							ReturnStmt: &ast.Expression{Ident: strRef("foo")},
 						},
 					},
 				},

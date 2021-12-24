@@ -5,21 +5,15 @@ import (
 	"elauffenburger/hypescript/emitter"
 	"elauffenburger/hypescript/parser"
 	"io"
-	"strings"
 	"testing"
 
-	_ "embed"
-
+	"github.com/bradleyjkemp/cupaloy"
 	"github.com/pkg/errors"
-	"github.com/sergi/go-diff/diffmatchpatch"
 )
-
-//go:embed snapshots/emitter_test/complex.cpp
-var testEmitForComplexCodeSnapshot string
 
 func TestEmitForComplexCode(t *testing.T) {
 	code := `
-		function foo(a: string, b: num): num {
+		function foo(a: string, b: number): number {
 			let ay = 5;
 			let bee = "bar";
 
@@ -51,19 +45,13 @@ func TestEmitForComplexCode(t *testing.T) {
 		}
 	`
 
-	assertCodeMatchesSnapshot(t, code, testEmitForComplexCodeSnapshot)
+	assertCodeMatchesSnapshot(t, code)
 }
 
-func assertCodeMatchesSnapshot(t *testing.T, code, snapshot string) {
+func assertCodeMatchesSnapshot(t *testing.T, code string) {
 	emitted := emitForString(t, code)
 
-	differ := diffmatchpatch.New()
-	diffs := differ.DiffMain(normalizeCode(snapshot), normalizeCode(emitted), false)
-	for _, diff := range diffs {
-		if diff.Type != diffmatchpatch.DiffEqual {
-			t.Errorf("\n%s\n", differ.DiffPrettyText(diffs))
-		}
-	}
+	cupaloy.Snapshot(t, emitted)
 }
 
 func emitForString(t *testing.T, code string) string {
@@ -93,8 +81,4 @@ func emitForString(t *testing.T, code string) string {
 	}
 
 	panic("no main.cpp emitted")
-}
-
-func normalizeCode(s string) string {
-	return strings.TrimSpace(strings.ReplaceAll(s, "\r\n", "\n"))
 }
