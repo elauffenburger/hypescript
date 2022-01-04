@@ -62,6 +62,7 @@ func (ctx *Context) registerFunctionDeclaration(astFn *ast.FunctionInstantiation
 
 		stmt := stmtOrExpr.Statement
 
+		// TODO: merge this with regular statement registration.
 		// If this is a let decl, add the ident to the current scope.
 		if let := stmt.LetDecl; let != nil {
 			infType, err := ctx.currentScope().InferType(let.Value)

@@ -1,4 +1,4 @@
-package main
+package emitter_test
 
 import (
 	"bufio"
@@ -66,6 +66,10 @@ func TestEmitForComplexCode(t *testing.T) {
 	`
 
 	assertCodeMatchesSnapshot(t, code)
+}
+
+func TestTypeAnnotation(t *testing.T) {
+
 }
 
 func assertCodeMatchesSnapshot(t *testing.T, code string) {

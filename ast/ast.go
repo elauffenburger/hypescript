@@ -122,8 +122,9 @@ type Number struct {
 }
 
 type LetDecl struct {
-	Name  string     `"let" @Ident`
-	Value Expression `"=" @@`
+	Name         string          `"let" @Ident`
+	ExplicitType *TypeIdentifier `(":" @@)?`
+	Value        *Expression     `("=" @@)?`
 }
 
 type Statement struct {

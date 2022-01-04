@@ -161,8 +161,9 @@ type Number struct {
 }
 
 type LetDecl struct {
-	Name  string
-	Value *Expression
+	Name         string
+	ExplicitType *TypeSpec
+	Value        *Expression
 }
 
 type Statement struct {

@@ -20,6 +20,7 @@ It compiles to standardized C++ so as long as your platform has a standards-comp
     - [x] `let` declarations
     - [ ] `const` declarations
     - [ ] `var` declarations
+    - [ ] allow value-less bindings
 - Types
     - [x] `function` params
     - [ ] variable types

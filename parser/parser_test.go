@@ -1,4 +1,4 @@
-package main
+package parser_test
 
 import (
 	"elauffenburger/hypescript/ast"
@@ -48,7 +48,7 @@ func TestParseSimpleFunction(t *testing.T) {
 									Statement: &ast.Statement{
 										LetDecl: &ast.LetDecl{
 											Name: "foo",
-											Value: ast.Expression{
+											Value: &ast.Expression{
 												Number: &ast.Number{Integer: intRef(5)},
 											},
 										},
@@ -58,7 +58,7 @@ func TestParseSimpleFunction(t *testing.T) {
 									Statement: &ast.Statement{
 										LetDecl: &ast.LetDecl{
 											Name:  "bar",
-											Value: ast.Expression{String: strRef("bar")},
+											Value: &ast.Expression{String: strRef("bar")},
 										},
 									},
 								},

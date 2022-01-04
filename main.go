@@ -45,6 +45,12 @@ func main() {
 
 		function blah2() {}
 
+		function blah3() {
+			let foo: number = 5;
+
+			return foo;
+		}
+
 		function returnsFn() {
 			return function() {
 				console.log("in nested!");

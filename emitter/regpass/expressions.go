@@ -38,23 +38,42 @@ func (ctx *Context) registerStatement(stmt *ast.Statement) (*core.StatementOrExp
 		return ctx.registerFunctionDeclaration(fnInst)
 	}
 
-	if letDecl := stmt.LetDecl; letDecl != nil {
-		value, err := ctx.expressionFromAst(&letDecl.Value)
-		if err != nil {
-			return nil, err
-		}
-
-		letDeclType, err := ctx.currentScope().InferType(value)
-		if err != nil {
-			return nil, err
-		}
-
-		ctx.currentScope().AddIdentifer(letDecl.Name, letDeclType)
-
+	if stmt.LetDecl != nil {
 		stmt, err := ctx.statementFromAst(stmt)
 		if err != nil {
 			return nil, err
 		}
+
+		letDecl := stmt.LetDecl
+
+		var letDeclType *core.TypeSpec
+
+		// TODO: fix this!
+		if letDecl.Value == nil {
+			return nil, fmt.Errorf("let bindings must have values (for now)")
+		}
+
+		// If there was a value provided, try to infer the type.
+		if letDecl.Value != nil {
+			letDeclType, err = ctx.currentScope().InferType(letDecl.Value)
+			if err != nil {
+				return nil, err
+			}
+
+			// Check if there was an explicit type annotation.
+			if letDecl.ExplicitType != nil {
+				// Make sure the explicit type annotation lines up with what we're expecting.
+				if letDeclType != nil && !letDeclType.EqualsReferencing(letDecl.ExplicitType) {
+					return nil, TypeMismatchError{
+						Name:     letDecl.Name,
+						Expected: letDecl.ExplicitType,
+						Actual:   letDeclType,
+					}
+				}
+			}
+		}
+
+		ctx.currentScope().AddIdentifer(letDecl.Name, letDeclType)
 
 		return ctx.currentScope().AddStmt(stmt), nil
 	}
@@ -99,16 +118,33 @@ func (ctx *Context) statementFromAst(stmt *ast.Statement) (*core.Statement, erro
 		return &core.Statement{FunctionInstantiation: fn}, nil
 	}
 
-	if stmt.LetDecl != nil {
-		value, err := ctx.expressionFromAst(&stmt.LetDecl.Value)
-		if err != nil {
-			return nil, err
+	if let := stmt.LetDecl; let != nil {
+		var value *core.Expression
+		var explType *core.TypeSpec
+
+		if let.Value != nil {
+			v, err := ctx.expressionFromAst(let.Value)
+			if err != nil {
+				return nil, err
+			}
+
+			value = v
+		}
+
+		if let.ExplicitType != nil {
+			t, err := ctx.typeSpecFromAst(let.ExplicitType)
+			if err != nil {
+				return nil, err
+			}
+
+			explType = t
 		}
 
 		return &core.Statement{
 			LetDecl: &core.LetDecl{
-				Name:  stmt.LetDecl.Name,
-				Value: value,
+				Name:         let.Name,
+				ExplicitType: explType,
+				Value:        value,
 			},
 		}, nil
 	}
