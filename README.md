@@ -29,6 +29,7 @@ It compiles to standardized C++ so as long as your platform has a standards-comp
     - `class`es
         - [ ] declarations
         - [ ] type checking
+    - [x] Mutually recursive types
 - [x] Scoped identifiers
 - [ ] `this`
 - [ ] `import`s
