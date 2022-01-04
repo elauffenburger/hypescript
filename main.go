@@ -13,14 +13,19 @@ func main() {
 	parser := parser.New()
 
 	ast, err := parser.ParseString(`
-		interface Bar {
-			str: string;
-		}
-
 		interface Foo {
 			str: string;
 			num: number;
 			bar: Bar;
+			baz: Baz;
+		}
+
+		interface Bar {
+			str: string;
+		}
+
+		interface Baz {
+			name: string;
 		}
 
 		function foo(a: string, b: number): number {

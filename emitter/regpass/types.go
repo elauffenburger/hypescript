@@ -66,8 +66,10 @@ func (ctx *Context) typeSpecFromAst(t *ast.TypeIdentifier) (*core.TypeSpec, erro
 			}
 		}
 
-		if t := t.TypeReference; t != nil {
-			return &core.TypeSpec{TypeReference: t}, nil
+		if ref := t.TypeReference; ref != nil {
+			t := ctx.currentScope().RegisteredType(*ref)
+
+			return t, nil
 		}
 	}
 

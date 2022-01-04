@@ -3,8 +3,7 @@ package regpass
 import (
 	"elauffenburger/hypescript/ast"
 	"elauffenburger/hypescript/emitter/core"
-
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 type Context struct {
@@ -46,7 +45,11 @@ func (ctx *Context) WithinNewScope(op func() error) error {
 }
 
 func (ctx *Context) Run(ast *ast.TS) error {
-	// Register all constructs.
+	// Register all types.
+	if err := ctx.registerTypes(ast); err != nil {
+		return err
+	}
+
 	for _, c := range ast.TopLevelConstructs {
 		if c.StatementOrExpression != nil {
 			_, err := ctx.registerStatementOrExpression(c.StatementOrExpression)
@@ -56,14 +59,54 @@ func (ctx *Context) Run(ast *ast.TS) error {
 
 			continue
 		}
+	}
 
+	return nil
+}
+
+func (ctx *Context) UnresolvedTypes() map[string]*core.TypeSpec {
+	types := make(map[string]*core.TypeSpec, 0)
+	addUnresolvedTypesFromScope(types, ctx.GlobalScope)
+
+	return types
+}
+
+func addUnresolvedTypesFromScope(types map[string]*core.TypeSpec, s *core.Scope) {
+	for k, v := range s.UnresolvedTypes() {
+		types[k] = v
+	}
+
+	for _, child := range s.Children {
+		addUnresolvedTypesFromScope(types, child)
+	}
+}
+
+func (ctx *Context) registerTypes(ast *ast.TS) error {
+	for _, c := range ast.TopLevelConstructs {
 		if intdef := c.InterfaceDefinition; intdef != nil {
-			ctx.registerInterface(intdef)
+			if err := ctx.registerInterface(intdef); err != nil {
+				return err
+			}
 
 			continue
 		}
+	}
 
-		return errors.Errorf("unknown top-level construct: %v", c)
+	// Make sure that we can resolve any unresolved types we had pending.
+	for name, t := range ctx.UnresolvedTypes() {
+		regd, err := ctx.currentScope().GetNamedType(name)
+		if err != nil {
+			return err
+		}
+
+		t.Redirect = regd
+		t.MarkResolved()
+	}
+
+	// If there are still unresolved types, bail out.
+	unresolved := ctx.UnresolvedTypes()
+	if len(unresolved) != 0 {
+		return fmt.Errorf("failed to resolve types: %#v", unresolved)
 	}
 
 	return nil

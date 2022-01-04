@@ -11,7 +11,7 @@ import (
 func validate(f *core.Function) error {
 	// Make sure the implicit return type matches the implicit one (if any).
 	if rtnType := f.ExplicitReturnType; rtnType != nil {
-		if !rtnType.Equals(f.ImplicitReturnType) {
+		if !rtnType.EqualsReferencing(f.ImplicitReturnType) {
 			return errors.WithStack(fmt.Errorf("implicit and explicit return types of function were not the same: %#v", *f))
 		}
 	}

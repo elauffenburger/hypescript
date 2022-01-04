@@ -39,11 +39,21 @@ type TypeSpec struct {
 	Object        *Object
 	Interface     *Interface
 	TypeReference *string
-	Primitive     *PrimitiveType
 	Union         *Union
 
-	Unresolved bool
-	Source     interface{}
+	unresolved bool
+	resolver   func()
+
+	// Redirect is a redirect to another TypeSpec
+	Redirect *TypeSpec
+}
+
+func (t *TypeSpec) Unresolved() bool {
+	return t.unresolved
+}
+
+func (t *TypeSpec) MarkResolved() {
+	t.resolver()
 }
 
 type Function struct {
@@ -185,6 +195,46 @@ type TS struct {
 	TopLevelConstructs []TopLevelConstruct
 }
 
-func (t *TypeSpec) Equals(other *TypeSpec) bool {
+/// EqualsReferencing returns true if t is a reference to other, or other is a reference
+/// to t.
+func (t *TypeSpec) EqualsReferencing(other *TypeSpec) bool {
+	return t.referenceTo(other) || other.referenceTo(t)
+}
+
+func (t *TypeSpec) referenceTo(other *TypeSpec) bool {
+	if t.TypeReference != nil {
+		if other.TypeReference == t.TypeReference {
+			return true
+		}
+
+		if other.Interface != nil && other.Interface.Name == *t.TypeReference {
+			return true
+		}
+	}
+
+	return false
+}
+
+/// EqualsStrict returns true if t is deeply equal to other.
+///
+/// If you want to test if the TypeSpecs are loosely equal via references,
+/// use EqualsReferencing.
+func (t *TypeSpec) EqualsStrict(other *TypeSpec) bool {
 	return reflect.DeepEqual(t, other)
+}
+
+/// ContainsAllTypeSpecs returns true if right contains all specs in left.
+func ContainsAllTypeSpecs(left, right []*TypeSpec) bool {
+	unseen := left[:]
+
+	for _, t1 := range unseen {
+		for _, t2 := range right {
+			if t1.EqualsStrict(t2) {
+				unseen = unseen[1:]
+				break
+			}
+		}
+	}
+
+	return len(unseen) == 0
 }

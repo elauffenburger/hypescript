@@ -10,9 +10,12 @@ type Scope struct {
 	Parent   *Scope
 	Children []*Scope
 
-	IdentTypes      map[string]*TypeSpec
-	Types           []*TypeSpec
-	UnresolvedTypes []*TypeSpec
+	IdentTypes map[string]*TypeSpec
+	Types      []*TypeSpec
+
+	// unresolvedTypes is a map from a type reference to a
+	// placeholder type spec for that type.
+	unresolvedTypes map[string]*TypeSpec
 
 	StatementsOrExpressions []*StatementOrExpression
 
@@ -23,14 +26,19 @@ func NewScope() *Scope {
 	return &Scope{
 		IdentTypes:              make(map[string]*TypeSpec),
 		Types:                   make([]*TypeSpec, 0),
+		unresolvedTypes:         make(map[string]*TypeSpec),
 		Children:                make([]*Scope, 0),
 		StatementsOrExpressions: make([]*StatementOrExpression, 0),
-		UnresolvedTypes:         make([]*TypeSpec, 0),
 	}
 }
 
 func NewGlobalScope() *Scope {
 	scope := NewScope()
+
+	scope.AddType(&TypeSpec{Interface: &Interface{Name: "string"}})
+	scope.AddType(&TypeSpec{Interface: &Interface{Name: "number"}})
+	// TODO: this doesn't feel right; should be a special type name.
+	scope.AddType(&TypeSpec{Interface: &Interface{Name: "void"}})
 
 	scope.AddType(&TypeSpec{
 		Interface: &Interface{
@@ -54,10 +62,6 @@ func NewGlobalScope() *Scope {
 	})
 
 	scope.AddIdentifer("console", &TypeSpec{TypeReference: strRef("Console")})
-
-	for _, t := range PrimitiveTypes {
-		scope.AddPrimitiveType(t)
-	}
 
 	return scope
 }
@@ -97,41 +101,25 @@ func (s *Scope) AddIdentifer(ident string, identType *TypeSpec) {
 	s.IdentTypes[ident] = identType
 }
 
-func (s *Scope) RegisteredTypeOf(ident string) *TypeSpec {
-	// Try to get the type.
-	t, err := s.TypeOf(ident)
-
-	// If it is registered, return it!
-	if t != nil && err == nil {
-		return t
-	}
-
-	// ...otherwise, create and register a placeholder we'll
-	// fill out later (hopefully).
-
-	t = s.NewPlaceholderTypeExpression(&Expression{Ident: &ident})
-	s.UnresolvedTypes = append(s.UnresolvedTypes, t)
-	s.IdentTypes[ident] = t
-
-	return t
-}
-
-func (s *Scope) RegisteredType(t *TypeSpec) *TypeSpec {
+func (s *Scope) RegisteredType(typeName string) *TypeSpec {
 	// Try to get the type.
 	for _, registered := range s.Types {
-		// If we found the referenced type, return it!
-		if t.TypeReference != nil && registered.TypeReference == t.TypeReference {
-			return registered
-		}
-
-		// If it's registered, return it!
-		if registered.Equals(t) {
+		// Check if we can resolve the type.
+		if i := registered.Interface; i != nil && i.Name == typeName {
 			return registered
 		}
 	}
 
-	// ...otherwise, add the type and hopefully resolve it later.
-	s.UnresolvedTypes = append(s.UnresolvedTypes, t)
+	// ...otherwise, add a placholder type and hopefully resolve it later.
+	t := &TypeSpec{unresolved: true}
+
+	// Attach a function that can be invoked to mark the type as resolved.
+	t.resolver = func() {
+		t.unresolved = false
+		delete(s.unresolvedTypes, typeName)
+	}
+
+	s.unresolvedTypes[typeName] = t
 
 	return t
 }
@@ -188,10 +176,6 @@ func (s *Scope) GetNamedType(name string) (*TypeSpec, error) {
 		if t.Interface != nil && t.Interface.Name == name {
 			return t, nil
 		}
-
-		if t.Primitive != nil && string(*t.Primitive) == name {
-			return t, nil
-		}
 	}
 
 	if s.Parent != nil {
@@ -226,13 +210,7 @@ func (s *Scope) ValidateHasType(t *TypeSpec) error {
 }
 
 func (s *Scope) NewPlaceholderTypeExpression(source interface{}) *TypeSpec {
-	t := &TypeSpec{Unresolved: true, Source: source}
-
-	return t
-}
-
-func (s *Scope) AddPrimitiveType(t PrimitiveType) {
-	s.AddType(&TypeSpec{Primitive: &t})
+	return &TypeSpec{unresolved: true}
 }
 
 func (s *Scope) GetTypeIdFor(t *TypeSpec) (int, error) {
@@ -279,6 +257,15 @@ func (s *Scope) InferType(expr *Expression) (*TypeSpec, error) {
 	}
 
 	return nil, fmt.Errorf("unable to infer type")
+}
+
+func (s *Scope) UnresolvedTypes() map[string]*TypeSpec {
+	types := make(map[string]*TypeSpec, len(s.unresolvedTypes))
+	for k, v := range s.unresolvedTypes {
+		types[k] = v
+	}
+
+	return types
 }
 
 func strRef(str string) *string {
