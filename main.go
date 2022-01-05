@@ -81,11 +81,24 @@ func main() {
 			baz();
 
 			returnsFn()();
+
+			let foo: Foo = {
+				str: "str",
+				num: 5,
+				bar: {
+					str: "hello",
+				},
+				baz: {
+					name: "world!",
+				},
+			};
+
+			console.log(foo.bar.str);
+			console.log(foo.baz.name);
 		}
 
 		run();
 	`)
-
 	if err != nil {
 		log.Fatalf("%+v\n", err)
 	}
