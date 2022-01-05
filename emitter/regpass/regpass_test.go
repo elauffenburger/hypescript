@@ -140,6 +140,64 @@ func TestFunctionReturnTypeObjectLiteralMatchingInterface(t *testing.T) {
 	}
 }
 
+func TestFunctionReturnTypeObjectLiteralMatchingComplexInterface(t *testing.T) {
+	ctx := run(`
+		interface Foo {
+			msg: string;
+			bar: Bar;
+		}
+
+		interface Bar {
+			name: string;
+		}
+
+		function fn(): Foo {
+			return {
+				msg: "hello world!",
+				bar: {
+					name: "sdlfkj",
+				}
+			};
+		}	
+	`)
+
+	fn := ctx.GlobalScope.IdentTypes["fn"].Function
+
+	expectedExplRtnType := &core.TypeSpec{TypeReference: typeutils.StrRef("Foo")}
+	if !fn.ExplicitReturnType.Equals(expectedExplRtnType) {
+		t.Errorf("wrong explicit return type")
+	}
+
+	expectedImplRtnType := &core.TypeSpec{
+		Object: &core.Object{
+			Fields: map[string]*core.ObjectTypeField{
+				"msg": {
+					Name: "msg",
+					Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+				},
+				"bar": {
+					Name: "bar",
+					Type: &core.TypeSpec{
+						Object: &core.Object{
+							Fields: map[string]*core.ObjectTypeField{
+								"name": {
+									Name: "name",
+									Type: &core.TypeSpec{
+										TypeReference: typeutils.StrRef("string"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	if !fn.ImplicitReturnType.Equals(expectedImplRtnType) {
+		t.Errorf("wrong impllicit return type")
+	}
+}
+
 func TestFunctionReturnTypeObjectLiteralSupersetOfInterface(t *testing.T) {
 	ctx := run(`
 		interface Foo {

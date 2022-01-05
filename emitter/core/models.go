@@ -229,6 +229,17 @@ func (t *TypeSpec) RefersTo(other *TypeSpec) bool {
 }
 
 func (t *TypeSpec) satisfies(other *TypeSpec, matchType equalsMatchType) bool {
+	// If we don't need an exact match, follow redirects.
+	if matchType != equalsMatchTypeExact {
+		for t.Redirect != nil {
+			t = t.Redirect
+		}
+
+		for other.Redirect != nil {
+			other = other.Redirect
+		}
+	}
+
 	if t.RefersTo(other) || other.RefersTo(t) {
 		return true
 	}
