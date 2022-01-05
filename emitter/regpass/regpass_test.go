@@ -2,8 +2,10 @@ package regpass_test
 
 import (
 	"elauffenburger/hypescript/ast"
+	"elauffenburger/hypescript/emitter/core"
 	"elauffenburger/hypescript/emitter/regpass"
 	"elauffenburger/hypescript/parser"
+	"elauffenburger/hypescript/typeutils"
 	"testing"
 )
 
@@ -12,7 +14,7 @@ func TestTypeAnnotationOnLetBinding(t *testing.T) {
 
 	ty := ctx.GlobalScope.IdentTypes["foo"]
 
-	if ty.Interface != nil && ty.Interface.Name != "number" {
+	if *ty.TypeReference != "number" {
 		t.Errorf("foo was expected to have type number")
 	}
 }
@@ -26,6 +28,35 @@ func TestMismatchedTypeAnnotationOnLetBinding(t *testing.T) {
 
 	if _, ok := err.(regpass.TypeMismatchError); !ok {
 		t.Errorf("unexpected error type")
+	}
+}
+
+func TestFunctionReturnTypeInferenceFromVarType(t *testing.T) {
+	ctx := run(`
+		function fn() {
+			let result = {
+				name: "foo",
+			};
+
+			return result;
+		}	
+	`)
+
+	fn := ctx.GlobalScope.IdentTypes["fn"]
+
+	expectedType := &core.TypeSpec{
+		Object: &core.Object{
+			Fields: map[string]*core.ObjectTypeField{
+				"name": {
+					Name: "name",
+					Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+				},
+			},
+		},
+	}
+
+	if !fn.Function.ImplicitReturnType.EqualsReferencing(expectedType) {
+		t.Errorf("wrong type inferred")
 	}
 }
 

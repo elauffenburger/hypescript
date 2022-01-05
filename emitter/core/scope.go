@@ -241,9 +241,9 @@ func (s *Scope) InferType(expr *Expression) (*TypeSpec, error) {
 	}
 
 	if objInst := expr.ObjectInstantiation; objInst != nil {
-		fields := make([]*ObjectTypeField, len(objInst.Fields))
-		for i, f := range objInst.Fields {
-			fields[i] = &ObjectTypeField{
+		fields := make(map[string]*ObjectTypeField, len(objInst.Fields))
+		for _, f := range objInst.Fields {
+			fields[f.Name] = &ObjectTypeField{
 				Name: f.Name,
 				Type: f.Type,
 			}

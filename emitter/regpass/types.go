@@ -7,15 +7,15 @@ import (
 )
 
 func (ctx *Context) objectFromAst(fields []*ast.ObjectTypeField) (*core.Object, error) {
-	objFields := make([]*core.ObjectTypeField, len(fields))
+	objFields := make(map[string]*core.ObjectTypeField, len(fields))
 
-	for i, field := range fields {
+	for _, field := range fields {
 		fieldType, err := ctx.typeSpecFromAst(&field.Type)
 		if err != nil {
 			return nil, err
 		}
 
-		objFields[i] = &core.ObjectTypeField{
+		objFields[field.Name] = &core.ObjectTypeField{
 			Name: field.Name,
 			Type: fieldType,
 		}

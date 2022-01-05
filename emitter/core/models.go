@@ -82,7 +82,7 @@ type Expression struct {
 }
 
 type Object struct {
-	Fields []*ObjectTypeField
+	Fields map[string]*ObjectTypeField
 }
 
 type ObjectTypeField struct {
@@ -204,13 +204,33 @@ func (t *TypeSpec) EqualsReferencing(other *TypeSpec) bool {
 
 func (t *TypeSpec) referenceTo(other *TypeSpec) bool {
 	if t.TypeReference != nil {
-		if other.TypeReference == t.TypeReference {
+		if other.TypeReference != nil && *other.TypeReference == *t.TypeReference {
 			return true
 		}
 
 		if other.Interface != nil && other.Interface.Name == *t.TypeReference {
 			return true
 		}
+	}
+
+	if t.Object != nil && other.Object != nil {
+		// Make sure all the fields line up.
+		for name, field := range t.Object.Fields {
+			otherField, ok := other.Object.Fields[name]
+			if !ok {
+				return false
+			}
+
+			if field.Type != nil && otherField.Type == nil || otherField.Type != nil && field.Type == nil {
+				return false
+			}
+
+			if !field.Type.EqualsReferencing(otherField.Type) {
+				return false
+			}
+		}
+
+		return true
 	}
 
 	return false
