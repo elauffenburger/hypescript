@@ -16,7 +16,7 @@ func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
 			}
 
 			member = &core.InterfaceMember{
-				Field: &core.InterfaceField{
+				Field: &core.ObjectTypeField{
 					Name: m.Field.Name,
 					Type: t,
 				},

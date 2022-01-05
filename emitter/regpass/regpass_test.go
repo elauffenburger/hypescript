@@ -69,7 +69,7 @@ func TestFunctionReturnTypeObjectLiteral(t *testing.T) {
 		}	
 	`)
 
-	fn := ctx.GlobalScope.IdentTypes["fn"]
+	fn := ctx.GlobalScope.IdentTypes["fn"].Function
 
 	expectedType := &core.TypeSpec{
 		Object: &core.Object{
@@ -82,7 +82,7 @@ func TestFunctionReturnTypeObjectLiteral(t *testing.T) {
 		},
 	}
 
-	if !fn.Function.ExplicitReturnType.Equals(expectedType) {
+	if !fn.ExplicitReturnType.Equals(expectedType) {
 		t.Errorf("wrong explicit return type")
 	}
 }
@@ -102,6 +102,81 @@ func TestFunctionReturnTypeObjectLiteralMissingFields(t *testing.T) {
 
 	if _, ok := err.(regpass.FnRtnTypeMismatchError); !ok {
 		t.Errorf("wrong error")
+	}
+}
+
+func TestFunctionReturnTypeObjectLiteralMatchingInterface(t *testing.T) {
+	ctx := run(`
+		interface Foo {
+			msg: string;
+		}
+
+		function fn(): Foo {
+			return {
+				msg: "hello world!",
+			};
+		}	
+	`)
+
+	fn := ctx.GlobalScope.IdentTypes["fn"].Function
+
+	expectedExplRtnType := &core.TypeSpec{TypeReference: typeutils.StrRef("Foo")}
+	if !fn.ExplicitReturnType.Equals(expectedExplRtnType) {
+		t.Errorf("wrong explicit return type")
+	}
+
+	expectedImplRtnType := &core.TypeSpec{
+		Object: &core.Object{
+			Fields: map[string]*core.ObjectTypeField{
+				"msg": {
+					Name: "msg",
+					Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+				},
+			},
+		},
+	}
+	if !fn.ImplicitReturnType.Equals(expectedImplRtnType) {
+		t.Errorf("wrong impllicit return type")
+	}
+}
+
+func TestFunctionReturnTypeObjectLiteralSupersetOfInterface(t *testing.T) {
+	ctx := run(`
+		interface Foo {
+			msg: string;
+		}
+
+		function fn(): Foo {
+			return {
+				msg: "The truth is out there",
+				name: "Fox Mulder",
+			};
+		}	
+	`)
+
+	fn := ctx.GlobalScope.IdentTypes["fn"].Function
+
+	expectedExplRtnType := &core.TypeSpec{TypeReference: typeutils.StrRef("Foo")}
+	if !fn.ExplicitReturnType.Equals(expectedExplRtnType) {
+		t.Errorf("wrong explicit return type")
+	}
+
+	expectedImplRtnType := &core.TypeSpec{
+		Object: &core.Object{
+			Fields: map[string]*core.ObjectTypeField{
+				"msg": {
+					Name: "msg",
+					Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+				},
+				"name": {
+					Name: "name",
+					Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+				},
+			},
+		},
+	}
+	if !fn.ImplicitReturnType.Equals(expectedImplRtnType) {
+		t.Errorf("wrong impllicit return type")
 	}
 }
 

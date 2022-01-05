@@ -63,7 +63,7 @@ func (ctx *Context) Run(ast *ast.TS) error {
 
 	// Validate functions now that we've completely resolved all idents and types.
 	for _, fn := range allFunctions(ctx.GlobalScope) {
-		if err := validate(fn); err != nil {
+		if err := validateFn(ctx.GlobalScope, fn); err != nil {
 			return err
 		}
 	}
@@ -114,41 +114,6 @@ func (ctx *Context) registerTypes(ast *ast.TS) error {
 	unresolved := ctx.UnresolvedTypes()
 	if len(unresolved) != 0 {
 		return fmt.Errorf("failed to resolve types: %#v", unresolved)
-	}
-
-	return nil
-}
-
-func allFunctions(s *core.Scope) []*core.Function {
-	fns := make([]*core.Function, 0)
-	for _, t := range s.IdentTypes {
-		if t.Function != nil {
-			fns = append(fns, t.Function)
-		}
-	}
-
-	for _, c := range s.Children {
-		fns = append(fns, allFunctions(c)...)
-	}
-
-	return fns
-}
-
-func validate(fn *core.Function) error {
-	// Make sure the implicit return type matches the implicit one (if any).
-	if rtnType := fn.ExplicitReturnType; rtnType != nil {
-		if !fn.ImplicitReturnType.Satisfies(fn.ExplicitReturnType) {
-			name := "anonymous fn"
-			if fn.Name != nil {
-				name = *fn.Name
-			}
-
-			return FnRtnTypeMismatchError{
-				Name:     name,
-				Implicit: fn.ImplicitReturnType,
-				Explicit: fn.ExplicitReturnType,
-			}
-		}
 	}
 
 	return nil

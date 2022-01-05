@@ -96,13 +96,8 @@ type Interface struct {
 }
 
 type InterfaceMember struct {
-	Field  *InterfaceField
+	Field  *ObjectTypeField
 	Method *InterfaceMethod
-}
-
-type InterfaceField struct {
-	Name string
-	Type *TypeSpec
 }
 
 type InterfaceMethod struct {
@@ -238,30 +233,50 @@ func (t *TypeSpec) satisfies(other *TypeSpec, matchType equalsMatchType) bool {
 		return true
 	}
 
-	if t.Object != nil && other.Object != nil {
-		// If we need an exact match, the fields of t must line up exactly (not just be a superset of other).
-		if matchType == equalsMatchTypeExact && len(t.Object.Fields) != len(other.Object.Fields) {
-			return false
+	if t.Object != nil {
+		if other.Object != nil {
+			return satisfiesFields(t.Object.Fields, other.Object.Fields, matchType)
 		}
 
-		// Make sure all the fields line up.
-		for name, tgtField := range other.Object.Fields {
-			// Make sure t contains the field.
-			field, ok := t.Object.Fields[name]
-			if !ok {
-				return false
-			}
+		if other.Interface != nil {
+			return satisfiesFields(t.Object.Fields, other.Interface.Fields(), matchType)
+		}
+	}
 
-			// Make sure the field type is satisfied.
-			if !tgtField.Type.satisfies(field.Type, matchType) {
-				return false
-			}
+	if t.Interface != nil {
+		if other.Object != nil {
+			return satisfiesFields(t.Interface.Fields(), other.Object.Fields, matchType)
 		}
 
-		return true
+		if other.Interface != nil {
+			return satisfiesFields(t.Interface.Fields(), other.Interface.Fields(), matchType)
+		}
 	}
 
 	return false
+}
+
+func satisfiesFields(fields, targetFields map[string]*ObjectTypeField, matchType equalsMatchType) bool {
+	// If we need an exact match, the fields of t must line up exactly (not just be a superset of other).
+	if matchType == equalsMatchTypeExact && len(fields) != len(targetFields) {
+		return false
+	}
+
+	// Make sure all the fields line up.
+	for name, tgtField := range targetFields {
+		// Make sure t contains the field.
+		field, ok := fields[name]
+		if !ok {
+			return false
+		}
+
+		// Make sure the field type is satisfied.
+		if !tgtField.Type.satisfies(field.Type, matchType) {
+			return false
+		}
+	}
+
+	return true
 }
 
 /// EqualsStrict returns true if t is deeply equal to other.
@@ -286,4 +301,15 @@ func ContainsAllTypeSpecs(left, right []*TypeSpec) bool {
 	}
 
 	return len(unseen) == 0
+}
+
+func (i *Interface) Fields() map[string]*ObjectTypeField {
+	fields := make(map[string]*ObjectTypeField, 0)
+	for _, m := range i.Members {
+		if m.Field != nil {
+			fields[m.Field.Name] = m.Field
+		}
+	}
+
+	return fields
 }

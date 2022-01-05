@@ -129,3 +129,50 @@ func (ctx *Context) functionParameterFromAst(params []*ast.FunctionParameter) ([
 
 	return results, nil
 }
+
+// TODO: move to core.Scope?
+func allFunctions(s *core.Scope) []*core.Function {
+	fns := make([]*core.Function, 0)
+	for _, t := range s.IdentTypes {
+		if t.Function != nil {
+			fns = append(fns, t.Function)
+		}
+	}
+
+	for _, c := range s.Children {
+		fns = append(fns, allFunctions(c)...)
+	}
+
+	return fns
+}
+
+// TODO: move to core.Function?
+func validateFn(scope *core.Scope, fn *core.Function) error {
+	// Make sure the implicit return type matches the implicit one (if any).
+	if fn.ExplicitReturnType != nil {
+		explRtnType, err := scope.ResolveType(fn.ExplicitReturnType)
+		if err != nil {
+			return err
+		}
+
+		implRtnType, err := scope.ResolveType(fn.ImplicitReturnType)
+		if err != nil {
+			return err
+		}
+
+		if !implRtnType.Satisfies(explRtnType) {
+			name := "anonymous fn"
+			if fn.Name != nil {
+				name = *fn.Name
+			}
+
+			return FnRtnTypeMismatchError{
+				Name:     name,
+				Implicit: fn.ImplicitReturnType,
+				Explicit: fn.ExplicitReturnType,
+			}
+		}
+	}
+
+	return nil
+}
