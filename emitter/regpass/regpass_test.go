@@ -55,7 +55,7 @@ func TestFunctionReturnTypeInferenceFromVarType(t *testing.T) {
 		},
 	}
 
-	if !fn.Function.ImplicitReturnType.EqualsReferencing(expectedType) {
+	if !fn.Function.ImplicitReturnType.Equals(expectedType) {
 		t.Errorf("wrong type inferred")
 	}
 }
@@ -82,7 +82,7 @@ func TestFunctionReturnTypeObjectLiteral(t *testing.T) {
 		},
 	}
 
-	if !fn.Function.ExplicitReturnType.EqualsReferencing(expectedType) {
+	if !fn.Function.ExplicitReturnType.Equals(expectedType) {
 		t.Errorf("wrong explicit return type")
 	}
 }

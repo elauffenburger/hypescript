@@ -63,7 +63,7 @@ func (ctx *Context) registerStatement(stmt *ast.Statement) (*core.StatementOrExp
 			// Check if there was an explicit type annotation.
 			if letDecl.ExplicitType != nil {
 				// Make sure the explicit type annotation lines up with what we're expecting.
-				if letDeclType != nil && !letDeclType.EqualsReferencing(letDecl.ExplicitType) {
+				if letDeclType != nil && !letDeclType.Equals(letDecl.ExplicitType) {
 					return nil, TypeMismatchError{
 						Name:     letDecl.Name,
 						Expected: letDecl.ExplicitType,

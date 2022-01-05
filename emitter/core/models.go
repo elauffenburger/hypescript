@@ -208,10 +208,9 @@ const (
 	equalsMatchTypeSuperset = 1
 )
 
-/// EqualsReferencing returns true if t is a reference to other, or other is a reference
-/// to t.
-func (t *TypeSpec) EqualsReferencing(other *TypeSpec) bool {
-	return t.satisfies(other, equalsMatchTypeExact) || other.satisfies(t, equalsMatchTypeExact)
+/// Equals returns true if t is a reference to other, or other is a reference to t.
+func (t *TypeSpec) Equals(other *TypeSpec) bool {
+	return t.satisfies(other, equalsMatchTypeExact)
 }
 
 /// Satisfies returns true if t can satisfy the requirements of other.
@@ -219,7 +218,8 @@ func (t *TypeSpec) Satisfies(other *TypeSpec) bool {
 	return t.satisfies(other, equalsMatchTypeSuperset)
 }
 
-func (t *TypeSpec) satisfies(other *TypeSpec, matchType equalsMatchType) bool {
+/// RefersTo returns true if t is a reference to other or other references the same type as t.
+func (t *TypeSpec) RefersTo(other *TypeSpec) bool {
 	if t.TypeReference != nil {
 		if other.TypeReference != nil && *other.TypeReference == *t.TypeReference {
 			return true
@@ -230,23 +230,30 @@ func (t *TypeSpec) satisfies(other *TypeSpec, matchType equalsMatchType) bool {
 		}
 	}
 
+	return false
+}
+
+func (t *TypeSpec) satisfies(other *TypeSpec, matchType equalsMatchType) bool {
+	if t.RefersTo(other) || other.RefersTo(t) {
+		return true
+	}
+
 	if t.Object != nil && other.Object != nil {
+		// If we need an exact match, the fields of t must line up exactly (not just be a superset of other).
 		if matchType == equalsMatchTypeExact && len(t.Object.Fields) != len(other.Object.Fields) {
 			return false
 		}
 
 		// Make sure all the fields line up.
-		for name, field := range other.Object.Fields {
-			otherField, ok := t.Object.Fields[name]
+		for name, tgtField := range other.Object.Fields {
+			// Make sure t contains the field.
+			field, ok := t.Object.Fields[name]
 			if !ok {
 				return false
 			}
 
-			if field.Type != nil && otherField.Type == nil || otherField.Type != nil && field.Type == nil {
-				return false
-			}
-
-			if !field.Type.satisfies(otherField.Type, matchType) {
+			// Make sure the field type is satisfied.
+			if !tgtField.Type.satisfies(field.Type, matchType) {
 				return false
 			}
 		}

@@ -130,8 +130,8 @@ type LetDecl struct {
 type Statement struct {
 	FunctionInstantiation *FunctionInstantiation `@@ ";"?`
 	ExpressionStmt        *Expression            `| @@ ";"`
-	LetDecl               *LetDecl               `| @@ ";"`
-	ReturnStmt            *Expression            `| "return" @@ ";"`
+	LetDecl               *LetDecl               `| @@ ";"?`
+	ReturnStmt            *Expression            `| "return" @@ ";"?`
 }
 
 type Assignment struct {
