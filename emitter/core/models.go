@@ -196,13 +196,30 @@ type TS struct {
 	TopLevelConstructs []TopLevelConstruct
 }
 
+/// equalsMatchType is the type of match to use for `satisfies`.
+type equalsMatchType int
+
+const (
+	/// equalsMatchTypeExact will match if the two types are identical.
+	///
+	/// A reference to type T and type T itself will be considered identical.
+	equalsMatchTypeExact = 0
+	/// equalsMatchTypeSuperset will match if the receiver is a superset of the argument type.
+	equalsMatchTypeSuperset = 1
+)
+
 /// EqualsReferencing returns true if t is a reference to other, or other is a reference
 /// to t.
 func (t *TypeSpec) EqualsReferencing(other *TypeSpec) bool {
-	return t.referenceTo(other) || other.referenceTo(t)
+	return t.satisfies(other, equalsMatchTypeExact) || other.satisfies(t, equalsMatchTypeExact)
 }
 
-func (t *TypeSpec) referenceTo(other *TypeSpec) bool {
+/// Satisfies returns true if t can satisfy the requirements of other.
+func (t *TypeSpec) Satisfies(other *TypeSpec) bool {
+	return t.satisfies(other, equalsMatchTypeSuperset)
+}
+
+func (t *TypeSpec) satisfies(other *TypeSpec, matchType equalsMatchType) bool {
 	if t.TypeReference != nil {
 		if other.TypeReference != nil && *other.TypeReference == *t.TypeReference {
 			return true
@@ -214,9 +231,13 @@ func (t *TypeSpec) referenceTo(other *TypeSpec) bool {
 	}
 
 	if t.Object != nil && other.Object != nil {
+		if matchType == equalsMatchTypeExact && len(t.Object.Fields) != len(other.Object.Fields) {
+			return false
+		}
+
 		// Make sure all the fields line up.
-		for name, field := range t.Object.Fields {
-			otherField, ok := other.Object.Fields[name]
+		for name, field := range other.Object.Fields {
+			otherField, ok := t.Object.Fields[name]
 			if !ok {
 				return false
 			}
@@ -225,7 +246,7 @@ func (t *TypeSpec) referenceTo(other *TypeSpec) bool {
 				return false
 			}
 
-			if !field.Type.EqualsReferencing(otherField.Type) {
+			if !field.Type.satisfies(otherField.Type, matchType) {
 				return false
 			}
 		}

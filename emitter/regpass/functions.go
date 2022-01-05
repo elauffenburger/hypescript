@@ -3,6 +3,7 @@ package regpass
 import (
 	"elauffenburger/hypescript/ast"
 	"elauffenburger/hypescript/emitter/core"
+	"elauffenburger/hypescript/typeutils"
 )
 
 func (ctx *Context) registerFunctionDeclaration(astFn *ast.FunctionInstantiation) (*core.StatementOrExpression, error) {
@@ -104,7 +105,7 @@ func (ctx *Context) registerFunctionDeclaration(astFn *ast.FunctionInstantiation
 	}
 
 	if fn.ImplicitReturnType == nil {
-		fn.ImplicitReturnType = &core.TypeSpec{TypeReference: strRef("void")}
+		fn.ImplicitReturnType = &core.TypeSpec{TypeReference: typeutils.StrRef("void")}
 	}
 
 	ctx.ExitScope()

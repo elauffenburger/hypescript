@@ -20,7 +20,7 @@ func TestTypeAnnotationOnLetBinding(t *testing.T) {
 }
 
 func TestMismatchedTypeAnnotationOnLetBinding(t *testing.T) {
-	_, err := runWithError(`let foo: string = 5;`)
+	_, err := runError(`let foo: string = 5;`)
 
 	if err == nil {
 		t.Errorf("expected error")
@@ -60,7 +60,52 @@ func TestFunctionReturnTypeInferenceFromVarType(t *testing.T) {
 	}
 }
 
-func runWithError(code string) (*regpass.Context, error) {
+func TestFunctionReturnTypeObjectLiteral(t *testing.T) {
+	ctx := run(`
+		function fn(): { msg: string } {
+			return {
+				msg: "hello world!",
+			};
+		}	
+	`)
+
+	fn := ctx.GlobalScope.IdentTypes["fn"]
+
+	expectedType := &core.TypeSpec{
+		Object: &core.Object{
+			Fields: map[string]*core.ObjectTypeField{
+				"msg": {
+					Name: "msg",
+					Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+				},
+			},
+		},
+	}
+
+	if !fn.Function.ExplicitReturnType.EqualsReferencing(expectedType) {
+		t.Errorf("wrong explicit return type")
+	}
+}
+
+func TestFunctionReturnTypeObjectLiteralMissingFields(t *testing.T) {
+	_, err := runError(`
+		function fn(): { name: string, age: number } {
+			return {
+				name: "Tommy Wiseau",
+			};
+		}	
+	`)
+
+	if err == nil {
+		t.Errorf("expected error")
+	}
+
+	if _, ok := err.(regpass.FnRtnTypeMismatchError); !ok {
+		t.Errorf("wrong error")
+	}
+}
+
+func runError(code string) (*regpass.Context, error) {
 	ctx := regpass.NewContext()
 	err := ctx.Run(parse(code))
 
@@ -68,7 +113,7 @@ func runWithError(code string) (*regpass.Context, error) {
 }
 
 func run(code string) *regpass.Context {
-	ctx, err := runWithError(code)
+	ctx, err := runError(code)
 	if err != nil {
 		panic(err)
 	}

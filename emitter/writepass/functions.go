@@ -4,26 +4,9 @@ import (
 	"elauffenburger/hypescript/emitter/core"
 	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
-func validate(f *core.Function) error {
-	// Make sure the implicit return type matches the implicit one (if any).
-	if rtnType := f.ExplicitReturnType; rtnType != nil {
-		if !rtnType.EqualsReferencing(f.ImplicitReturnType) {
-			return errors.WithStack(fmt.Errorf("implicit and explicit return types of function were not the same: %#v", *f))
-		}
-	}
-
-	return nil
-}
-
 func (ctx *Context) writeFunctionDeclaration(fn *core.Function) error {
-	if err := validate(fn); err != nil {
-		return err
-	}
-
 	ctx.WriteString(fmt.Sprintf("TsFunction* %s = ", mangleFunctionName(*fn.Name)))
 
 	err := ctx.writeFunction(fn)

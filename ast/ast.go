@@ -59,7 +59,7 @@ type ObjectType struct {
 }
 
 type ObjectTypeField struct {
-	Name string         `(@Ident | ("\""@Ident"\"")) ":"`
+	Name string         `(@Ident | ("\""@Ident"\""))`
 	Type TypeIdentifier `":" @@`
 }
 
