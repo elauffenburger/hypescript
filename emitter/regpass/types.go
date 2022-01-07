@@ -28,7 +28,6 @@ func (ctx *Context) functionFromAst(fn *ast.FunctionInstantiation) (*core.Functi
 	res, err := ctx.WithinTempScope(func() (interface{}, error) {
 		return ctx.registerFunctionDeclaration(fn)
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -36,46 +35,66 @@ func (ctx *Context) functionFromAst(fn *ast.FunctionInstantiation) (*core.Functi
 	return res.(*core.StatementOrExpression).Statement.FunctionInstantiation, nil
 }
 
-func (ctx *Context) typeSpecFromAst(t *ast.TypeIdentifier) (*core.TypeSpec, error) {
-	if t == nil {
+func (ctx *Context) typeSpecFromAst(ident *ast.TypeIdentifier) (*core.TypeSpec, error) {
+	if ident == nil {
 		return nil, nil
 	}
 
-	if t := t.NonUnionType; t != nil {
-		if t := t.LiteralType; t != nil {
-			if t := t.FunctionType; t != nil {
-				fn, err := ctx.functionFromAst(&ast.FunctionInstantiation{
-					Parameters: t.Parameters,
-					ReturnType: t.ReturnType,
-				})
+	if len(ident.Rest) > 0 {
+		types := make(map[*core.TypeSpec]bool, len(ident.Rest)+1)
 
-				if err != nil {
-					return nil, err
-				}
-
-				return &core.TypeSpec{Function: fn}, nil
+		for _, ut := range append([]*ast.TypeIdentifierPart{{Type: ident.Head}}, ident.Rest...) {
+			spec, err := ctx.typeSpecFromAst(&ast.TypeIdentifier{Head: ut.Type})
+			if err != nil {
+				return nil, err
 			}
 
-			if t.ObjectType != nil {
-				obj, err := ctx.objectFromAst(t.ObjectType.Fields)
-				if err != nil {
-					return nil, err
-				}
-
-				return &core.TypeSpec{Object: obj}, nil
-			}
+			types[spec] = true
 		}
 
-		if ref := t.TypeReference; ref != nil {
-			t := ctx.currentScope().RegisteredType(*ref)
+		return &core.TypeSpec{Union: &core.Union{Types: types}}, nil
+	}
 
-			return t, nil
+	t := ident.Head
+	if t := t.LiteralType; t != nil {
+		if t := t.FunctionType; t != nil {
+			fn, err := ctx.functionFromAst(&ast.FunctionInstantiation{
+				Parameters: t.Parameters,
+				ReturnType: t.ReturnType,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			return &core.TypeSpec{Function: fn}, nil
+		}
+
+		if t.ObjectType != nil {
+			obj, err := ctx.objectFromAst(t.ObjectType.Fields)
+			if err != nil {
+				return nil, err
+			}
+
+			return &core.TypeSpec{Object: obj}, nil
 		}
 	}
 
-	return nil, fmt.Errorf("unknown type identifier %#v", t)
+	if ref := t.TypeReference; ref != nil {
+		t := ctx.currentScope().RegisteredType(*ref)
+
+		return t, nil
+	}
+
+	return nil, fmt.Errorf("unknown type identifier %#v", ident)
 }
 
 func createUnionType(left, right *core.TypeSpec) (*core.TypeSpec, error) {
-	return &core.TypeSpec{Union: &core.Union{Head: left, Tail: []*core.TypeSpec{right}}}, nil
+	return &core.TypeSpec{
+		Union: &core.Union{
+			Types: map[*core.TypeSpec]bool{
+				left:  true,
+				right: true,
+			},
+		},
+	}, nil
 }

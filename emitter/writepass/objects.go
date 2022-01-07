@@ -63,7 +63,6 @@ func (ctx *Context) writeObjectInstantiation(objInst *core.ObjectInstantiation) 
 		value, err := ctx.WithinPrintContext(func(printCtx *Context) error {
 			return printCtx.writeExpression(f.Value)
 		})
-
 		if err != nil {
 			return err
 		}
@@ -99,7 +98,6 @@ func (ctx *Context) writeObjectInvocation(accesseeType *core.TypeSpec, invocatio
 		expr, err := ctx.WithinPrintContext(func(printCtx *Context) error {
 			return printCtx.writeExpression(arg)
 		})
-
 		if err != nil {
 			return err
 		}
@@ -210,5 +208,5 @@ func (ctx *Context) getFieldType(t *core.TypeSpec, field string) (*core.TypeSpec
 		}
 	}
 
-	return nil, errors.WithStack(fmt.Errorf("failed to resolve field type of %s on %#v", field, t))
+	return nil, errors.WithStack(fmt.Errorf("failed to resolve field type of %s on %s", field, t))
 }

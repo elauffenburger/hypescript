@@ -1,9 +1,5 @@
 package core
 
-import (
-	"reflect"
-)
-
 type PrimitiveType string
 
 const (
@@ -33,28 +29,6 @@ const (
 	TypeIdVoid       TypeId = 5
 	TypeIdIntrinsic  TypeId = 6
 )
-
-type TypeSpec struct {
-	Function      *Function
-	Object        *Object
-	Interface     *Interface
-	TypeReference *string
-	Union         *Union
-
-	unresolved bool
-	resolver   func()
-
-	// Redirect is a redirect to another TypeSpec
-	Redirect *TypeSpec
-}
-
-func (t *TypeSpec) Unresolved() bool {
-	return t.unresolved
-}
-
-func (t *TypeSpec) MarkResolved() {
-	t.resolver()
-}
 
 type Function struct {
 	Name               *string
@@ -112,8 +86,7 @@ type FunctionParameter struct {
 }
 
 type Union struct {
-	Head *TypeSpec
-	Tail []*TypeSpec
+	Types map[*TypeSpec]bool
 }
 
 type IdentAssignment struct {
@@ -189,113 +162,6 @@ type TopLevelConstruct struct {
 
 type TS struct {
 	TopLevelConstructs []TopLevelConstruct
-}
-
-/// equalsMatchType is the type of match to use for `satisfies`.
-type equalsMatchType int
-
-const (
-	/// equalsMatchTypeExact will match if the two types are identical.
-	///
-	/// A reference to type T and type T itself will be considered identical.
-	equalsMatchTypeExact = 0
-	/// equalsMatchTypeSuperset will match if the receiver is a superset of the argument type.
-	equalsMatchTypeSuperset = 1
-)
-
-/// Equals returns true if t is a reference to other, or other is a reference to t.
-func (t *TypeSpec) Equals(other *TypeSpec) bool {
-	return t.satisfies(other, equalsMatchTypeExact)
-}
-
-/// Satisfies returns true if t can satisfy the requirements of other.
-func (t *TypeSpec) Satisfies(other *TypeSpec) bool {
-	return t.satisfies(other, equalsMatchTypeSuperset)
-}
-
-/// RefersTo returns true if t is a reference to other or other references the same type as t.
-func (t *TypeSpec) RefersTo(other *TypeSpec) bool {
-	if t.TypeReference != nil {
-		if other.TypeReference != nil && *other.TypeReference == *t.TypeReference {
-			return true
-		}
-
-		if other.Interface != nil && other.Interface.Name == *t.TypeReference {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (t *TypeSpec) satisfies(other *TypeSpec, matchType equalsMatchType) bool {
-	// If we don't need an exact match, follow redirects.
-	if matchType != equalsMatchTypeExact {
-		for t.Redirect != nil {
-			t = t.Redirect
-		}
-
-		for other.Redirect != nil {
-			other = other.Redirect
-		}
-	}
-
-	if t.RefersTo(other) || other.RefersTo(t) {
-		return true
-	}
-
-	if t.Object != nil {
-		if other.Object != nil {
-			return satisfiesFields(t.Object.Fields, other.Object.Fields, matchType)
-		}
-
-		if other.Interface != nil {
-			return satisfiesFields(t.Object.Fields, other.Interface.Fields(), matchType)
-		}
-	}
-
-	if t.Interface != nil {
-		if other.Object != nil {
-			return satisfiesFields(t.Interface.Fields(), other.Object.Fields, matchType)
-		}
-
-		if other.Interface != nil {
-			return satisfiesFields(t.Interface.Fields(), other.Interface.Fields(), matchType)
-		}
-	}
-
-	return false
-}
-
-func satisfiesFields(fields, targetFields map[string]*ObjectTypeField, matchType equalsMatchType) bool {
-	// If we need an exact match, the fields of t must line up exactly (not just be a superset of other).
-	if matchType == equalsMatchTypeExact && len(fields) != len(targetFields) {
-		return false
-	}
-
-	// Make sure all the fields line up.
-	for name, tgtField := range targetFields {
-		// Make sure t contains the field.
-		field, ok := fields[name]
-		if !ok {
-			return false
-		}
-
-		// Make sure the field type is satisfied.
-		if !tgtField.Type.satisfies(field.Type, matchType) {
-			return false
-		}
-	}
-
-	return true
-}
-
-/// EqualsStrict returns true if t is deeply equal to other.
-///
-/// If you want to test if the TypeSpecs are loosely equal via references,
-/// use EqualsReferencing.
-func (t *TypeSpec) EqualsStrict(other *TypeSpec) bool {
-	return reflect.DeepEqual(t, other)
 }
 
 /// ContainsAllTypeSpecs returns true if right contains all specs in left.

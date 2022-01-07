@@ -17,7 +17,6 @@ func (ctx *Context) accessableFromAst(accessable ast.Accessable) (*core.Accessab
 				Parameters: f.Parameters,
 				ReturnType: f.ReturnType,
 			})
-
 			if err != nil {
 				return nil, err
 			}
@@ -35,5 +34,5 @@ func (ctx *Context) accessableFromAst(accessable ast.Accessable) (*core.Accessab
 		}
 	}
 
-	return nil, fmt.Errorf("unknown accessable type: %#v", accessable)
+	return nil, fmt.Errorf("unknown accessable type: %v", accessable)
 }

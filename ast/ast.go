@@ -35,11 +35,21 @@ type FunctionInstantiation struct {
 }
 
 type TypeIdentifier struct {
-	NonUnionType *NonUnionType `@@`
-	UnionType    *UnionType    `| @@`
+	Head *TypeIdentifierType   `@@`
+	Rest []*TypeIdentifierPart `@@*`
 }
 
-type NonUnionType struct {
+type TypeIdentifierPart struct {
+	Operator *TypeIdentifierPartOperator `@@`
+	Type     *TypeIdentifierType         `@@`
+}
+
+type TypeIdentifierPartOperator struct {
+	Union        bool `@"|"`
+	Intersection bool `| @"&"`
+}
+
+type TypeIdentifierType struct {
 	LiteralType   *LiteralType `@@`
 	TypeReference *string      `| @Ident`
 }
@@ -61,11 +71,6 @@ type ObjectType struct {
 type ObjectTypeField struct {
 	Name string         `(@Ident | ("\""@Ident"\""))`
 	Type TypeIdentifier `":" @@`
-}
-
-type UnionType struct {
-	Head *NonUnionType  `@@`
-	Tail []NonUnionType `("|" @@)*`
 }
 
 type FunctionParameter struct {
@@ -161,23 +166,14 @@ func (left *TypeIdentifier) Equals(right *TypeIdentifier) bool {
 		return false
 	}
 
-	if left.NonUnionType != nil && right.NonUnionType != nil {
-		left, right := left.NonUnionType, right.NonUnionType
+	if len(left.Rest) > 1 || len(right.Rest) > 1 {
+		panic(fmt.Errorf("unsupported union or intersection type comparison between %#v and %#v", left, right))
+	}
 
-		if left.TypeReference != nil && right.TypeReference != nil {
-			return *left.TypeReference == *right.TypeReference
-		}
+	l, r := left.Rest[0].Type, right.Rest[0].Type
+	if l.TypeReference != nil && r.TypeReference != nil {
+		return *l.TypeReference == *r.TypeReference
 	}
 
 	panic(fmt.Errorf("unsupported type comparison between %#v and %#v", left, right))
-}
-
-func CreateUnionType(left, right *TypeIdentifier) *UnionType {
-	if left.NonUnionType != nil && right.NonUnionType != nil {
-		left, right := left.NonUnionType, right.NonUnionType
-
-		return &UnionType{Head: left, Tail: []NonUnionType{*right}}
-	}
-
-	panic(fmt.Errorf("union type creation for %#v and %#v not implemented", left, right))
 }

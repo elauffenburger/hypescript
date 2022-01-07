@@ -12,8 +12,7 @@ type Parser interface {
 	ParseString(str string) (*ast.TS, error)
 }
 
-type parser struct {
-}
+type parser struct{}
 
 func (p parser) ParseString(str string) (*ast.TS, error) {
 	lex := lexer.MustSimple([]lexer.Rule{
@@ -21,7 +20,7 @@ func (p parser) ParseString(str string) (*ast.TS, error) {
 		{"Ident", `[a-zA-Z_$][a-zA-Z_$0-9]*`, nil},
 		{"String", `"[^"]*"`, nil},
 		{"Whitespace", `(?:[\s\t]|\n|(?:\r\n))+`, nil},
-		{"Punct", `[,.<>(){}=:;]`, nil},
+		{"Punct", `[,.|<>(){}=:;]`, nil},
 		{"Comment", `//.*`, nil},
 		{"Reserved", `(let|function)`, nil},
 	})
@@ -34,7 +33,6 @@ func (p parser) ParseString(str string) (*ast.TS, error) {
 
 	ast := &ast.TS{}
 	err := parser.ParseString("temp.ts", str, ast)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse program")
 	}

@@ -113,7 +113,7 @@ func (ctx *Context) registerTypes(ast *ast.TS) error {
 	// If there are still unresolved types, bail out.
 	unresolved := ctx.UnresolvedTypes()
 	if len(unresolved) != 0 {
-		return fmt.Errorf("failed to resolve types: %#v", unresolved)
+		return fmt.Errorf("failed to resolve types: %s", unresolved)
 	}
 
 	return nil

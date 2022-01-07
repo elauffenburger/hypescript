@@ -7,9 +7,10 @@ It compiles to standardized C++ so as long as your platform has a standards-comp
 ## TODO
 
 - `function`s
-    - [x] Named
-    - [x] Anonymous
-    - [ ] Hoisting
+    - [x] named
+    - [x] anonymous
+    - [x] hoisting
+    - [x] closures
 - Objects
     - [x] literals
     - [x] chained access
@@ -20,19 +21,27 @@ It compiles to standardized C++ so as long as your platform has a standards-comp
     - [x] `let` declarations
     - [ ] `const` declarations
     - [ ] `var` declarations
-    - [ ] allow value-less bindings
 - Types
     - [x] `function` params
-    - [ ] variable types
+    - [x] variable types
     - `interface`s
-        - [ ] declarations
-        - [ ] type checking
+        - [x] declarations
+        - [x] type checking
     - `class`es
         - [ ] declarations
         - [ ] type checking
-    - [x] Mutually recursive types
-- [x] Scoped identifiers
+    - `type`s
+    - [x] mutually recursive types
+    - [ ] `any`
+    - [ ] `undefined`
+    - [ ] `null`
+    - unions
+        - [x] variables
+        - [ ] type checking
+    - [ ] generics
+- [x] scoped identifiers
 - [ ] `this`
+- [ ] `new`
 - [ ] `import`s
 - [ ] `export`s
 - [ ] modules

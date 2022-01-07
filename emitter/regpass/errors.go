@@ -13,7 +13,7 @@ type TypeMismatchError struct {
 
 func (err TypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"%s had a type annotation of %#v, but the type was found to be %#v",
+		"%s had a type annotation of %s, but the type was found to be %s",
 		err.Name,
 		err.Expected,
 		err.Actual,
@@ -28,7 +28,7 @@ type FnRtnTypeMismatchError struct {
 
 func (err FnRtnTypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"%s had an explicit return type of %#v, but the implicit return type was found to be %#v",
+		"%s had an explicit return type of %s, but the implicit return type was found to be %s",
 		err.Name,
 		err.Explicit,
 		err.Implicit,
