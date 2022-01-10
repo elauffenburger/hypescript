@@ -55,7 +55,7 @@ func (ctx *Context) registerStatement(stmt *ast.Statement) (*core.StatementOrExp
 
 		// If there was a value provided, try to infer the type.
 		if letDecl.Value != nil {
-			letDeclType, err = ctx.currentScope().InferType(letDecl.Value)
+			letDeclType, err = ctx.currentScope().ExprType(letDecl.Value)
 			if err != nil {
 				return nil, err
 			}
@@ -182,7 +182,7 @@ func (ctx *Context) expressionFromAst(expr *ast.Expression) (*core.Expression, e
 				return nil, err
 			}
 
-			t, err := ctx.currentScope().InferType(value)
+			t, err := ctx.currentScope().ExprType(value)
 			if err != nil {
 				return nil, err
 			}

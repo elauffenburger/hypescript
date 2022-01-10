@@ -74,10 +74,12 @@ func TestFunctionReturnTypeInferredFromVar(t *testing.T) {
 		`,
 		implSpec: &core.TypeSpec{
 			Object: &core.Object{
-				Fields: map[string]*core.ObjectTypeField{
-					"name": {
-						Name: "name",
-						Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+				Members: map[string]*core.Member{
+					"name": &core.Member{
+						Field: &core.ObjectTypeField{
+							Name: "name",
+							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						},
 					},
 				},
 			},
@@ -96,10 +98,12 @@ func TestFunctionCanHaveExplicitObjectLiteralReturnType(t *testing.T) {
 		`,
 		explSpec: &core.TypeSpec{
 			Object: &core.Object{
-				Fields: map[string]*core.ObjectTypeField{
+				Members: map[string]*core.Member{
 					"msg": {
-						Name: "msg",
-						Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						Field: &core.ObjectTypeField{
+							Name: "msg",
+							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						},
 					},
 				},
 			},
@@ -140,10 +144,12 @@ func TestFunctionHasObjectLiteralSatisfyInterfaceReturnType(t *testing.T) {
 		explSpec: &core.TypeSpec{TypeReference: typeutils.StrRef("Foo")},
 		implSpec: &core.TypeSpec{
 			Object: &core.Object{
-				Fields: map[string]*core.ObjectTypeField{
+				Members: map[string]*core.Member{
 					"msg": {
-						Name: "msg",
-						Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						Field: &core.ObjectTypeField{
+							Name: "msg",
+							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						},
 					},
 				},
 			},
@@ -175,20 +181,26 @@ func TestFunctionReturnsObjectLiteralSatisfyingComplexInterface(t *testing.T) {
 		explSpec: &core.TypeSpec{TypeReference: typeutils.StrRef("Foo")},
 		implSpec: &core.TypeSpec{
 			Object: &core.Object{
-				Fields: map[string]*core.ObjectTypeField{
+				Members: map[string]*core.Member{
 					"msg": {
-						Name: "msg",
-						Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						Field: &core.ObjectTypeField{
+							Name: "msg",
+							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						},
 					},
 					"bar": {
-						Name: "bar",
-						Type: &core.TypeSpec{
-							Object: &core.Object{
-								Fields: map[string]*core.ObjectTypeField{
-									"name": {
-										Name: "name",
-										Type: &core.TypeSpec{
-											TypeReference: typeutils.StrRef("string"),
+						Field: &core.ObjectTypeField{
+							Name: "bar",
+							Type: &core.TypeSpec{
+								Object: &core.Object{
+									Members: map[string]*core.Member{
+										"name": {
+											Field: &core.ObjectTypeField{
+												Name: "name",
+												Type: &core.TypeSpec{
+													TypeReference: typeutils.StrRef("string"),
+												},
+											},
 										},
 									},
 								},
@@ -218,14 +230,18 @@ func TestFunctionReturnObjectLiteralSubsetOfExplicitInterface(t *testing.T) {
 		explSpec: &core.TypeSpec{TypeReference: typeutils.StrRef("Foo")},
 		implSpec: &core.TypeSpec{
 			Object: &core.Object{
-				Fields: map[string]*core.ObjectTypeField{
+				Members: map[string]*core.Member{
 					"msg": {
-						Name: "msg",
-						Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						Field: &core.ObjectTypeField{
+							Name: "msg",
+							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						},
 					},
 					"name": {
-						Name: "name",
-						Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						Field: &core.ObjectTypeField{
+							Name: "name",
+							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						},
 					},
 				},
 			},

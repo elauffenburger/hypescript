@@ -68,6 +68,49 @@ func (ctx *Context) Run(ast *ast.TS) error {
 		}
 	}
 
+	// Make sure invocations make sense.
+	for scope, invocs := range ctx.Invocations() {
+		for _, invoc := range invocs {
+			t := invoc.Accessee.Type
+
+			switch {
+			case t.Function != nil:
+				fn := t.Function
+				var fnName string
+				if fn.Name != nil {
+					fnName = *fn.Name
+				} else {
+					fnName = "<anonymous>"
+				}
+
+				if len(invoc.Arguments) > len(fn.Parameters) {
+					return fmt.Errorf("too many args for invocation of fn %s", fnName)
+				}
+
+				for i, param := range fn.Parameters {
+					if i > len(invoc.Arguments)-1 {
+						if param.Optional {
+							continue
+						}
+
+						return fmt.Errorf("missing arg for %s in call to fn %s", param.Name, fnName)
+					}
+
+					arg := invoc.Arguments[i]
+					argType, err := scope.ExprType(arg)
+					if err != nil {
+						return err
+					}
+
+					if !argType.Satisfies(param.Type) {
+						return fmt.Errorf("cannot use type %s for arg %s in call to %s", argType, param.Name, fnName)
+					}
+				}
+			}
+
+		}
+	}
+
 	return nil
 }
 
@@ -101,7 +144,7 @@ func (ctx *Context) registerTypes(ast *ast.TS) error {
 
 	// Make sure that we can resolve any unresolved types we had pending.
 	for name, t := range ctx.UnresolvedTypes() {
-		regd, err := ctx.currentScope().GetNamedType(name)
+		regd, err := ctx.currentScope().ResolvedTypeFromName(name)
 		if err != nil {
 			return err
 		}
@@ -117,4 +160,43 @@ func (ctx *Context) registerTypes(ast *ast.TS) error {
 	}
 
 	return nil
+}
+
+func (c *Context) Invocations() map[*core.Scope][]*core.ObjectInvocation {
+	invocs := make(map[*core.Scope][]*core.ObjectInvocation)
+	addInvocationsFromScope(c.GlobalScope, invocs)
+
+	return invocs
+}
+
+func addInvocationsFromScope(scope *core.Scope, invocs map[*core.Scope][]*core.ObjectInvocation) {
+	if scope == nil {
+		return
+	}
+
+	scopeInvocs := make([]*core.ObjectInvocation, 0)
+	for _, stmtOrExpr := range scope.StatementsOrExpressions {
+		// Try to grab the expression directly or fallback to checking for an expression statement.
+		expr := stmtOrExpr.Expression
+		if expr == nil {
+			expr = stmtOrExpr.Statement.ExpressionStmt
+		}
+
+		if expr == nil || expr.ChainedObjectOperation == nil {
+			continue
+		}
+
+		maybeInvoc := expr.ChainedObjectOperation.Last
+		if maybeInvoc.Invocation == nil {
+			continue
+		}
+
+		scopeInvocs = append(scopeInvocs, maybeInvoc.Invocation)
+	}
+
+	invocs[scope] = scopeInvocs
+
+	for _, child := range scope.Children {
+		addInvocationsFromScope(child, invocs)
+	}
 }

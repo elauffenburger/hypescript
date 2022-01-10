@@ -128,7 +128,7 @@ func (ctx *Context) writeChainedObjectOperation(op *core.ChainedObjectOperation)
 func (ctx *Context) rectifyChainedOperation(op *core.ChainedObjectOperation) error {
 	// TODO: this won't always be true!
 	// Figure out the type of the base object.
-	t, err := ctx.currentScope().GetResolvedType(*op.First.Accessee.Ident)
+	t, err := ctx.currentScope().ResolveIdentType(*op.First.Accessee.Ident)
 	if err != nil {
 		return err
 	}
@@ -183,29 +183,15 @@ func (ctx *Context) rectifyChainedOperation(op *core.ChainedObjectOperation) err
 }
 
 func (ctx *Context) getFieldType(t *core.TypeSpec, field string) (*core.TypeSpec, error) {
-	if t.Object != nil {
-		for _, f := range t.Object.Fields {
-			if f.Name == field {
-				return ctx.currentScope().ResolveType(f.Type)
-			}
+	if t.Object != nil || t.Interface != nil {
+		var hasMembers core.HasMembers
+		if t.Object != nil {
+			hasMembers = t.Object
+		} else if t.Interface != nil {
+			hasMembers = t.Interface
 		}
-	}
 
-	if t := t.Interface; t != nil {
-		for _, m := range t.Members {
-			if m.Field != nil && m.Field.Name == field {
-				return m.Field.Type, nil
-			}
-
-			if m.Method != nil && m.Method.Name == field {
-				return &core.TypeSpec{
-					Function: &core.Function{
-						Parameters: m.Method.Parameters,
-						// TODO: attach methods.
-					},
-				}, nil
-			}
-		}
+		return hasMembers.AllMembers()[field].Type(), nil
 	}
 
 	return nil, errors.WithStack(fmt.Errorf("failed to resolve field type of %s on %s", field, t))

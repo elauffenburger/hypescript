@@ -34,13 +34,30 @@ func (ctx *Context) chainedObjOperationFromAst(chainedOp *ast.ChainedObjectOpera
 		// Make the current link the new link.
 		currentLink = link
 
-		// Add "access" chain operation.
-		if access := astOp.Access; access != nil {
-			link.Access = &core.ObjectAccess{
-				AccessedIdent: access.AccessedIdent,
+		// Grab some parent info if available.
+		var parent core.HasMembers
+		{
+			parentType, err := ctx.currentScope().ResolveType(accessee.Type)
+			if err != nil {
+				return nil, err
 			}
 
-			accessee = &core.Accessable{Ident: &access.AccessedIdent}
+			if parentType.Object != nil || parentType.Interface != nil {
+				if parentType.Interface != nil {
+					parent = parentType.Interface
+				} else if parentType.Object != nil {
+					parent = parentType.Object
+				}
+			}
+		}
+
+		// Add "access" chain operation.
+		if access := astOp.Access; access != nil {
+			ident := access.AccessedIdent
+			identType := parent.AllMembers()[ident].Type()
+
+			link.Access = &core.ObjectAccess{AccessedIdent: ident, Type: identType}
+			accessee = &core.Accessable{Ident: &ident, Type: identType}
 
 			continue
 		}
@@ -54,14 +71,14 @@ func (ctx *Context) chainedObjOperationFromAst(chainedOp *ast.ChainedObjectOpera
 
 			link.Invocation = invoc
 
-			if accessee.Ident != nil {
-				accessee = &core.Accessable{Ident: accessee.Ident}
-			} else if t := accessee.Type; t != nil {
+			if t := accessee.Type; t != nil {
 				if fn := accessee.Type.Function; fn != nil {
-					accessee = &core.Accessable{Type: fn.ImplicitReturnType}
-				} else {
-					accessee = &core.Accessable{Type: t}
+					accessee = &core.Accessable{Ident: fn.Name, Type: fn.ImplicitReturnType}
+
+					continue
 				}
+
+				return nil, fmt.Errorf("could not resolve return type of %#v", accessee)
 			}
 
 			continue

@@ -6,6 +6,7 @@ const (
 	TsString PrimitiveType = "string"
 	TsNumber PrimitiveType = "number"
 	TsVoid   PrimitiveType = "void"
+	TsAny    PrimitiveType = "any"
 )
 
 var PrimitiveTypes = []PrimitiveType{TsString, TsNumber, TsVoid}
@@ -56,7 +57,11 @@ type Expression struct {
 }
 
 type Object struct {
-	Fields map[string]*ObjectTypeField
+	Members map[string]*Member
+}
+
+func (o *Object) AllMembers() map[string]*Member {
+	return o.Members
 }
 
 type ObjectTypeField struct {
@@ -66,18 +71,27 @@ type ObjectTypeField struct {
 
 type Interface struct {
 	Name    string
-	Members []*InterfaceMember
+	Members map[string]*Member
 }
 
-type InterfaceMember struct {
-	Field  *ObjectTypeField
-	Method *InterfaceMethod
+type Member struct {
+	Name     string
+	Field    *ObjectTypeField
+	Function *Function
 }
 
-type InterfaceMethod struct {
-	Name       string
-	Parameters []*FunctionParameter
-	ReturnType *TypeSpec
+func (m *Member) Type() *TypeSpec {
+	if m.Field != nil {
+		return m.Field.Type
+	} else if m.Function != nil {
+		return &TypeSpec{Function: m.Function}
+	}
+
+	panic("unknown member type")
+}
+
+func (i *Interface) AllMembers() map[string]*Member {
+	return i.Members
 }
 
 type FunctionParameter struct {
@@ -118,6 +132,7 @@ type ObjectInvocation struct {
 
 type ObjectAccess struct {
 	AccessedIdent string
+	Type          *TypeSpec
 }
 
 type Accessable struct {
@@ -181,13 +196,6 @@ func ContainsAllTypeSpecs(left, right []*TypeSpec) bool {
 	return len(unseen) == 0
 }
 
-func (i *Interface) Fields() map[string]*ObjectTypeField {
-	fields := make(map[string]*ObjectTypeField, 0)
-	for _, m := range i.Members {
-		if m.Field != nil {
-			fields[m.Field.Name] = m.Field
-		}
-	}
-
-	return fields
+type HasMembers interface {
+	AllMembers() map[string]*Member
 }

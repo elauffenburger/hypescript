@@ -8,7 +8,12 @@ import (
 
 func (ctx *Context) accessableFromAst(accessable ast.Accessable) (*core.Accessable, error) {
 	if accessable.Ident != nil {
-		return &core.Accessable{Ident: accessable.Ident}, nil
+		t, err := ctx.currentScope().IdentType(*accessable.Ident)
+		if err != nil {
+			return nil, err
+		}
+
+		return &core.Accessable{Ident: accessable.Ident, Type: t}, nil
 	}
 
 	if lit := accessable.LiteralType; lit != nil {

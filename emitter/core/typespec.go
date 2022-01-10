@@ -104,27 +104,31 @@ func (t *TypeSpec) satisfies(other *TypeSpec, matchType typeSpecMatchType) bool 
 		}
 	}
 
+	if other.TypeReference != nil && *other.TypeReference == string(TsAny) {
+		return true
+	}
+
 	if t.RefersTo(other) || other.RefersTo(t) {
 		return true
 	}
 
 	if other.Object != nil {
 		if t.Object != nil {
-			return satisfiesFields(t.Object.Fields, other.Object.Fields, matchType)
+			return satisfiesMembers(t.Object.AllMembers(), other.Object.AllMembers(), matchType)
 		}
 
 		if t.Interface != nil {
-			return satisfiesFields(t.Interface.Fields(), other.Object.Fields, matchType)
+			return satisfiesMembers(t.Interface.AllMembers(), other.Object.AllMembers(), matchType)
 		}
 	}
 
 	if other.Interface != nil {
 		if t.Object != nil {
-			return satisfiesFields(t.Object.Fields, other.Interface.Fields(), matchType)
+			return satisfiesMembers(t.Object.AllMembers(), other.Interface.AllMembers(), matchType)
 		}
 
 		if t.Interface != nil {
-			return satisfiesFields(t.Interface.Fields(), other.Interface.Fields(), matchType)
+			return satisfiesMembers(t.Interface.AllMembers(), other.Interface.AllMembers(), matchType)
 		}
 	}
 
@@ -158,23 +162,42 @@ func (t *TypeSpec) satisfies(other *TypeSpec, matchType typeSpecMatchType) bool 
 	return false
 }
 
-func satisfiesFields(fields, targetFields map[string]*ObjectTypeField, matchType typeSpecMatchType) bool {
+func satisfiesMembers(members, targetMembers map[string]*Member, matchType typeSpecMatchType) bool {
 	// If we need an exact match, the fields of t must line up exactly (not just be a superset of other).
-	if matchType == typeSpecMatchTypeExact && len(fields) != len(targetFields) {
+	if matchType == typeSpecMatchTypeExact && len(members) != len(targetMembers) {
 		return false
 	}
 
 	// Make sure all the fields line up.
-	for name, tgtField := range targetFields {
-		// Make sure t contains the field.
-		field, ok := fields[name]
+	for name, tgtMember := range targetMembers {
+		// Make sure t contains the member.
+		member, ok := members[name]
 		if !ok {
 			return false
 		}
 
-		// Make sure the field type is satisfied.
-		if !tgtField.Type.satisfies(field.Type, matchType) {
-			return false
+		if tgtMember.Field != nil {
+			if member.Field == nil {
+				return false
+			}
+
+			if !tgtMember.Field.Type.satisfies(member.Field.Type, matchType) {
+				return false
+			}
+		}
+
+		if tgtMember.Function != nil {
+			if member.Function == nil {
+				return false
+			}
+
+			if member.Function.Name != tgtMember.Function.Name {
+				return false
+			}
+
+			if !member.Function.ImplicitReturnType.satisfies(tgtMember.Function.ImplicitReturnType, matchType) {
+				return false
+			}
 		}
 	}
 

@@ -69,7 +69,6 @@ func TestEmitForComplexCode(t *testing.T) {
 }
 
 func TestTypeAnnotation(t *testing.T) {
-
 }
 
 func assertCodeMatchesSnapshot(t *testing.T, code string) {

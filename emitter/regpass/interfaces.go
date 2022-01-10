@@ -3,19 +3,21 @@ package regpass
 import (
 	"elauffenburger/hypescript/ast"
 	"elauffenburger/hypescript/emitter/core"
+	"elauffenburger/hypescript/typeutils"
 )
 
 func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
-	members := make([]*core.InterfaceMember, len(i.Members))
-	for i, m := range i.Members {
-		var member *core.InterfaceMember
+	members := make(map[string]*core.Member, len(i.Members))
+	for _, m := range i.Members {
+		var member *core.Member
 		if m.Field != nil {
 			t, err := ctx.typeSpecFromAst(&m.Field.Type)
 			if err != nil {
 				return err
 			}
 
-			member = &core.InterfaceMember{
+			member = &core.Member{
+				Name: m.Field.Name,
 				Field: &core.ObjectTypeField{
 					Name: m.Field.Name,
 					Type: t,
@@ -27,15 +29,32 @@ func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
 				return err
 			}
 
-			member = &core.InterfaceMember{
-				Method: &core.InterfaceMethod{
-					Name:       m.Field.Name,
-					ReturnType: t,
+			params := make([]*core.FunctionParameter, len(m.Method.Parameters))
+			for i, p := range m.Method.Parameters {
+				paramType, err := ctx.typeSpecFromAst(&p.Type)
+				if err != nil {
+					return err
+				}
+
+				params[i] = &core.FunctionParameter{
+					Name:     p.Name,
+					Optional: p.Optional,
+					Type:     paramType,
+				}
+			}
+
+			member = &core.Member{
+				Name: m.Method.Name,
+				Function: &core.Function{
+					Name:               typeutils.StrRef(m.Method.Name),
+					Parameters:         params,
+					ExplicitReturnType: t,
+					ImplicitReturnType: t,
 				},
 			}
 		}
 
-		members[i] = member
+		members[member.Name] = member
 	}
 
 	ctx.currentScope().AddType(&core.TypeSpec{

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"elauffenburger/hypescript/typeutils"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -46,15 +47,15 @@ func NewGlobalScope() *Scope {
 	scope.AddType(&TypeSpec{
 		Interface: &Interface{
 			Name: "Console",
-			Members: []*InterfaceMember{
-				{
-					Method: &InterfaceMethod{
-						Name: "log",
+			Members: map[string]*Member{
+				"log": {
+					Function: &Function{
+						Name: typeutils.StrRef("log"),
 						Parameters: []*FunctionParameter{
 							{
 								Name: "fmt",
 								Type: &TypeSpec{
-									TypeReference: strRef("any"),
+									TypeReference: typeutils.StrRef("any"),
 								},
 							},
 						},
@@ -64,7 +65,7 @@ func NewGlobalScope() *Scope {
 		},
 	})
 
-	scope.AddIdentifer("console", &TypeSpec{TypeReference: strRef("Console")})
+	scope.AddIdentifer("console", &TypeSpec{TypeReference: typeutils.StrRef("Console")})
 
 	return scope
 }
@@ -104,7 +105,7 @@ func (s *Scope) AddIdentifer(ident string, identType *TypeSpec) {
 	s.IdentTypes[ident] = identType
 }
 
-func (s *Scope) RegisteredType(typeName string) *TypeSpec {
+func (s *Scope) TypeFromName(typeName string) *TypeSpec {
 	// Try to get the type.
 	for _, registered := range s.Types {
 		// Check if we can resolve the type.
@@ -127,7 +128,15 @@ func (s *Scope) RegisteredType(typeName string) *TypeSpec {
 	return t
 }
 
-func (s *Scope) TypeOf(ident string) (*TypeSpec, error) {
+func (s *Scope) ResolveType(t *TypeSpec) (*TypeSpec, error) {
+	if t.TypeReference != nil {
+		return s.ResolvedTypeFromName(*t.TypeReference)
+	}
+
+	return t, nil
+}
+
+func (s *Scope) IdentType(ident string) (*TypeSpec, error) {
 	t, ok := s.IdentTypes[ident]
 	if ok {
 		return t, nil
@@ -137,19 +146,11 @@ func (s *Scope) TypeOf(ident string) (*TypeSpec, error) {
 		return nil, errors.WithStack(fmt.Errorf("unknown identifier %s in scope: %#v", ident, s))
 	}
 
-	return s.Parent.TypeOf(ident)
+	return s.Parent.IdentType(ident)
 }
 
-func (s *Scope) ResolveType(t *TypeSpec) (*TypeSpec, error) {
-	if t.TypeReference != nil {
-		return s.GetNamedType(*t.TypeReference)
-	}
-
-	return t, nil
-}
-
-func (s *Scope) GetResolvedType(ident string) (*TypeSpec, error) {
-	t, err := s.TypeOf(ident)
+func (s *Scope) ResolveIdentType(ident string) (*TypeSpec, error) {
+	t, err := s.IdentType(ident)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +175,7 @@ func (s *Scope) NewIdent() string {
 	return fmt.Sprintf("ident%d", ident)
 }
 
-func (s *Scope) GetNamedType(name string) (*TypeSpec, error) {
+func (s *Scope) ResolvedTypeFromName(name string) (*TypeSpec, error) {
 	for _, t := range s.Types {
 		if t.Interface != nil && t.Interface.Name == name {
 			return t, nil
@@ -182,7 +183,7 @@ func (s *Scope) GetNamedType(name string) (*TypeSpec, error) {
 	}
 
 	if s.Parent != nil {
-		return s.Parent.GetNamedType(name)
+		return s.Parent.ResolvedTypeFromName(name)
 	}
 
 	return nil, fmt.Errorf("failed to find type %s in scope", name)
@@ -190,13 +191,13 @@ func (s *Scope) GetNamedType(name string) (*TypeSpec, error) {
 
 func (s *Scope) ContainsType(t *TypeSpec) bool {
 	if t.Interface != nil {
-		i, _ := s.GetNamedType(t.Interface.Name)
+		i, _ := s.ResolvedTypeFromName(t.Interface.Name)
 
 		return i != nil
 	}
 
 	if t.TypeReference != nil {
-		i, _ := s.GetNamedType(*t.TypeReference)
+		i, _ := s.ResolvedTypeFromName(*t.TypeReference)
 
 		return i != nil
 	}
@@ -222,7 +223,7 @@ func (s *Scope) GetTypeIdFor(t *TypeSpec) (int, error) {
 	return 0, nil
 }
 
-func (s *Scope) InferType(expr *Expression) (*TypeSpec, error) {
+func (s *Scope) ExprType(expr *Expression) (*TypeSpec, error) {
 	if expr.String != nil {
 		t := string(TsString)
 
@@ -236,7 +237,7 @@ func (s *Scope) InferType(expr *Expression) (*TypeSpec, error) {
 	}
 
 	if expr.Ident != nil {
-		return s.TypeOf(*expr.Ident)
+		return s.IdentType(*expr.Ident)
 	}
 
 	if fn := expr.FunctionInstantiation; fn != nil {
@@ -244,19 +245,29 @@ func (s *Scope) InferType(expr *Expression) (*TypeSpec, error) {
 	}
 
 	if objInst := expr.ObjectInstantiation; objInst != nil {
-		fields := make(map[string]*ObjectTypeField, len(objInst.Fields))
+		members := make(map[string]*Member, len(objInst.Fields))
 		for _, f := range objInst.Fields {
-			fields[f.Name] = &ObjectTypeField{
-				Name: f.Name,
-				Type: f.Type,
+			members[f.Name] = &Member{
+				Field: &ObjectTypeField{
+					Name: f.Name,
+					Type: f.Type,
+				},
 			}
 		}
 
-		return &TypeSpec{Object: &Object{Fields: fields}}, nil
+		return &TypeSpec{Object: &Object{Members: members}}, nil
 	}
 
 	if chain := expr.ChainedObjectOperation; chain != nil {
-		return chain.Last.Accessee.Type, nil
+		op := chain.Last
+
+		if op.Access != nil {
+			return op.Access.Type, nil
+		}
+
+		if op.Invocation != nil {
+			return op.Invocation.Accessee.Type, nil
+		}
 	}
 
 	return nil, fmt.Errorf("unable to infer type")
@@ -269,8 +280,4 @@ func (s *Scope) UnresolvedTypes() map[string]*TypeSpec {
 	}
 
 	return types
-}
-
-func strRef(str string) *string {
-	return &str
 }

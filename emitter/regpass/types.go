@@ -7,7 +7,7 @@ import (
 )
 
 func (ctx *Context) objectFromAst(fields []*ast.ObjectTypeField) (*core.Object, error) {
-	objFields := make(map[string]*core.ObjectTypeField, len(fields))
+	members := make(map[string]*core.Member, len(fields))
 
 	for _, field := range fields {
 		fieldType, err := ctx.typeSpecFromAst(&field.Type)
@@ -15,13 +15,16 @@ func (ctx *Context) objectFromAst(fields []*ast.ObjectTypeField) (*core.Object, 
 			return nil, err
 		}
 
-		objFields[field.Name] = &core.ObjectTypeField{
+		members[field.Name] = &core.Member{
 			Name: field.Name,
-			Type: fieldType,
+			Field: &core.ObjectTypeField{
+				Name: field.Name,
+				Type: fieldType,
+			},
 		}
 	}
 
-	return &core.Object{Fields: objFields}, nil
+	return &core.Object{Members: members}, nil
 }
 
 func (ctx *Context) functionFromAst(fn *ast.FunctionInstantiation) (*core.Function, error) {
@@ -80,7 +83,7 @@ func (ctx *Context) typeSpecFromAst(ident *ast.TypeIdentifier) (*core.TypeSpec, 
 	}
 
 	if ref := t.TypeReference; ref != nil {
-		t := ctx.currentScope().RegisteredType(*ref)
+		t := ctx.currentScope().TypeFromName(*ref)
 
 		return t, nil
 	}

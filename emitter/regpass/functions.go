@@ -4,6 +4,7 @@ import (
 	"elauffenburger/hypescript/ast"
 	"elauffenburger/hypescript/emitter/core"
 	"elauffenburger/hypescript/typeutils"
+	"fmt"
 )
 
 func (ctx *Context) registerFunctionDeclaration(astFn *ast.FunctionInstantiation) (*core.StatementOrExpression, error) {
@@ -66,7 +67,7 @@ func (ctx *Context) registerFunctionDeclaration(astFn *ast.FunctionInstantiation
 		// TODO: merge this with regular statement registration.
 		// If this is a let decl, add the ident to the current scope.
 		if let := stmt.LetDecl; let != nil {
-			infType, err := ctx.currentScope().InferType(let.Value)
+			infType, err := ctx.currentScope().ExprType(let.Value)
 			if err != nil {
 				return nil, err
 			}
@@ -78,7 +79,7 @@ func (ctx *Context) registerFunctionDeclaration(astFn *ast.FunctionInstantiation
 
 		// If this is a return stmt, update the implicit return type.
 		if stmt.ReturnStmt != nil {
-			rtnStmtType, err := ctx.currentScope().InferType(stmt.ReturnStmt)
+			rtnStmtType, err := ctx.currentScope().ExprType(stmt.ReturnStmt)
 			if err != nil {
 				return nil, err
 			}
@@ -149,6 +150,18 @@ func allFunctions(s *core.Scope) []*core.Function {
 
 // TODO: move to core.Function?
 func validateFn(scope *core.Scope, fn *core.Function) error {
+	// Make sure parameters are valid.
+	{
+		seenOptional := false
+
+		for _, p := range fn.Parameters {
+			// Don't allow a non-optional param after we've added an optional one.
+			if seenOptional && !p.Optional {
+				return fmt.Errorf("param %s must be optional since the previous param is", p.Name)
+			}
+		}
+	}
+
 	// Make sure the implicit return type matches the implicit one (if any).
 	if fn.ExplicitReturnType != nil {
 		explRtnType, err := scope.ResolveType(fn.ExplicitReturnType)
