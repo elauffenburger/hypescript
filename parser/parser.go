@@ -16,13 +16,13 @@ type parser struct{}
 
 func (p parser) ParseString(str string) (*ast.TS, error) {
 	lex := lexer.MustSimple([]lexer.Rule{
-		{"Int", `\d+`, nil},
-		{"Ident", `[a-zA-Z_$][a-zA-Z_$0-9]*`, nil},
-		{"String", `"[^"]*"`, nil},
-		{"Whitespace", `(?:[\s\t]|\n|(?:\r\n))+`, nil},
-		{"Punct", `[?,.|<>(){}=:;]`, nil},
-		{"Comment", `//.*`, nil},
-		{"Reserved", `(let|function)`, nil},
+		{Name: "Int", Pattern: `\d+`, Action: nil},
+		{Name: "Ident", Pattern: `[a-zA-Z_$][a-zA-Z_$0-9]*`, Action: nil},
+		{Name: "String", Pattern: `"[^"]*"`, Action: nil},
+		{Name: "Whitespace", Pattern: `(?:[\s\t]|\n|(?:\r\n))+`, Action: nil},
+		{Name: "Punct", Pattern: `[?,.|<>(){}=:;]`, Action: nil},
+		{Name: "Comment", Pattern: `//.*`, Action: nil},
+		{Name: "Reserved", Pattern: `(let|function)`, Action: nil},
 	})
 
 	parser := participle.MustBuild(

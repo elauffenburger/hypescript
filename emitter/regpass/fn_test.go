@@ -75,7 +75,7 @@ func TestFunctionReturnTypeInferredFromVar(t *testing.T) {
 		implSpec: &core.TypeSpec{
 			Object: &core.Object{
 				Members: map[string]*core.Member{
-					"name": &core.Member{
+					"name": {
 						Field: &core.ObjectTypeField{
 							Name: "name",
 							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
