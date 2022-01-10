@@ -23,6 +23,8 @@ It compiles to standardized C++ so as long as your platform has a standards-comp
     - [ ] `var` declarations
 - Types
     - [x] `function` params
+        - [x] optional params
+        - [x] typechecking
     - [x] variable types
     - `interface`s
         - [x] declarations
