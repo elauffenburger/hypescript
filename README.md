@@ -37,8 +37,9 @@ It compiles to standardized C++ so as long as your platform has a standards-comp
     - [ ] `null`
     - unions
         - [x] variables
-        - [ ] type checking
+        - [x] type checking
     - [ ] generics
+    - [ ] arrays
 - [x] scoped identifiers
 - [ ] `this`
 - [ ] `new`

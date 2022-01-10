@@ -37,8 +37,11 @@ func NewGlobalScope() *Scope {
 
 	scope.AddType(&TypeSpec{Interface: &Interface{Name: "string"}})
 	scope.AddType(&TypeSpec{Interface: &Interface{Name: "number"}})
-	// TODO: this doesn't feel right; should be a special type name.
+
+	// TODO: this doesn't feel right; should be special type names maybe?
 	scope.AddType(&TypeSpec{Interface: &Interface{Name: "void"}})
+	scope.AddType(&TypeSpec{Interface: &Interface{Name: "null"}})
+	scope.AddType(&TypeSpec{Interface: &Interface{Name: "undefined"}})
 
 	scope.AddType(&TypeSpec{
 		Interface: &Interface{
