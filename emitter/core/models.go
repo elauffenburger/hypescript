@@ -81,8 +81,9 @@ type InterfaceMethod struct {
 }
 
 type FunctionParameter struct {
-	Name string
-	Type *TypeSpec
+	Name     string
+	Optional bool
+	Type     *TypeSpec
 }
 
 type Union struct {

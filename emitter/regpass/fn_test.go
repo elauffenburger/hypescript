@@ -9,6 +9,7 @@ import (
 
 type fnTest struct {
 	code       string
+	paramSpec  []core.FunctionParameter
 	explSpec   *core.TypeSpec
 	implSpec   *core.TypeSpec
 	errChecker func(error)
@@ -16,16 +17,38 @@ type fnTest struct {
 
 func testFn(t *testing.T, tc fnTest) {
 	switch {
-	case tc.implSpec != nil, tc.explSpec != nil:
+	case tc.paramSpec != nil, tc.implSpec != nil, tc.explSpec != nil:
 		ctx := run(tc.code)
 		fn := ctx.GlobalScope.IdentTypes["fn"]
+
+		if tc.paramSpec != nil {
+			if len(fn.Function.Parameters) != len(tc.paramSpec) {
+				t.Error("wrong parameters")
+			}
+
+			for i, param := range fn.Function.Parameters {
+				paramSpec := tc.paramSpec[i]
+
+				if param.Name != paramSpec.Name {
+					t.Errorf("wrong param name at position %d", i)
+				}
+
+				if param.Optional != paramSpec.Optional {
+					t.Error("optionality doesn't match up")
+				}
+
+				if !param.Type.Equals(paramSpec.Type) {
+					t.Error("param types don't match up")
+				}
+			}
+		}
 
 		if tc.implSpec != nil && !fn.Function.ImplicitReturnType.Equals(tc.implSpec) {
 			t.Error("wrong implicit return type inferred")
 		}
 
 		if tc.explSpec != nil && !fn.Function.ExplicitReturnType.Equals(tc.explSpec) {
-			t.Error("wrong explicit return type inferred")
+			t.Error("wrong explicit return type")
 		}
 
 	case tc.errChecker != nil:
@@ -206,6 +229,15 @@ func TestFunctionReturnObjectLiteralSubsetOfExplicitInterface(t *testing.T) {
 					},
 				},
 			},
+		},
+	})
+}
+
+func TestFunctionOptionalParameter(t *testing.T) {
+	testFn(t, fnTest{
+		code: `function fn(foo?: number) {}`,
+		paramSpec: []core.FunctionParameter{
+			{Name: "foo", Optional: true, Type: &core.TypeSpec{TypeReference: typeutils.StrRef("number")}},
 		},
 	})
 }

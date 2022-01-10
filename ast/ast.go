@@ -74,8 +74,9 @@ type ObjectTypeField struct {
 }
 
 type FunctionParameter struct {
-	Name string         `@Ident`
-	Type TypeIdentifier `":" @@`
+	Name     string         `@Ident`
+	Optional bool           `@"?"?`
+	Type     TypeIdentifier `":" @@`
 }
 
 type StatementOrExpression struct {

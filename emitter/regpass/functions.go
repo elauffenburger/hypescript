@@ -13,7 +13,7 @@ func (ctx *Context) registerFunctionDeclaration(astFn *ast.FunctionInstantiation
 	}
 
 	// Figure out our params.
-	params, err := ctx.functionParameterFromAst(astFn.Parameters)
+	params, err := ctx.functionParametersFromAst(astFn.Parameters)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (ctx *Context) registerFunctionDeclaration(astFn *ast.FunctionInstantiation
 	return result, nil
 }
 
-func (ctx *Context) functionParameterFromAst(params []*ast.FunctionParameter) ([]*core.FunctionParameter, error) {
+func (ctx *Context) functionParametersFromAst(params []*ast.FunctionParameter) ([]*core.FunctionParameter, error) {
 	results := make([]*core.FunctionParameter, 0)
 	for _, p := range params {
 		pType, err := ctx.typeSpecFromAst(&p.Type)
@@ -122,8 +122,9 @@ func (ctx *Context) functionParameterFromAst(params []*ast.FunctionParameter) ([
 		}
 
 		results = append(results, &core.FunctionParameter{
-			Name: p.Name,
-			Type: pType,
+			Name:     p.Name,
+			Optional: p.Optional,
+			Type:     pType,
 		})
 	}
 

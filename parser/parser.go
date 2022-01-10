@@ -20,7 +20,7 @@ func (p parser) ParseString(str string) (*ast.TS, error) {
 		{"Ident", `[a-zA-Z_$][a-zA-Z_$0-9]*`, nil},
 		{"String", `"[^"]*"`, nil},
 		{"Whitespace", `(?:[\s\t]|\n|(?:\r\n))+`, nil},
-		{"Punct", `[,.|<>(){}=:;]`, nil},
+		{"Punct", `[?,.|<>(){}=:;]`, nil},
 		{"Comment", `//.*`, nil},
 		{"Reserved", `(let|function)`, nil},
 	})
