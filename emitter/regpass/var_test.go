@@ -104,9 +104,14 @@ func TestInterfaceWithOptionalFieldsHasFieldsSatisfied(t *testing.T) {
 					},
 					"age": {
 						Field: &core.ObjectTypeField{
-							Name:     "age",
-							Optional: true,
-							Type:     &core.TypeSpec{TypeReference: typeutils.StrRef("number")},
+							Name: "age",
+							Type: &core.TypeSpec{
+								Union: &core.Union{
+									Types: map[*core.TypeSpec]bool{
+										{TypeReference: typeutils.StrRef("number")}: true,
+									},
+								},
+							},
 						},
 					},
 				},

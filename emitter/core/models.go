@@ -65,9 +65,8 @@ func (o *Object) AllMembers() map[string]*Member {
 }
 
 type ObjectTypeField struct {
-	Name     string
-	Optional bool
-	Type     *TypeSpec
+	Name string
+	Type *TypeSpec
 }
 
 type Interface struct {
@@ -87,18 +86,6 @@ func (m *Member) Name() *string {
 
 	if m.Function != nil {
 		return m.Function.Name
-	}
-
-	panic("unknown member type")
-}
-
-func (m *Member) Optional() bool {
-	if m.Field != nil {
-		return m.Field.Optional
-	}
-
-	if m.Function != nil {
-		return false
 	}
 
 	panic("unknown member type")

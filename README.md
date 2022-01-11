@@ -34,7 +34,7 @@ It compiles to standardized C++ so as long as your platform has a standards-comp
         - [ ] type checking
     - `type`s
     - [x] mutually recursive types
-    - [ ] `any`
+    - [x] `any`
     - [ ] `undefined`
     - [ ] `null`
     - unions

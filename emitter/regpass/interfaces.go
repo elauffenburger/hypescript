@@ -16,11 +16,19 @@ func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
 				return err
 			}
 
+			if m.Field.Optional {
+				union, err := createUnionType(t, &core.TypeSpec{TypeReference: typeutils.StrRef("undefined")})
+				if err != nil {
+					return err
+				}
+
+				t = union
+			}
+
 			members[m.Field.Name] = &core.Member{
 				Field: &core.ObjectTypeField{
-					Name:     m.Field.Name,
-					Optional: m.Field.Optional,
-					Type:     t,
+					Name: m.Field.Name,
+					Type: t,
 				},
 			}
 		case m.Method != nil:

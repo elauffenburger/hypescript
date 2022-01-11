@@ -1,6 +1,7 @@
 package core
 
 import (
+	"elauffenburger/hypescript/typeutils"
 	"reflect"
 	"strings"
 )
@@ -187,7 +188,9 @@ func satisfiesMembers(members, targetMembers map[string]*Member, matchType typeS
 		// Make sure t contains the member or the member is optional.
 		member, present := members[name]
 		if !present {
-			return tgtMember.Optional()
+			undefined := &TypeSpec{TypeReference: typeutils.StrRef("undefined")}
+
+			return undefined.Satisfies(tgtMember.Type())
 		}
 
 		if !member.Type().satisfies(tgtMember.Type(), matchType) {
