@@ -89,6 +89,41 @@ func TestInterfaceWithOptionalFieldsHasFieldsSatisfied(t *testing.T) {
 			}
 
 			let test: Foo = {
+				name: "Eric",
+				age: 30,
+			};
+		`,
+		spec: &core.TypeSpec{
+			Object: &core.Object{
+				Members: map[string]*core.Member{
+					"name": {
+						Field: &core.ObjectTypeField{
+							Name: "name",
+							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						},
+					},
+					"age": {
+						Field: &core.ObjectTypeField{
+							Name:     "age",
+							Optional: true,
+							Type:     &core.TypeSpec{TypeReference: typeutils.StrRef("number")},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestInterfaceWithOptionalFieldsHasFieldsUnsatisfied(t *testing.T) {
+	testVar(t, varTest{
+		code: `
+			interface Foo {
+				name: string;
+				age?: number;
+			}
+
+			let test: Foo = {
 				name: "Tommy Wiseau",
 			};
 		`,
@@ -105,7 +140,4 @@ func TestInterfaceWithOptionalFieldsHasFieldsSatisfied(t *testing.T) {
 			},
 		},
 	})
-}
-
-func TestInterfaceWithOptionalFieldsHasFieldsUnsatisfied(t *testing.T) {
 }
