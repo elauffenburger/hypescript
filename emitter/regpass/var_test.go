@@ -79,3 +79,33 @@ func TestVarNotSatisfyingUnionAnnotation(t *testing.T) {
 		},
 	})
 }
+
+func TestInterfaceWithOptionalFieldsHasFieldsSatisfied(t *testing.T) {
+	testVar(t, varTest{
+		code: `
+			interface Foo {
+				name: string;
+				age?: number;
+			}
+
+			let test: Foo = {
+				name: "Tommy Wiseau",
+			};
+		`,
+		spec: &core.TypeSpec{
+			Object: &core.Object{
+				Members: map[string]*core.Member{
+					"name": {
+						Field: &core.ObjectTypeField{
+							Name: "name",
+							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestInterfaceWithOptionalFieldsHasFieldsUnsatisfied(t *testing.T) {
+}

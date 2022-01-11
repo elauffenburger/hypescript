@@ -9,21 +9,21 @@ import (
 func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
 	members := make(map[string]*core.Member, len(i.Members))
 	for _, m := range i.Members {
-		var member *core.Member
-		if m.Field != nil {
+		switch {
+		case m.Field != nil:
 			t, err := ctx.typeSpecFromAst(&m.Field.Type)
 			if err != nil {
 				return err
 			}
 
-			member = &core.Member{
-				Name: m.Field.Name,
+			members[m.Field.Name] = &core.Member{
 				Field: &core.ObjectTypeField{
-					Name: m.Field.Name,
-					Type: t,
+					Name:     m.Field.Name,
+					Optional: m.Field.Optional,
+					Type:     t,
 				},
 			}
-		} else if m.Method != nil {
+		case m.Method != nil:
 			t, err := ctx.typeSpecFromAst(m.Method.ReturnType)
 			if err != nil {
 				return err
@@ -43,8 +43,7 @@ func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
 				}
 			}
 
-			member = &core.Member{
-				Name: m.Method.Name,
+			members[m.Method.Name] = &core.Member{
 				Function: &core.Function{
 					Name:               typeutils.StrRef(m.Method.Name),
 					Parameters:         params,
@@ -53,8 +52,6 @@ func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
 				},
 			}
 		}
-
-		members[member.Name] = member
 	}
 
 	ctx.currentScope().AddType(&core.TypeSpec{

@@ -17,8 +17,9 @@ type InterfaceMemberDefinition struct {
 }
 
 type InterfaceFieldDefinition struct {
-	Name string         `@Ident`
-	Type TypeIdentifier `":" @@ ";"`
+	Name     string         `@Ident`
+	Optional bool           `@"?"?`
+	Type     TypeIdentifier `":" @@ ";"`
 }
 
 type InterfaceMethodDefinition struct {

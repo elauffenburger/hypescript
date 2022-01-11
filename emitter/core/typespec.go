@@ -132,6 +132,20 @@ func (t *TypeSpec) satisfies(other *TypeSpec, matchType typeSpecMatchType) bool 
 		}
 	}
 
+	if other.Function != nil {
+		if t.Function != nil {
+			if t.Function.Name != other.Function.Name {
+				return false
+			}
+
+			if !t.Function.ImplicitReturnType.satisfies(other.Function.ImplicitReturnType, matchType) {
+				return false
+			}
+
+			return true
+		}
+	}
+
 	if other.Union != nil {
 		if t.Union != nil {
 			// If we need an exact match, make sure the unions line up exactly.
@@ -170,34 +184,14 @@ func satisfiesMembers(members, targetMembers map[string]*Member, matchType typeS
 
 	// Make sure all the fields line up.
 	for name, tgtMember := range targetMembers {
-		// Make sure t contains the member.
-		member, ok := members[name]
-		if !ok {
+		// Make sure t contains the member or the member is optional.
+		member, present := members[name]
+		if !present {
+			return tgtMember.Optional()
+		}
+
+		if !member.Type().satisfies(tgtMember.Type(), matchType) {
 			return false
-		}
-
-		if tgtMember.Field != nil {
-			if member.Field == nil {
-				return false
-			}
-
-			if !tgtMember.Field.Type.satisfies(member.Field.Type, matchType) {
-				return false
-			}
-		}
-
-		if tgtMember.Function != nil {
-			if member.Function == nil {
-				return false
-			}
-
-			if member.Function.Name != tgtMember.Function.Name {
-				return false
-			}
-
-			if !member.Function.ImplicitReturnType.satisfies(tgtMember.Function.ImplicitReturnType, matchType) {
-				return false
-			}
 		}
 	}
 

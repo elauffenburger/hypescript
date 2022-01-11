@@ -16,7 +16,6 @@ func (ctx *Context) objectFromAst(fields []*ast.ObjectTypeField) (*core.Object, 
 		}
 
 		members[field.Name] = &core.Member{
-			Name: field.Name,
 			Field: &core.ObjectTypeField{
 				Name: field.Name,
 				Type: fieldType,
@@ -43,6 +42,7 @@ func (ctx *Context) typeSpecFromAst(ident *ast.TypeIdentifier) (*core.TypeSpec, 
 		return nil, nil
 	}
 
+	// Check if this is a union type...
 	if len(ident.Rest) > 0 {
 		types := make(map[*core.TypeSpec]bool, len(ident.Rest)+1)
 
@@ -58,9 +58,17 @@ func (ctx *Context) typeSpecFromAst(ident *ast.TypeIdentifier) (*core.TypeSpec, 
 		return &core.TypeSpec{Union: &core.Union{Types: types}}, nil
 	}
 
+	// ...otherwise this is a regular type.
 	t := ident.Head
-	if t := t.LiteralType; t != nil {
-		if t := t.FunctionType; t != nil {
+
+	switch {
+	case t.LiteralType != nil:
+		t := t.LiteralType
+
+		switch {
+		case t.FunctionType != nil:
+			t := t.FunctionType
+
 			fn, err := ctx.functionFromAst(&ast.FunctionInstantiation{
 				Parameters: t.Parameters,
 				ReturnType: t.ReturnType,
@@ -70,20 +78,19 @@ func (ctx *Context) typeSpecFromAst(ident *ast.TypeIdentifier) (*core.TypeSpec, 
 			}
 
 			return &core.TypeSpec{Function: fn}, nil
-		}
 
-		if t.ObjectType != nil {
+		case t.ObjectType != nil:
 			obj, err := ctx.objectFromAst(t.ObjectType.Fields)
 			if err != nil {
 				return nil, err
 			}
 
 			return &core.TypeSpec{Object: obj}, nil
-		}
-	}
 
-	if ref := t.TypeReference; ref != nil {
-		t := ctx.currentScope().TypeFromName(*ref)
+		}
+
+	case t.TypeReference != nil:
+		t := ctx.currentScope().TypeFromName(*t.TypeReference)
 
 		return t, nil
 	}
