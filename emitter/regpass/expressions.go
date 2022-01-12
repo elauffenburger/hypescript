@@ -175,6 +175,11 @@ func (ctx *Context) expressionFromAst(expr *ast.Expression) (*core.Expression, e
 	}
 
 	if objInst := expr.ObjectInstantiation; objInst != nil {
+		scope := ctx.EnterScope()
+
+		this := core.NewObject([]*core.Member{})
+		scope.IdentTypes["this"] = &core.TypeSpec{Object: this}
+
 		fields := make([]*core.ObjectFieldInstantiation, len(objInst.Fields))
 		for i, f := range objInst.Fields {
 			value, err := ctx.expressionFromAst(&f.Value)
@@ -192,7 +197,11 @@ func (ctx *Context) expressionFromAst(expr *ast.Expression) (*core.Expression, e
 				Type:  t,
 				Value: value,
 			}
+
+			this.AddMember(&core.Member{Field: &core.ObjectTypeField{Name: f.Name, Type: t}})
 		}
+
+		ctx.ExitScope()
 
 		return &core.Expression{ObjectInstantiation: &core.ObjectInstantiation{Fields: fields}}, nil
 	}

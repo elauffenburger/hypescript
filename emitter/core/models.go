@@ -1,5 +1,7 @@
 package core
 
+import "sync"
+
 type PrimitiveType string
 
 const (
@@ -57,11 +59,40 @@ type Expression struct {
 }
 
 type Object struct {
-	Members map[string]*Member
+	memberTracker *memberTracker
+}
+
+func NewObject(members []*Member) *Object {
+	obj := &Object{}
+	for _, m := range members {
+		obj.AddMember(m)
+	}
+
+	return obj
+}
+
+func (o *Object) AddMember(m *Member) {
+	if o.memberTracker == nil {
+		o.memberTracker = newMemberTracker()
+	}
+
+	o.memberTracker.AddMember(m)
 }
 
 func (o *Object) AllMembers() map[string]*Member {
-	return o.Members
+	if o.memberTracker == nil {
+		o.memberTracker = newMemberTracker()
+	}
+
+	return o.memberTracker.AllMembers()
+}
+
+func (o *Object) MemberResolved(name string) <-chan *Member {
+	if o.memberTracker == nil {
+		o.memberTracker = newMemberTracker()
+	}
+
+	return o.memberTracker.MemberResolved(name)
 }
 
 type ObjectTypeField struct {
@@ -70,22 +101,51 @@ type ObjectTypeField struct {
 }
 
 type Interface struct {
-	Name    string
-	Members map[string]*Member
+	memberTracker *memberTracker
+
+	Name string
+}
+
+func NewInterface(name string, members []*Member) *Interface {
+	i := &Interface{Name: name}
+	for _, m := range members {
+		i.AddMember(m)
+	}
+
+	return i
+}
+
+func (i *Interface) AddMember(m *Member) {
+	if i.memberTracker == nil {
+		i.memberTracker = newMemberTracker()
+	}
+
+	i.memberTracker.AddMember(m)
+}
+
+func (i *Interface) AllMembers() map[string]*Member {
+	if i.memberTracker == nil {
+		i.memberTracker = newMemberTracker()
+	}
+
+	return i.memberTracker.AllMembers()
+}
+
+func (i *Interface) MemberResolved(name string) <-chan *Member {
+	if i.memberTracker == nil {
+		i.memberTracker = newMemberTracker()
+	}
+
+	return i.memberTracker.MemberResolved(name)
 }
 
 type Member struct {
-	Field    *ObjectTypeField
-	Function *Function
+	Field *ObjectTypeField
 }
 
 func (m *Member) Name() *string {
 	if m.Field != nil {
 		return &m.Field.Name
-	}
-
-	if m.Function != nil {
-		return m.Function.Name
 	}
 
 	panic("unknown member type")
@@ -94,15 +154,9 @@ func (m *Member) Name() *string {
 func (m *Member) Type() *TypeSpec {
 	if m.Field != nil {
 		return m.Field.Type
-	} else if m.Function != nil {
-		return &TypeSpec{Function: m.Function}
 	}
 
 	panic("unknown member type")
-}
-
-func (i *Interface) AllMembers() map[string]*Member {
-	return i.Members
 }
 
 type FunctionParameter struct {
@@ -208,5 +262,70 @@ func ContainsAllTypeSpecs(left, right []*TypeSpec) bool {
 }
 
 type HasMembers interface {
+	AddMember(m *Member)
 	AllMembers() map[string]*Member
+	MemberResolved(name string) <-chan *Member
+}
+
+type memberTracker struct {
+	lock      *sync.Mutex
+	listeners map[string][]chan *Member
+
+	members map[string]*Member
+}
+
+func newMemberTracker() *memberTracker {
+	return &memberTracker{
+		lock:      &sync.Mutex{},
+		listeners: map[string][]chan *Member{},
+		members:   map[string]*Member{},
+	}
+}
+
+func (t *memberTracker) AddMember(m *Member) {
+	t.members[*m.Name()] = m
+
+	t.resolveMember(m)
+}
+
+func (t *memberTracker) AllMembers() map[string]*Member {
+	return t.members
+}
+
+func (t *memberTracker) MemberResolved(name string) <-chan *Member {
+	c := make(chan *Member)
+
+	t.lock.Lock()
+
+	if t.listeners[name] == nil {
+		t.listeners[name] = []chan *Member{}
+	}
+
+	t.listeners[name] = append(t.listeners[name], c)
+
+	t.lock.Unlock()
+
+	if m := t.members[name]; m != nil {
+		go func() {
+			t.resolveMember(m)
+		}()
+	}
+
+	return c
+}
+
+func (t *memberTracker) resolveMember(m *Member) {
+	listeners := t.listeners[*m.Name()]
+	if listeners == nil {
+		return
+	}
+
+	for _, l := range listeners {
+		l := l
+
+		go func() {
+			l <- m
+			close(l)
+		}()
+	}
 }

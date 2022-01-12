@@ -6,9 +6,9 @@ import (
 	"elauffenburger/hypescript/typeutils"
 )
 
-func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
-	members := make(map[string]*core.Member, len(i.Members))
-	for _, m := range i.Members {
+func (ctx *Context) registerInterface(iface *ast.InterfaceDefinition) error {
+	members := make([]*core.Member, len(iface.Members))
+	for i, m := range iface.Members {
 		switch {
 		case m.Field != nil:
 			t, err := ctx.typeSpecFromAst(&m.Field.Type)
@@ -25,7 +25,7 @@ func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
 				t = union
 			}
 
-			members[m.Field.Name] = &core.Member{
+			members[i] = &core.Member{
 				Field: &core.ObjectTypeField{
 					Name: m.Field.Name,
 					Type: t,
@@ -51,22 +51,29 @@ func (ctx *Context) registerInterface(i *ast.InterfaceDefinition) error {
 				}
 			}
 
-			members[m.Method.Name] = &core.Member{
-				Function: &core.Function{
-					Name:               typeutils.StrRef(m.Method.Name),
-					Parameters:         params,
-					ExplicitReturnType: t,
-					ImplicitReturnType: t,
+			name := m.Method.Name
+
+			members[i] = &core.Member{
+				Field: &core.ObjectTypeField{
+					Name: name,
+					Type: &core.TypeSpec{
+						Function: &core.Function{
+							Name:               &name,
+							Parameters:         params,
+							ExplicitReturnType: t,
+							ImplicitReturnType: t,
+						},
+					},
 				},
 			}
 		}
 	}
 
 	ctx.currentScope().AddType(&core.TypeSpec{
-		Interface: &core.Interface{
-			Name:    i.Name,
-			Members: members,
-		},
+		Interface: core.NewInterface(
+			iface.Name,
+			members,
+		),
 	})
 
 	return nil

@@ -1,12 +1,15 @@
 package regpass
 
 import (
+	"context"
 	"elauffenburger/hypescript/ast"
 	"elauffenburger/hypescript/emitter/core"
 	"fmt"
 )
 
 type Context struct {
+	ctx context.Context
+
 	scopeTracker core.ScopeTracker
 	GlobalScope  *core.Scope
 }
@@ -15,6 +18,7 @@ func NewContext() *Context {
 	global := core.NewGlobalScope()
 
 	return &Context{
+		ctx:          context.Background(),
 		scopeTracker: core.NewScopeTracker(global),
 		GlobalScope:  global,
 	}
@@ -22,6 +26,10 @@ func NewContext() *Context {
 
 func (ctx *Context) currentScope() *core.Scope {
 	return ctx.scopeTracker.CurrentScope()
+}
+
+func (ctx *Context) Done() <-chan struct{} {
+	return ctx.ctx.Done()
 }
 
 func (ctx *Context) EnterScope() *core.Scope {

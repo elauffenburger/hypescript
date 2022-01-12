@@ -54,7 +54,19 @@ func (ctx *Context) chainedObjOperationFromAst(chainedOp *ast.ChainedObjectOpera
 		// Add "access" chain operation.
 		if access := astOp.Access; access != nil {
 			ident := access.AccessedIdent
-			identType := parent.AllMembers()[ident].Type()
+			var identType *core.TypeSpec
+			{
+				member, ok := parent.AllMembers()[ident]
+				if ok {
+					identType = member.Type()
+				} else {
+					select {
+					case <-ctx.Done():
+					case member := <-parent.MemberResolved(ident):
+						identType = member.Type()
+					}
+				}
+			}
 
 			link.Access = &core.ObjectAccess{AccessedIdent: ident, Type: identType}
 			accessee = &core.Accessable{Ident: &ident, Type: identType}

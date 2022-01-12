@@ -7,23 +7,23 @@ import (
 )
 
 func (ctx *Context) objectFromAst(fields []*ast.ObjectTypeField) (*core.Object, error) {
-	members := make(map[string]*core.Member, len(fields))
+	members := make([]*core.Member, len(fields))
 
-	for _, field := range fields {
-		fieldType, err := ctx.typeSpecFromAst(&field.Type)
+	for i, f := range fields {
+		fieldType, err := ctx.typeSpecFromAst(&f.Type)
 		if err != nil {
 			return nil, err
 		}
 
-		members[field.Name] = &core.Member{
+		members[i] = &core.Member{
 			Field: &core.ObjectTypeField{
-				Name: field.Name,
+				Name: f.Name,
 				Type: fieldType,
 			},
 		}
 	}
 
-	return &core.Object{Members: members}, nil
+	return core.NewObject(members), nil
 }
 
 func (ctx *Context) functionFromAst(fn *ast.FunctionInstantiation) (*core.Function, error) {

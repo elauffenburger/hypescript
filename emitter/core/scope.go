@@ -45,24 +45,29 @@ func NewGlobalScope() *Scope {
 	scope.AddType(&TypeSpec{Interface: &Interface{Name: "undefined"}})
 
 	scope.AddType(&TypeSpec{
-		Interface: &Interface{
-			Name: "Console",
-			Members: map[string]*Member{
-				"log": {
-					Function: &Function{
-						Name: typeutils.StrRef("log"),
-						Parameters: []*FunctionParameter{
-							{
-								Name: "fmt",
-								Type: &TypeSpec{
-									TypeReference: typeutils.StrRef("any"),
+		Interface: NewInterface(
+			"Console",
+			[]*Member{
+				{
+					Field: &ObjectTypeField{
+						Name: "log",
+						Type: &TypeSpec{
+							Function: &Function{
+								Name: typeutils.StrRef("log"),
+								Parameters: []*FunctionParameter{
+									{
+										Name: "fmt",
+										Type: &TypeSpec{
+											TypeReference: typeutils.StrRef("any"),
+										},
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-		},
+		),
 	})
 
 	scope.AddIdentifer("console", &TypeSpec{TypeReference: typeutils.StrRef("Console")})
@@ -245,9 +250,9 @@ func (s *Scope) ExprType(expr *Expression) (*TypeSpec, error) {
 	}
 
 	if objInst := expr.ObjectInstantiation; objInst != nil {
-		members := make(map[string]*Member, len(objInst.Fields))
-		for _, f := range objInst.Fields {
-			members[f.Name] = &Member{
+		members := make([]*Member, len(objInst.Fields))
+		for i, f := range objInst.Fields {
+			members[i] = &Member{
 				Field: &ObjectTypeField{
 					Name: f.Name,
 					Type: f.Type,
@@ -255,7 +260,7 @@ func (s *Scope) ExprType(expr *Expression) (*TypeSpec, error) {
 			}
 		}
 
-		return &TypeSpec{Object: &Object{Members: members}}, nil
+		return &TypeSpec{Object: NewObject(members)}, nil
 	}
 
 	if chain := expr.ChainedObjectOperation; chain != nil {

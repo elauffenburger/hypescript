@@ -94,15 +94,15 @@ func TestInterfaceWithOptionalFieldsHasFieldsSatisfied(t *testing.T) {
 			};
 		`,
 		spec: &core.TypeSpec{
-			Object: &core.Object{
-				Members: map[string]*core.Member{
-					"name": {
+			Object: core.NewObject(
+				[]*core.Member{
+					{
 						Field: &core.ObjectTypeField{
 							Name: "name",
 							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
 						},
 					},
-					"age": {
+					{
 						Field: &core.ObjectTypeField{
 							Name: "age",
 							Type: &core.TypeSpec{
@@ -115,7 +115,7 @@ func TestInterfaceWithOptionalFieldsHasFieldsSatisfied(t *testing.T) {
 						},
 					},
 				},
-			},
+			),
 		},
 	})
 }
@@ -133,16 +133,16 @@ func TestInterfaceWithOptionalFieldsHasFieldsUnsatisfied(t *testing.T) {
 			};
 		`,
 		spec: &core.TypeSpec{
-			Object: &core.Object{
-				Members: map[string]*core.Member{
-					"name": {
+			Object: core.NewObject(
+				[]*core.Member{
+					{
 						Field: &core.ObjectTypeField{
 							Name: "name",
 							Type: &core.TypeSpec{TypeReference: typeutils.StrRef("string")},
 						},
 					},
 				},
-			},
+			),
 		},
 	})
 }
