@@ -60,9 +60,14 @@ func (ctx *Context) chainedObjOperationFromAst(chainedOp *ast.ChainedObjectOpera
 				if ok {
 					identType = member.Type()
 				} else {
+					c := make(chan *core.Member)
+					go func() {
+						c <- parent.WaitForMember(ident)
+					}()
+
 					select {
 					case <-ctx.Done():
-					case member := <-parent.MemberResolved(ident):
+					case member := <-c:
 						identType = member.Type()
 					}
 				}

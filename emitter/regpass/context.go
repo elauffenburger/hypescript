@@ -24,6 +24,14 @@ func NewContext() *Context {
 	}
 }
 
+func (c *Context) Clone() *Context {
+	return &Context{
+		ctx:          c.ctx,
+		scopeTracker: c.scopeTracker.Clone(),
+		GlobalScope:  c.GlobalScope,
+	}
+}
+
 func (ctx *Context) currentScope() *core.Scope {
 	return ctx.scopeTracker.CurrentScope()
 }

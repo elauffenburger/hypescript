@@ -5,6 +5,8 @@ import (
 	"elauffenburger/hypescript/emitter/core"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/pkg/errors"
 )
 
@@ -180,25 +182,38 @@ func (ctx *Context) expressionFromAst(expr *ast.Expression) (*core.Expression, e
 		this := core.NewObject([]*core.Member{})
 		scope.IdentTypes["this"] = &core.TypeSpec{Object: this}
 
+		errs := errgroup.Group{}
 		fields := make([]*core.ObjectFieldInstantiation, len(objInst.Fields))
 		for i, f := range objInst.Fields {
-			value, err := ctx.expressionFromAst(&f.Value)
-			if err != nil {
-				return nil, err
-			}
+			i := i
+			f := f
+			ctx := ctx.Clone()
 
-			t, err := ctx.currentScope().ExprType(value)
-			if err != nil {
-				return nil, err
-			}
+			errs.Go(func() error {
+				value, err := ctx.expressionFromAst(&f.Value)
+				if err != nil {
+					return err
+				}
 
-			fields[i] = &core.ObjectFieldInstantiation{
-				Name:  f.Name,
-				Type:  t,
-				Value: value,
-			}
+				t, err := ctx.currentScope().ExprType(value)
+				if err != nil {
+					return err
+				}
 
-			this.AddMember(&core.Member{Field: &core.ObjectTypeField{Name: f.Name, Type: t}})
+				fields[i] = &core.ObjectFieldInstantiation{
+					Name:  f.Name,
+					Type:  t,
+					Value: value,
+				}
+
+				this.AddMember(&core.Member{Field: &core.ObjectTypeField{Name: f.Name, Type: t}})
+				return nil
+			})
+		}
+
+		err := errs.Wait()
+		if err != nil {
+			return nil, err
 		}
 
 		ctx.ExitScope()

@@ -11,6 +11,7 @@ type ScopeTracker interface {
 	WithinScope(s *Scope, op func() error) error
 	WithinTempScope(op func() (interface{}, error)) (interface{}, error)
 	WithinNewScope(op func() error) error
+	Clone() ScopeTracker
 }
 
 func NewScopeTracker(scope *Scope) ScopeTracker {
@@ -77,4 +78,10 @@ func (s *scopeTracker) WithinNewScope(op func() error) error {
 	s.ExitScope()
 
 	return err
+}
+
+func (s *scopeTracker) Clone() ScopeTracker {
+	return &scopeTracker{
+		currentScope: s.currentScope.Clone(),
+	}
 }

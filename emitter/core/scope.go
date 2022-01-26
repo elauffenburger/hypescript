@@ -36,13 +36,13 @@ func NewScope() *Scope {
 func NewGlobalScope() *Scope {
 	scope := NewScope()
 
-	scope.AddType(&TypeSpec{Interface: &Interface{Name: "string"}})
-	scope.AddType(&TypeSpec{Interface: &Interface{Name: "number"}})
+	scope.AddType(&TypeSpec{Interface: NewInterface("string", []*Member{})})
+	scope.AddType(&TypeSpec{Interface: NewInterface("number", []*Member{})})
 
 	// TODO: this doesn't feel right; should be special type names maybe?
-	scope.AddType(&TypeSpec{Interface: &Interface{Name: "void"}})
-	scope.AddType(&TypeSpec{Interface: &Interface{Name: "null"}})
-	scope.AddType(&TypeSpec{Interface: &Interface{Name: "undefined"}})
+	scope.AddType(&TypeSpec{Interface: NewInterface("void", []*Member{})})
+	scope.AddType(&TypeSpec{Interface: NewInterface("null", []*Member{})})
+	scope.AddType(&TypeSpec{Interface: NewInterface("undefined", []*Member{})})
 
 	scope.AddType(&TypeSpec{
 		Interface: NewInterface(

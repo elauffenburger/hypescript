@@ -97,6 +97,7 @@ func TestInvokeObjectFnWithFnInvokeOnThisBeforeFnDef(t *testing.T) {
 	obj, err := ctx.GlobalScope.IdentType("obj")
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	spec := &core.TypeSpec{
