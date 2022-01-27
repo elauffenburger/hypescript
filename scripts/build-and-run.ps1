@@ -29,7 +29,7 @@ try {
     pushd "./build"
 
     try {
-        $Srcs = Get-ChildItem "./build" -Filter "*.cpp" | % { $_.FullName }
+        $Srcs = Get-ChildItem "." -Filter "*.cpp" | % { $_.FullName }
         cl $Srcs /link /DEBUG:FULL /out:main.exe
         if ($LASTEXITCODE -ne 0) {
             throw "Compilation failed!"

@@ -7,6 +7,7 @@ const (
 	TsNumber PrimitiveType = "number"
 	TsVoid   PrimitiveType = "void"
 	TsAny    PrimitiveType = "any"
+	TsThis   PrimitiveType = "this"
 )
 
 var PrimitiveTypes = []PrimitiveType{TsString, TsNumber, TsVoid}

@@ -95,6 +95,18 @@ func main() {
 
 			console.log(foo.bar.str);
 			console.log(foo.baz.name);
+
+			let bar = {
+				name: "foo",
+				sayName: function() {
+					console.log(this.getName());
+				},
+				getName: function(): string {
+					return this.name;
+				},
+			};
+
+			bar.sayName();
 		}
 
 		run();

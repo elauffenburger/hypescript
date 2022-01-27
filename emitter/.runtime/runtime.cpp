@@ -5,8 +5,29 @@
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
+#include <typeinfo>
 
 #include "runtime.hpp"
+
+TsObject::TsObject(int typeId, std::vector<TsObjectField *> fields)
+	: typeId(typeId),
+	  fields(fields)
+{
+	for (auto field : fields)
+	{
+		auto value = field->value;
+
+		// For any functions that don't have an explicit `this` set, use this object as `this`.
+		if (value->typeId == TypeIdTsFunction)
+		{
+			TsFunction *fn = dynamic_cast<TsFunction *>(value);
+			if (fn->thisFn == NULL)
+			{
+				fn->thisFn = [this]() -> TsObject * { return this; };
+			}
+		}
+	}
+}
 
 TsObjectField *TsObject::getField(const std::string &field_name) const
 {
@@ -76,18 +97,22 @@ const TsFunctionArg &TsFunctionArg::findArg(const std::vector<TsFunctionArg> &ar
 
 TsObject *TsFunction::invoke(std::vector<TsFunctionArg> args)
 {
-	return fn(args);
+	// If there's no thisFn, use ourself.
+	auto _this = this->thisFn == NULL ? this : this->thisFn();
+
+	return fn(_this, args);
 }
 
-TsObject* console = new TsObject(TypeIdTsObject, TsCoreHelpers::toVector<TsObjectField *>({new TsObjectField(
-												TsObjectFieldDescriptor(TsString("log"), TypeIdTsFunction),
-												new TsFunction("log",
-															   TsCoreHelpers::toVector<TsFunctionParam>({}),
-															   [](std::vector<TsFunctionArg> args) -> TsObject *
-															   {
-																   auto fmt = dynamic_cast<TsString *>(args[0].value);
+TsObject *console = new TsObject(TypeIdTsObject, TsCoreHelpers::toVector<TsObjectField *>({new TsObjectField(
+													 TsObjectFieldDescriptor(TsString("log"), TypeIdTsFunction),
+													 new TsFunction(
+														 "log",
+														 TsCoreHelpers::toVector<TsFunctionParam>({}),
+														 [](auto _this, auto args) -> TsObject *
+														 {
+															 auto fmt = dynamic_cast<TsString *>(args[0].value);
 
-																   printf("%s\n", fmt->value.c_str());
+															 printf("%s\n", fmt->value.c_str());
 
-																   return NULL;
-															   }))}));
+															 return NULL;
+														 }))}));

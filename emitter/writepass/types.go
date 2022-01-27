@@ -11,5 +11,10 @@ func mangleIdentName(name string, identType *core.TypeSpec) string {
 		return mangleFunctionName(name)
 	}
 
+	if name == string(core.TsThis) {
+		// TODO: this won't always work.
+		return "_this"
+	}
+
 	return name
 }

@@ -24,6 +24,14 @@ func (ctx *Context) writeFunction(fn *core.Function) error {
 	formattedParams := strings.Builder{}
 	formattedParams.WriteString("TsCoreHelpers::toVector<TsFunctionParam>({")
 
+	// Figure out the function name.
+	var fnName string
+	if fn.Name != nil {
+		fnName = *fn.Name
+	} else {
+		fnName = ctx.currentScope().NewIdent()
+	}
+
 	numParams := len(fn.Parameters)
 	for i, p := range fn.Parameters {
 		typeId, err := ctx.currentScope().GetTypeIdFor(p.Type)
@@ -39,13 +47,6 @@ func (ctx *Context) writeFunction(fn *core.Function) error {
 	}
 
 	formattedParams.WriteString("})")
-
-	var fnName string
-	if fn.Name != nil {
-		fnName = *fn.Name
-	} else {
-		fnName = ctx.currentScope().NewIdent()
-	}
 
 	ctx.WriteString(
 		fmt.Sprintf(
@@ -66,7 +67,7 @@ func (ctx *Context) writeFunction(fn *core.Function) error {
 }
 
 func (ctx *Context) writeFunctionLambda(fn *core.Function) error {
-	ctx.WriteString("[=](std::vector<TsFunctionArg> args) -> TsObject* {")
+	ctx.WriteString("[=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {")
 
 	// Unpack each arg into local vars in the function.
 	for _, param := range fn.Parameters {

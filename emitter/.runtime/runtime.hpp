@@ -63,9 +63,7 @@ public:
     TsObject(int typeId)
         : TsObject(typeId, std::vector<TsObjectField *>()) {}
 
-    TsObject(int typeId, std::vector<TsObjectField *> fields)
-        : typeId(typeId),
-          fields(fields) {}
+    TsObject(int typeId, std::vector<TsObjectField *> fields);
 
     TsObjectField *getField(const std::string &field_name) const;
 
@@ -164,10 +162,14 @@ class TsFunction : public TsObject
 public:
     std::string name;
     std::vector<TsFunctionParam> params;
+    std::function<TsObject *()> thisFn;
 
-    std::function<TsObject *(std::vector<TsFunctionArg> args)> fn;
+    std::function<TsObject *(TsObject *, std::vector<TsFunctionArg> args)> fn;
 
-    TsFunction(std::string name, std::vector<TsFunctionParam> params, std::function<TsObject *(std::vector<TsFunctionArg> args)> fn)
+    TsFunction(
+        std::string name,
+        std::vector<TsFunctionParam> params,
+        std::function<TsObject *(TsObject *, std::vector<TsFunctionArg> args)> fn)
         : name(name),
           params(params),
           fn(fn),
