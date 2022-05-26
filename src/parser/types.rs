@@ -1,5 +1,3 @@
-use std::any::TypeId;
-
 #[derive(Debug)]
 pub enum TopLevelConstruct {
     Interface(Interface),
@@ -77,7 +75,13 @@ pub enum StmtOrExpr {
 
 #[derive(Debug)]
 pub enum Stmt {
-    LetDecl{ ident: String, typ: Option<TypeIdent>, expr: Expr }
+    LetDecl {
+        name: String,
+        typ: Option<TypeIdent>,
+        assignment: Option<Expr>,
+    },
+    Expr(Expr),
+    ReturnExpr(Expr),
 }
 
 #[derive(Debug)]
@@ -93,7 +97,7 @@ pub enum Expr {
 
 #[derive(Debug)]
 pub struct FnInst {
-    pub name: String,
+    pub name: Option<String>,
     pub params: Vec<FnParam>,
     pub body: Vec<StmtOrExpr>,
     pub return_type: Option<TypeIdent>,
@@ -115,11 +119,19 @@ pub enum Accessable {
 #[derive(Debug)]
 pub enum ObjOp {
     Access(String),
-    Invoc{ args: Vec<Expr> },
+    Invoc { args: Vec<Expr> },
 }
 
 #[derive(Debug)]
-pub struct ObjInst {}
+pub struct ObjInst {
+    pub fields: Vec<ObjFieldInst>,
+}
+
+#[derive(Debug)]
+pub struct ObjFieldInst {
+    pub name: String,
+    pub value: Expr,
+}
 
 #[derive(Debug)]
 pub struct IdentAssignment {

@@ -28,13 +28,13 @@ iface_defn = { "interface" ~ ident ~ "{" ~ iface_defn_body ~ "}" }
 stmt_or_expr = { stmt | expr }
 
 stmt = { (let_decl | expr | return_expr) ~ ";"? }
-let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ ("=" ~ expr)? }
+let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ assignment? }
 return_expr = { ("return" ~ expr) }
 
 expr = { num | string | ident_assignment | fn_inst | chained_obj_op | obj_inst | ident }
 ident_assignment = {ident ~ assignment}
 chained_obj_op = { accessable ~ obj_op ~ obj_op* ~ assignment? }
-accessable = { ident | ( "(" ~ literal_type ~ ")" ) }
+/* _ */ accessable = _{ ident | ( "(" ~ literal_type ~ ")" ) }
 
 // Objects:
 obj_op = { obj_access | obj_invoc }
