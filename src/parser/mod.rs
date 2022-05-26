@@ -226,7 +226,7 @@ fn parse_stmt(pair: Pair<Rule>) -> Result<Stmt, ParseError> {
         }
         Rule::fn_inst => todo!("fn_inst"),
         Rule::expr => Stmt::Expr(parse_expr(inner)?),
-        Rule::return_expr => todo!("return_expr"),
+        Rule::return_expr => Stmt::ReturnExpr(parse_expr(inner.into_inner().next().unwrap())?),
         _ => unreachable!(),
     })
 }

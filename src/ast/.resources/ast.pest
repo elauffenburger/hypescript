@@ -27,7 +27,7 @@ iface_defn = { "interface" ~ ident ~ "{" ~ iface_defn_body ~ "}" }
 // Statments & Expressions:
 stmt_or_expr = { stmt | expr }
 
-stmt = { (let_decl | expr | return_expr) ~ ";"? }
+stmt = { (let_decl | return_expr | expr ) ~ ";"? }
 let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ assignment? }
 return_expr = { ("return" ~ expr) }
 
