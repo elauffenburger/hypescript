@@ -1,49 +1,48 @@
 // Entrypoint:
 ts = _{ SOI ~ top_level_construct* ~ EOI }
-top_level_construct = _{ iface_defn | stmt_or_expr }
+/* _ */ top_level_construct = _{ iface_defn | stmt_or_expr }
 
 // Types:
 type_ident = { type_ident_type ~ type_ident_part* }
-type_ident_type = { literal_type | ident }
-type_ident_part = { type_ident_part_operator ~ type_ident_type }
-type_ident_part_operator = _{ union | sum }
+/* _ */ type_ident_type = { literal_type | ident }
+/* _ */ type_ident_part = { type_ident_part_operator ~ type_ident_type }
+/* _ */ type_ident_part_operator = _{ union | sum }
+
 literal_type = { fn_type | obj_type }
 
 fn_type = { "(" ~ fn_param_list ~ ") => " ~ type_ident }
 
 obj_type = { "{" ~ obj_type_field ~ ("," ~ obj_type_field)* ~ ","? ~ "}" }
-obj_type_field = { (ident | ("\"" ~ ident ~ "\"")) ~ optional? ~ ":" ~ type_ident }
+/* _ */ obj_type_field = { (ident | ("\"" ~ ident ~ "\"")) ~ optional? ~ ":" ~ type_ident }
 
-fn_param = { ident ~ optional? ~ (":" ~ type_ident)? }
-//                                     ^ should be optional
 fn_param_list = { fn_param ~ ("," ~ fn_param)* }
+/* _ */ fn_param = { ident ~ optional? ~ (":" ~ type_ident)? }
 
 // Interfaces:
 iface_defn = { "interface" ~ ident ~ "{" ~ iface_defn_body ~ "}" }
-iface_defn_body = { (iface_field_defn | iface_method_defn )* }
-iface_field_defn = { ident ~ optional? ~ ":" ~ type_ident ~ ";" }
-iface_method_defn = { ident ~ "(" ~ fn_param_list ~ ")" }
+/* _ */ iface_defn_body = { (iface_field_defn | iface_method_defn )* }
+/* _ */ iface_field_defn = { ident ~ optional? ~ ":" ~ type_ident ~ ";" }
+/* _ */ iface_method_defn = { ident ~ "(" ~ fn_param_list ~ ")" }
 
 // Statments & Expressions:
 stmt_or_expr = { stmt | expr }
 
-stmt = { (let_decl | fn_inst | expr | ("return" ~ expr)) ~ ";"? }
+stmt = { (let_decl | expr | return_expr) ~ ";"? }
 let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ ("=" ~ expr)? }
+return_expr = { ("return" ~ expr) }
 
 expr = { num | string | ident_assignment | fn_inst | chained_obj_op | obj_inst | ident }
-
 ident_assignment = {ident ~ assignment}
 chained_obj_op = { accessable ~ obj_op ~ obj_op* ~ assignment? }
-
 accessable = { ident | ( "(" ~ literal_type ~ ")" ) }
 
 // Objects:
 obj_op = { obj_access | obj_invoc }
-obj_access = { "." ~ ident }
-obj_invoc = { "(" ~ (expr ~ ("," ~ expr)*)? ~ ")" }
+/* _ */ obj_access = { "." ~ ident }
+/* _ */ obj_invoc = { "(" ~ (expr ~ ("," ~ expr)*)? ~ ")" }
 
 obj_inst = { "{" ~ obj_field_inst ~ ("," ~ obj_field_inst)* ~ ","? ~ "}" }
-obj_field_inst = { (ident | ("\"" ~ ident ~ "\"")) ~ ":" ~ expr }
+/* _ */ obj_field_inst = { (ident | ("\"" ~ ident ~ "\"")) ~ ":" ~ expr }
 
 assignment = { "=" ~ expr }
 
