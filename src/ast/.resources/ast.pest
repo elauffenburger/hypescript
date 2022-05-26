@@ -1,0 +1,72 @@
+// Entrypoint:
+ts = _{ SOI ~ top_level_construct* ~ EOI }
+top_level_construct = _{ iface_defn | stmt_or_expr }
+
+// Types:
+type_ident = { type_ident_type ~ type_ident_part* }
+type_ident_type = { literal_type | ident }
+type_ident_part = { type_ident_part_operator ~ type_ident_type }
+type_ident_part_operator = _{ union | sum }
+literal_type = { fn_type | obj_type }
+
+fn_type = { "(" ~ fn_param_list ~ ") => " ~ type_ident }
+
+obj_type = { "{" ~ obj_type_field ~ ("," ~ obj_type_field)* ~ ","? ~ "}" }
+obj_type_field = { (ident | ("\"" ~ ident ~ "\"")) ~ optional? ~ ":" ~ type_ident }
+
+fn_param = { ident ~ optional? ~ (":" ~ type_ident)? }
+//                                     ^ should be optional
+fn_param_list = { fn_param ~ ("," ~ fn_param)* }
+
+// Interfaces:
+iface_defn = { "interface" ~ ident ~ "{" ~ iface_defn_body ~ "}" }
+iface_defn_body = { (iface_field_defn | iface_method_defn )* }
+iface_field_defn = { ident ~ optional? ~ ":" ~ type_ident ~ ";" }
+iface_method_defn = { ident ~ "(" ~ fn_param_list ~ ")" }
+
+// Statments & Expressions:
+stmt_or_expr = { stmt | expr }
+
+stmt = { (let_decl | fn_inst | expr | ("return" ~ expr)) ~ ";"? }
+let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ ("=" ~ expr)? }
+
+expr = { num | string | ident_assignment | fn_inst | chained_obj_op | obj_inst | ident }
+
+ident_assignment = {ident ~ assignment}
+chained_obj_op = { accessable ~ obj_op ~ obj_op* ~ assignment? }
+
+accessable = { ident | ( "(" ~ literal_type ~ ")" ) }
+
+// Objects:
+obj_op = { obj_access | obj_invoc }
+obj_access = { "." ~ ident }
+obj_invoc = { "(" ~ (expr ~ ("," ~ expr)*)? ~ ")" }
+
+obj_inst = { "{" ~ obj_field_inst ~ ("," ~ obj_field_inst)* ~ ","? ~ "}" }
+obj_field_inst = { (ident | ("\"" ~ ident ~ "\"")) ~ ":" ~ expr }
+
+assignment = { "=" ~ expr }
+
+fn_inst = { 
+	"function" ~ ident? ~ "(" ~ fn_param_list? ~ ")" ~ (":" ~ type_ident)? ~ 
+    "{" ~ stmt_or_expr* ~ "}"
+}
+
+// Core:
+num = {('0'..'9')+}
+string = ${ "\"" ~ str_inner ~ "\"" }
+str_inner = @{ char* }
+char = {
+    !("\"" | "\\") ~ ANY
+    | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+    | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+
+// Helpers:
+ident = ${ ('a'..'z' | 'A'..'Z') ~ ('a'..'z' | 'A'..'Z' | '0'..'9')*}
+optional = { "?" }
+union = { "|" }
+sum = { "&" }
+
+// Pest config:
+WHITESPACE = _{" " | "\t" | "\r" | "\n" }
