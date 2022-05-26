@@ -1,0 +1,903 @@
+---
+source: tests/parser_test.rs
+expression: parsed
+---
+ParseResult {
+    top_level_constructs: [
+        Interface(
+            Interface {
+                name: "Foo",
+                fields: [
+                    InterfaceField {
+                        name: "str",
+                        optional: false,
+                        typ: TypeIdent {
+                            head: Name(
+                                "string",
+                            ),
+                            rest: [],
+                        },
+                    },
+                    InterfaceField {
+                        name: "num",
+                        optional: false,
+                        typ: TypeIdent {
+                            head: Name(
+                                "number",
+                            ),
+                            rest: [],
+                        },
+                    },
+                    InterfaceField {
+                        name: "bar",
+                        optional: false,
+                        typ: TypeIdent {
+                            head: Name(
+                                "Bar",
+                            ),
+                            rest: [],
+                        },
+                    },
+                    InterfaceField {
+                        name: "baz",
+                        optional: false,
+                        typ: TypeIdent {
+                            head: Name(
+                                "Baz",
+                            ),
+                            rest: [],
+                        },
+                    },
+                    InterfaceField {
+                        name: "qux",
+                        optional: false,
+                        typ: TypeIdent {
+                            head: Name(
+                                "string",
+                            ),
+                            rest: [
+                                Union(
+                                    Name(
+                                        "number",
+                                    ),
+                                ),
+                                Sum(
+                                    Name(
+                                        "Baz",
+                                    ),
+                                ),
+                            ],
+                        },
+                    },
+                ],
+                methods: [],
+            },
+        ),
+        Interface(
+            Interface {
+                name: "Bar",
+                fields: [
+                    InterfaceField {
+                        name: "str",
+                        optional: false,
+                        typ: TypeIdent {
+                            head: Name(
+                                "string",
+                            ),
+                            rest: [],
+                        },
+                    },
+                ],
+                methods: [],
+            },
+        ),
+        Interface(
+            Interface {
+                name: "Baz",
+                fields: [
+                    InterfaceField {
+                        name: "name",
+                        optional: false,
+                        typ: TypeIdent {
+                            head: Name(
+                                "string",
+                            ),
+                            rest: [],
+                        },
+                    },
+                ],
+                methods: [],
+            },
+        ),
+        StmtOrExpr(
+            Stmt(
+                Expr(
+                    FnInst(
+                        FnInst {
+                            name: Some(
+                                "foo",
+                            ),
+                            params: [
+                                FnParam {
+                                    name: "a",
+                                    optional: false,
+                                    typ: Some(
+                                        TypeIdent {
+                                            head: Name(
+                                                "string",
+                                            ),
+                                            rest: [],
+                                        },
+                                    ),
+                                },
+                                FnParam {
+                                    name: "b",
+                                    optional: false,
+                                    typ: Some(
+                                        TypeIdent {
+                                            head: Name(
+                                                "number",
+                                            ),
+                                            rest: [],
+                                        },
+                                    ),
+                                },
+                            ],
+                            body: [
+                                Stmt(
+                                    LetDecl {
+                                        name: "ay",
+                                        typ: None,
+                                        assignment: Some(
+                                            Num(
+                                                5.0,
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                Stmt(
+                                    LetDecl {
+                                        name: "bee",
+                                        typ: None,
+                                        assignment: Some(
+                                            Str(
+                                                "bar",
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                Stmt(
+                                    ReturnExpr(
+                                        Ident(
+                                            "ay",
+                                        ),
+                                    ),
+                                ),
+                            ],
+                            return_type: Some(
+                                TypeIdent {
+                                    head: Name(
+                                        "number",
+                                    ),
+                                    rest: [],
+                                },
+                            ),
+                        },
+                    ),
+                ),
+            ),
+        ),
+        StmtOrExpr(
+            Stmt(
+                Expr(
+                    FnInst(
+                        FnInst {
+                            name: Some(
+                                "blah",
+                            ),
+                            params: [],
+                            body: [
+                                Stmt(
+                                    LetDecl {
+                                        name: "foo",
+                                        typ: None,
+                                        assignment: Some(
+                                            Str(
+                                                "asdf",
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                Stmt(
+                                    LetDecl {
+                                        name: "bar",
+                                        typ: None,
+                                        assignment: Some(
+                                            Ident(
+                                                "foo",
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                Stmt(
+                                    Expr(
+                                        IdentAssignment(
+                                            IdentAssignment {
+                                                ident: "bar",
+                                                assignment: Str(
+                                                    "bar",
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                Stmt(
+                                    ReturnExpr(
+                                        Ident(
+                                            "foo",
+                                        ),
+                                    ),
+                                ),
+                            ],
+                            return_type: None,
+                        },
+                    ),
+                ),
+            ),
+        ),
+        StmtOrExpr(
+            Stmt(
+                Expr(
+                    FnInst(
+                        FnInst {
+                            name: Some(
+                                "blah2",
+                            ),
+                            params: [],
+                            body: [],
+                            return_type: None,
+                        },
+                    ),
+                ),
+            ),
+        ),
+        StmtOrExpr(
+            Stmt(
+                Expr(
+                    FnInst(
+                        FnInst {
+                            name: Some(
+                                "blah3",
+                            ),
+                            params: [],
+                            body: [
+                                Stmt(
+                                    LetDecl {
+                                        name: "foo",
+                                        typ: Some(
+                                            TypeIdent {
+                                                head: Name(
+                                                    "number",
+                                                ),
+                                                rest: [],
+                                            },
+                                        ),
+                                        assignment: Some(
+                                            Num(
+                                                5.0,
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                Stmt(
+                                    ReturnExpr(
+                                        Ident(
+                                            "foo",
+                                        ),
+                                    ),
+                                ),
+                            ],
+                            return_type: None,
+                        },
+                    ),
+                ),
+            ),
+        ),
+        StmtOrExpr(
+            Stmt(
+                Expr(
+                    FnInst(
+                        FnInst {
+                            name: Some(
+                                "returnsFn",
+                            ),
+                            params: [],
+                            body: [
+                                Stmt(
+                                    ReturnExpr(
+                                        FnInst(
+                                            FnInst {
+                                                name: None,
+                                                params: [],
+                                                body: [
+                                                    Stmt(
+                                                        Expr(
+                                                            ChainedObjOp(
+                                                                ChainedObjOp {
+                                                                    accessable: Ident(
+                                                                        "console",
+                                                                    ),
+                                                                    obj_ops: [
+                                                                        Access(
+                                                                            "log",
+                                                                        ),
+                                                                        Invoc {
+                                                                            args: [
+                                                                                Str(
+                                                                                    "in nested!",
+                                                                                ),
+                                                                            ],
+                                                                        },
+                                                                    ],
+                                                                    assignment: None,
+                                                                },
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ],
+                                                return_type: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            ],
+                            return_type: None,
+                        },
+                    ),
+                ),
+            ),
+        ),
+        StmtOrExpr(
+            Stmt(
+                Expr(
+                    FnInst(
+                        FnInst {
+                            name: Some(
+                                "run",
+                            ),
+                            params: [],
+                            body: [
+                                Stmt(
+                                    Expr(
+                                        FnInst(
+                                            FnInst {
+                                                name: Some(
+                                                    "baz",
+                                                ),
+                                                params: [],
+                                                body: [
+                                                    Stmt(
+                                                        Expr(
+                                                            ChainedObjOp(
+                                                                ChainedObjOp {
+                                                                    accessable: Ident(
+                                                                        "console",
+                                                                    ),
+                                                                    obj_ops: [
+                                                                        Access(
+                                                                            "log",
+                                                                        ),
+                                                                        Invoc {
+                                                                            args: [
+                                                                                Str(
+                                                                                    "in baz!",
+                                                                                ),
+                                                                            ],
+                                                                        },
+                                                                    ],
+                                                                    assignment: None,
+                                                                },
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ],
+                                                return_type: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                Stmt(
+                                    LetDecl {
+                                        name: "obj",
+                                        typ: None,
+                                        assignment: Some(
+                                            ObjInst(
+                                                ObjInst {
+                                                    fields: [
+                                                        ObjFieldInst {
+                                                            name: "foo",
+                                                            value: Str(
+                                                                "bar",
+                                                            ),
+                                                        },
+                                                        ObjFieldInst {
+                                                            name: "baz",
+                                                            value: Num(
+                                                                5.0,
+                                                            ),
+                                                        },
+                                                        ObjFieldInst {
+                                                            name: "qux",
+                                                            value: ObjInst(
+                                                                ObjInst {
+                                                                    fields: [
+                                                                        ObjFieldInst {
+                                                                            name: "a",
+                                                                            value: Str(
+                                                                                "a",
+                                                                            ),
+                                                                        },
+                                                                        ObjFieldInst {
+                                                                            name: "foo",
+                                                                            value: FnInst(
+                                                                                FnInst {
+                                                                                    name: None,
+                                                                                    params: [],
+                                                                                    body: [
+                                                                                        Stmt(
+                                                                                            Expr(
+                                                                                                ChainedObjOp(
+                                                                                                    ChainedObjOp {
+                                                                                                        accessable: Ident(
+                                                                                                            "console",
+                                                                                                        ),
+                                                                                                        obj_ops: [
+                                                                                                            Access(
+                                                                                                                "log",
+                                                                                                            ),
+                                                                                                            Invoc {
+                                                                                                                args: [
+                                                                                                                    Str(
+                                                                                                                        "in foo!",
+                                                                                                                    ),
+                                                                                                                ],
+                                                                                                            },
+                                                                                                        ],
+                                                                                                        assignment: None,
+                                                                                                    },
+                                                                                                ),
+                                                                                            ),
+                                                                                        ),
+                                                                                    ],
+                                                                                    return_type: None,
+                                                                                },
+                                                                            ),
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ),
+                                                        },
+                                                    ],
+                                                },
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                Stmt(
+                                    Expr(
+                                        ChainedObjOp(
+                                            ChainedObjOp {
+                                                accessable: Ident(
+                                                    "obj",
+                                                ),
+                                                obj_ops: [
+                                                    Access(
+                                                        "qux",
+                                                    ),
+                                                    Access(
+                                                        "a",
+                                                    ),
+                                                ],
+                                                assignment: Some(
+                                                    Str(
+                                                        "hello, world!",
+                                                    ),
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                Stmt(
+                                    Expr(
+                                        ChainedObjOp(
+                                            ChainedObjOp {
+                                                accessable: Ident(
+                                                    "console",
+                                                ),
+                                                obj_ops: [
+                                                    Access(
+                                                        "log",
+                                                    ),
+                                                    Invoc {
+                                                        args: [
+                                                            ChainedObjOp(
+                                                                ChainedObjOp {
+                                                                    accessable: Ident(
+                                                                        "obj",
+                                                                    ),
+                                                                    obj_ops: [
+                                                                        Access(
+                                                                            "qux",
+                                                                        ),
+                                                                        Access(
+                                                                            "a",
+                                                                        ),
+                                                                    ],
+                                                                    assignment: None,
+                                                                },
+                                                            ),
+                                                        ],
+                                                    },
+                                                ],
+                                                assignment: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                Stmt(
+                                    Expr(
+                                        ChainedObjOp(
+                                            ChainedObjOp {
+                                                accessable: Ident(
+                                                    "obj",
+                                                ),
+                                                obj_ops: [
+                                                    Access(
+                                                        "qux",
+                                                    ),
+                                                    Access(
+                                                        "foo",
+                                                    ),
+                                                    Invoc {
+                                                        args: [],
+                                                    },
+                                                ],
+                                                assignment: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                Stmt(
+                                    Expr(
+                                        ChainedObjOp(
+                                            ChainedObjOp {
+                                                accessable: Ident(
+                                                    "baz",
+                                                ),
+                                                obj_ops: [
+                                                    Invoc {
+                                                        args: [],
+                                                    },
+                                                ],
+                                                assignment: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                Stmt(
+                                    ReturnExpr(
+                                        ChainedObjOp(
+                                            ChainedObjOp {
+                                                accessable: Ident(
+                                                    "sFn",
+                                                ),
+                                                obj_ops: [
+                                                    Invoc {
+                                                        args: [],
+                                                    },
+                                                    Invoc {
+                                                        args: [],
+                                                    },
+                                                ],
+                                                assignment: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                Stmt(
+                                    LetDecl {
+                                        name: "foo",
+                                        typ: Some(
+                                            TypeIdent {
+                                                head: Name(
+                                                    "Foo",
+                                                ),
+                                                rest: [],
+                                            },
+                                        ),
+                                        assignment: Some(
+                                            ObjInst(
+                                                ObjInst {
+                                                    fields: [
+                                                        ObjFieldInst {
+                                                            name: "str",
+                                                            value: Str(
+                                                                "str",
+                                                            ),
+                                                        },
+                                                        ObjFieldInst {
+                                                            name: "num",
+                                                            value: Num(
+                                                                5.0,
+                                                            ),
+                                                        },
+                                                        ObjFieldInst {
+                                                            name: "bar",
+                                                            value: ObjInst(
+                                                                ObjInst {
+                                                                    fields: [
+                                                                        ObjFieldInst {
+                                                                            name: "str",
+                                                                            value: Str(
+                                                                                "hello",
+                                                                            ),
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ),
+                                                        },
+                                                        ObjFieldInst {
+                                                            name: "baz",
+                                                            value: ObjInst(
+                                                                ObjInst {
+                                                                    fields: [
+                                                                        ObjFieldInst {
+                                                                            name: "name",
+                                                                            value: Str(
+                                                                                "world!",
+                                                                            ),
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ),
+                                                        },
+                                                    ],
+                                                },
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                Stmt(
+                                    Expr(
+                                        ChainedObjOp(
+                                            ChainedObjOp {
+                                                accessable: Ident(
+                                                    "console",
+                                                ),
+                                                obj_ops: [
+                                                    Access(
+                                                        "log",
+                                                    ),
+                                                    Invoc {
+                                                        args: [
+                                                            ChainedObjOp(
+                                                                ChainedObjOp {
+                                                                    accessable: Ident(
+                                                                        "foo",
+                                                                    ),
+                                                                    obj_ops: [
+                                                                        Access(
+                                                                            "bar",
+                                                                        ),
+                                                                        Access(
+                                                                            "str",
+                                                                        ),
+                                                                    ],
+                                                                    assignment: None,
+                                                                },
+                                                            ),
+                                                        ],
+                                                    },
+                                                ],
+                                                assignment: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                Stmt(
+                                    Expr(
+                                        ChainedObjOp(
+                                            ChainedObjOp {
+                                                accessable: Ident(
+                                                    "console",
+                                                ),
+                                                obj_ops: [
+                                                    Access(
+                                                        "log",
+                                                    ),
+                                                    Invoc {
+                                                        args: [
+                                                            ChainedObjOp(
+                                                                ChainedObjOp {
+                                                                    accessable: Ident(
+                                                                        "foo",
+                                                                    ),
+                                                                    obj_ops: [
+                                                                        Access(
+                                                                            "baz",
+                                                                        ),
+                                                                        Access(
+                                                                            "name",
+                                                                        ),
+                                                                    ],
+                                                                    assignment: None,
+                                                                },
+                                                            ),
+                                                        ],
+                                                    },
+                                                ],
+                                                assignment: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                Stmt(
+                                    LetDecl {
+                                        name: "bar",
+                                        typ: None,
+                                        assignment: Some(
+                                            ObjInst(
+                                                ObjInst {
+                                                    fields: [
+                                                        ObjFieldInst {
+                                                            name: "name",
+                                                            value: Str(
+                                                                "foo",
+                                                            ),
+                                                        },
+                                                        ObjFieldInst {
+                                                            name: "sayName",
+                                                            value: FnInst(
+                                                                FnInst {
+                                                                    name: None,
+                                                                    params: [],
+                                                                    body: [
+                                                                        Stmt(
+                                                                            Expr(
+                                                                                ChainedObjOp(
+                                                                                    ChainedObjOp {
+                                                                                        accessable: Ident(
+                                                                                            "console",
+                                                                                        ),
+                                                                                        obj_ops: [
+                                                                                            Access(
+                                                                                                "log",
+                                                                                            ),
+                                                                                            Invoc {
+                                                                                                args: [
+                                                                                                    ChainedObjOp(
+                                                                                                        ChainedObjOp {
+                                                                                                            accessable: Ident(
+                                                                                                                "this",
+                                                                                                            ),
+                                                                                                            obj_ops: [
+                                                                                                                Access(
+                                                                                                                    "getName",
+                                                                                                                ),
+                                                                                                                Invoc {
+                                                                                                                    args: [],
+                                                                                                                },
+                                                                                                            ],
+                                                                                                            assignment: None,
+                                                                                                        },
+                                                                                                    ),
+                                                                                                ],
+                                                                                            },
+                                                                                        ],
+                                                                                        assignment: None,
+                                                                                    },
+                                                                                ),
+                                                                            ),
+                                                                        ),
+                                                                    ],
+                                                                    return_type: None,
+                                                                },
+                                                            ),
+                                                        },
+                                                        ObjFieldInst {
+                                                            name: "getName",
+                                                            value: FnInst(
+                                                                FnInst {
+                                                                    name: None,
+                                                                    params: [],
+                                                                    body: [
+                                                                        Stmt(
+                                                                            ReturnExpr(
+                                                                                ChainedObjOp(
+                                                                                    ChainedObjOp {
+                                                                                        accessable: Ident(
+                                                                                            "this",
+                                                                                        ),
+                                                                                        obj_ops: [
+                                                                                            Access(
+                                                                                                "name",
+                                                                                            ),
+                                                                                        ],
+                                                                                        assignment: None,
+                                                                                    },
+                                                                                ),
+                                                                            ),
+                                                                        ),
+                                                                    ],
+                                                                    return_type: Some(
+                                                                        TypeIdent {
+                                                                            head: Name(
+                                                                                "string",
+                                                                            ),
+                                                                            rest: [],
+                                                                        },
+                                                                    ),
+                                                                },
+                                                            ),
+                                                        },
+                                                    ],
+                                                },
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                Stmt(
+                                    Expr(
+                                        ChainedObjOp(
+                                            ChainedObjOp {
+                                                accessable: Ident(
+                                                    "bar",
+                                                ),
+                                                obj_ops: [
+                                                    Access(
+                                                        "sayName",
+                                                    ),
+                                                    Invoc {
+                                                        args: [],
+                                                    },
+                                                ],
+                                                assignment: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            ],
+                            return_type: Some(
+                                TypeIdent {
+                                    head: Name(
+                                        "void",
+                                    ),
+                                    rest: [],
+                                },
+                            ),
+                        },
+                    ),
+                ),
+            ),
+        ),
+        StmtOrExpr(
+            Stmt(
+                Expr(
+                    ChainedObjOp(
+                        ChainedObjOp {
+                            accessable: Ident(
+                                "run",
+                            ),
+                            obj_ops: [
+                                Invoc {
+                                    args: [],
+                                },
+                            ],
+                            assignment: None,
+                        },
+                    ),
+                ),
+            ),
+        ),
+    ],
+}
