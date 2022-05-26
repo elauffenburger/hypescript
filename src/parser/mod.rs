@@ -8,7 +8,7 @@ pub use types::*;
 
 pub type ParseError = String;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ParseResult {
     pub top_level_constructs: Vec<TopLevelConstruct>,
 }
