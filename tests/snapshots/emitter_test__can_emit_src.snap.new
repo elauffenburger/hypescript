@@ -1,0 +1,8 @@
+---
+source: tests/emitter_test.rs
+assertion_line: 16
+expression: "emitter::Emitter::new().emit(parsed).unwrap()"
+---
+EmitterResult {
+    code: "TsFunction* _main = new TsFunction(\"main\",TsCoreHelpers::toVector<TsFunctionParam>({}), [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {{_console->get_value(\"log\")->invoke(\"hello, world!\");\n});\n_main->invoke();\n",
+}

@@ -9,11 +9,11 @@ pub use types::*;
 pub type ParseError = String;
 
 #[derive(Debug, PartialEq)]
-pub struct ParseResult {
+pub struct ParserResult {
     pub top_level_constructs: Vec<TopLevelConstruct>,
 }
 
-pub fn parse(src: &str) -> Result<ParseResult, ParseError> {
+pub fn parse(src: &str) -> Result<ParserResult, ParseError> {
     let root_pairs = ast::TsParser::parse(Rule::ts, src).map_err(|e| format!("{e}"))?;
 
     let mut top_level_constructs = vec![];
@@ -29,13 +29,9 @@ pub fn parse(src: &str) -> Result<ParseResult, ParseError> {
         })
     }
 
-    let result = ParseResult {
+    Ok(ParserResult {
         top_level_constructs,
-    };
-
-    println!("{result:#?}");
-
-    Ok(result)
+    })
 }
 
 fn parse_interface(pair: Pair<Rule>) -> Result<Interface, ParseError> {
@@ -121,15 +117,17 @@ fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
 
             let obj_ops = {
                 let mut ops = vec![];
-                
+
                 while let Some(peeked) = inner.peek() {
-                    if peeked.as_rule() != Rule::obj_op  {
-                        break
+                    if peeked.as_rule() != Rule::obj_op {
+                        break;
                     }
 
                     let next = inner.next().unwrap().into_inner().next().unwrap();
                     ops.push(match next.as_rule() {
-                        Rule::obj_access => ObjOp::Access(parse_ident(next.into_inner().next().unwrap())?),
+                        Rule::obj_access => {
+                            ObjOp::Access(parse_ident(next.into_inner().next().unwrap())?)
+                        }
                         Rule::obj_invoc => {
                             let mut args = vec![];
 
@@ -137,8 +135,8 @@ fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
                                 args.push(parse_expr(pair)?);
                             }
 
-                            ObjOp::Invoc {args}
-                        },
+                            ObjOp::Invoc { args }
+                        }
                         _ => unreachable!(),
                     });
                 }
@@ -153,7 +151,11 @@ fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
                 }
             };
 
-            Expr::ChainedObjOp(ChainedObjOp{accessable, obj_ops, assignment})
+            Expr::ChainedObjOp(ChainedObjOp {
+                accessable,
+                obj_ops,
+                assignment,
+            })
         }
         Rule::obj_inst => {
             let mut fields = vec![];
@@ -163,11 +165,11 @@ fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
                 let name = parse_ident(inner.next().unwrap())?;
                 let value = parse_expr(inner.next().unwrap())?;
 
-                fields.push(ObjFieldInst{name, value});
+                fields.push(ObjFieldInst { name, value });
             }
 
-            Expr::ObjInst(ObjInst{fields})
-        },
+            Expr::ObjInst(ObjInst { fields })
+        }
         Rule::ident => Expr::Ident(parse_ident(inner)?),
         _ => unreachable!(),
     })
@@ -261,7 +263,10 @@ fn parse_type_ident(pair: Pair<Rule>) -> Result<TypeIdent, ParseError> {
         parts
     };
 
-    Ok(TypeIdent { head, rest })
+    Ok(TypeIdent {
+        head,
+        rest: if rest.is_empty() { None } else { Some(rest) },
+    })
 }
 
 fn parse_type_ident_type(pair: Pair<Rule>) -> Result<TypeIdentType, ParseError> {
@@ -288,7 +293,7 @@ fn parse_literal_type(pair: Pair<Rule>) -> Result<LiteralType, ParseError> {
 
             LiteralType::FnType {
                 params,
-                return_type,
+                return_type: Some(return_type),
             }
         }
         Rule::obj_type => {
@@ -316,8 +321,8 @@ fn parse_literal_type(pair: Pair<Rule>) -> Result<LiteralType, ParseError> {
                 })
             }
 
-            LiteralType::ObjType { fields, }
-        },
+            LiteralType::ObjType { fields }
+        }
         _ => unreachable!(),
     })
 }

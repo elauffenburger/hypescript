@@ -1,4 +1,4 @@
-use hypescript::parser;
+use hypescript::{emitter, parser};
 
 const SRC: &'static str = r#"
     interface Foo {
@@ -102,5 +102,18 @@ const SRC: &'static str = r#"
 "#;
 
 fn main() -> Result<(), String> {
-    parser::parse(SRC).and(Ok(()))
+    // parser::parse(SRC).and(Ok(()))
+
+    let emitted = emitter::Emitter::new().emit(parser::parse(
+        r#"
+        function main() {
+            console.log("hello, world!");
+        } 
+
+        main();
+        "#,
+    )?)?;
+    println!("{}", emitted.code);
+
+    Ok(())
 }
