@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use maplit::hashmap;
 
 use super::types::*;
-use crate::parser::{self, Expr};
+use crate::parser::{self, Expr, TypeIdent};
 
 #[derive(Default, Debug)]
 pub struct Scope {
@@ -25,14 +25,17 @@ impl Scope {
     pub fn get_ident(&self, ident: &str) -> Option<Rc<RefCell<Type>>> {
         match self.ident_types.get(ident) {
             Some(t) => Some(t.to_owned()),
-            None => None,
+            None => match self.parent.clone() {
+                Some(parent) => parent.borrow().get_ident(ident),
+                None => None,
+            },
         }
     }
 
     pub fn type_of(&self, expr: &Expr) -> Result<Rc<RefCell<Type>>, String> {
         Ok(match expr {
             Expr::Num(_) => Rc::new(RefCell::new(Type {
-                head: parser::TypeIdentType::Name("num".into()),
+                head: parser::TypeIdentType::Name("number".into()),
                 rest: None,
             })),
             Expr::Str(_) => Rc::new(RefCell::new(Type {
@@ -42,7 +45,7 @@ impl Scope {
             Expr::IdentAssignment(ref ident_assign) => self
                 .ident_types
                 .get(&ident_assign.ident)
-                .ok_or("unknown ident")?
+                .ok_or(format!("unknown ident {}", &ident_assign.ident))?
                 .clone(),
             Expr::FnInst(ref fn_inst) => Rc::new(RefCell::new(Type {
                 head: parser::TypeIdentType::LiteralType(Box::new(parser::LiteralType::FnType {
@@ -52,8 +55,24 @@ impl Scope {
                 rest: None,
             })),
             Expr::ChainedObjOp(_) => todo!(),
-            Expr::ObjInst(_) => todo!(),
-            Expr::Ident(ref ident) => self.ident_types.get(ident).ok_or("unknown ident")?.clone(),
+            Expr::ObjInst(ref obj_inst) => {
+                let obj_typ = parser::LiteralType::ObjType { fields: vec![] };
+
+                todo!("impl fields");
+                for field in &obj_inst.fields {
+                    
+                }
+
+                Rc::new(RefCell::new(parser::TypeIdent {
+                    head: parser::TypeIdentType::LiteralType(Box::new(obj_typ)),
+                    rest: None,
+                }))
+            }
+            Expr::Ident(ref ident) => self
+                .ident_types
+                .get(ident)
+                .ok_or_else(|| format!("unknown ident {}", &ident))?
+                .clone(),
         })
     }
 }

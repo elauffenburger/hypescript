@@ -1,8 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::parser;
+use crate::parser::{self, IdentAssignment, ObjInst};
 
 mod types;
+use maplit::hashmap;
 pub use types::*;
 
 mod scope;
@@ -14,6 +15,8 @@ pub struct EmitterResult {
 }
 
 type EmitterError = String;
+
+type EmitResult = Result<(), EmitterError>;
 
 pub struct Emitter {
     curr_scope: Rc<RefCell<Scope>>,
@@ -61,28 +64,66 @@ impl Emitter {
         Ok(EmitterResult { code: self.buffer })
     }
 
-    fn emit_stmt(&mut self, stmt: parser::Stmt) -> Result<(), EmitterError> {
+    fn emit_stmt(&mut self, stmt: parser::Stmt) -> EmitResult {
         match stmt {
-            parser::Stmt::LetDecl { .. } => todo!(),
-            parser::Stmt::Expr(expr) => {
-                match expr {
-                    parser::Expr::Num(_) => todo!(),
-                    parser::Expr::Str(_) => todo!(),
-                    parser::Expr::IdentAssignment(_) => todo!(),
-                    parser::Expr::FnInst(ref fn_inst) => {
-                        if let Some(ref name) = fn_inst.name {
-                            let mangled_name = self.mangle_ident(name);
-                            self.write(&format!("TsFunction* {mangled_name} = "))?;
-                        }
+            parser::Stmt::LetDecl {
+                name,
+                typ: expl_typ,
+                assignment,
+            } => {
+                let mangled_name = self.mangle_ident(&name);
+
+                match assignment.clone() {
+                    Some(assignment) => {
+                        self.write(&format!("auto {mangled_name} = "))?;
+
+                        self.emit_expr(assignment)?;
                     }
-                    parser::Expr::ChainedObjOp(_) => {}
-                    parser::Expr::ObjInst(_) => todo!(),
-                    parser::Expr::Ident(_) => todo!(),
+                    None => todo!("let decls without assignments"),
+                }
+
+                // Register the ident in the current scope.
+                {
+                    let impl_type = match assignment {
+                        Some(ref assignment) => Some(self.type_of(assignment)?.borrow().clone()),
+                        None => todo!("let decls without assignments"),
+                    };
+
+                    let typ = match expl_typ {
+                        Some(expl_typ) => match impl_type {
+                            Some(impl_typ) => {
+                                if expl_typ != impl_typ {
+                                    return Err(format!("explicit type of {name} marked as {:#?}, but resolved implicit type as {:#?}", &expl_typ, &impl_typ));
+                                }
+
+                                Some(impl_typ)
+                            }
+                            None => None,
+                        },
+                        None => impl_type,
+                    };
+
+                    match typ {
+                        Some(typ) => self.curr_scope.borrow_mut().add_ident(name, typ),
+                        None => return Err(format!("unable to determine the type of {name}")),
+                    };
+                };
+            }
+            parser::Stmt::Expr(expr) => {
+                if let parser::Expr::FnInst(ref fn_inst) = expr {
+                    if let Some(ref name) = fn_inst.name {
+                        let mangled_name = self.mangle_ident(name);
+                        self.write(&format!("TsFunction* {mangled_name} = "))?;
+                    }
                 }
 
                 self.emit_expr(expr)?;
             }
-            parser::Stmt::ReturnExpr(_) => todo!(),
+            parser::Stmt::ReturnExpr(expr) => {
+                self.write("return ")?;
+                self.emit_expr(expr)?;
+                self.write("\n")?;
+            }
         }
 
         self.write(";\n")?;
@@ -90,19 +131,23 @@ impl Emitter {
         Ok(())
     }
 
-    fn emit_expr(&mut self, expr: parser::Expr) -> Result<(), EmitterError> {
+    fn emit_expr(&mut self, expr: parser::Expr) -> EmitResult {
         match expr {
-            parser::Expr::Num(_) => todo!(),
+            parser::Expr::Num(num) => self.emit_num(num),
             parser::Expr::Str(str) => self.emit_str(&str),
-            parser::Expr::IdentAssignment(_) => todo!(),
+            parser::Expr::IdentAssignment(ident_assignment) => {
+                self.emit_ident_assignment(*ident_assignment)
+            }
             parser::Expr::FnInst(fn_inst) => self.emit_fn_inst(fn_inst),
             parser::Expr::ChainedObjOp(chained_obj_op) => self.emit_chained_obj_op(chained_obj_op),
-            parser::Expr::ObjInst(_) => todo!(),
-            parser::Expr::Ident(_) => todo!(),
+            parser::Expr::ObjInst(obj_inst) => self.emit_obj_inst(obj_inst),
+            parser::Expr::Ident(ident) => self.emit_ident(&ident),
         }
     }
 
-    fn emit_fn_inst(&mut self, fn_inst: parser::FnInst) -> Result<(), String> {
+    fn emit_fn_inst(&mut self, mut fn_inst: parser::FnInst) -> EmitResult {
+        self.enter_scope();
+
         // If the fn is named, add a reference to it in the current scope.
         let fn_name = if let Some(ref name) = &fn_inst.name {
             self.curr_scope.borrow_mut().add_ident(
@@ -123,41 +168,6 @@ impl Emitter {
             ""
         };
 
-        // Find all the return stmts in the body and see if we can figure out what the
-        // actual return type is.
-        let ret_typ = fn_inst.body.iter().fold(None, |acc, stmt_or_expr| {
-            match stmt_or_expr {
-                parser::StmtOrExpr::Stmt(parser::Stmt::ReturnExpr(ret_expr)) => {
-                    let typ = self.type_of(ret_expr);
-                    match acc {
-                        None => return Some(typ),
-                        Some(ref ret_type) => {
-                            // If the types are the same, just return the existing acc.
-                            if *ret_type == typ {
-                                return acc;
-                            }
-
-                            todo!("return type consolidation");
-                        }
-                    }
-                }
-                _ => acc,
-            }
-        });
-
-        match fn_inst.return_type {
-            // If there's an explicit return type, make sure it lines up with the actual one.
-            Some(_) => {
-                todo!("confirm return types line up");
-            }
-            // If there's no explicit return type on the fn, set it.
-            None => {
-                if let Some(ret_typ) = ret_typ {
-                    todo!("patch return type on fn_inst: {ret_typ:#?}");
-                }
-            }
-        }
-
         // Write start of inst.
         self.write(&format!("new TsFunction(\"{fn_name}\","))?;
 
@@ -175,27 +185,95 @@ impl Emitter {
         self.write(", [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {\n")?;
 
         // Write body of lambda.
-        let mut did_return = false;
-        for stmt_or_expr in fn_inst.body.into_iter() {
-            match stmt_or_expr {
-                parser::StmtOrExpr::Stmt(stmt) => {
-                    self.emit_stmt(stmt.clone())?;
+        {
+            let mut did_return = false;
+            for stmt_or_expr in fn_inst.body.clone().into_iter() {
+                match stmt_or_expr {
+                    parser::StmtOrExpr::Stmt(stmt) => {
+                        self.emit_stmt(stmt.clone())?;
 
-                    if let parser::Stmt::ReturnExpr(_) = &stmt {
-                        did_return = true;
+                        if let parser::Stmt::ReturnExpr(_) = &stmt {
+                            did_return = true;
+                        }
                     }
+                    parser::StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
                 }
-                parser::StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
+            }
+
+            // If we never explicitly returned, synthesize a return stmt.
+            if !did_return {
+                self.write("return NULL;\n")?;
             }
         }
 
-        // If we never explicitly returned, synthesize a return stmt.
-        if !did_return {
-            self.write("return NULL;\n")?;
+        // Find all the return stmts in the body and see if we can figure out what the
+        // actual return type is.
+        {
+            let ret_type = fn_inst.body.iter().fold(None, |acc, stmt_or_expr| {
+                match stmt_or_expr {
+                    parser::StmtOrExpr::Stmt(parser::Stmt::ReturnExpr(ret_expr)) => {
+                        let typ = self
+                            .type_of(ret_expr)
+                            .expect("couldn't determine type of return expr");
+
+                        match acc {
+                            None => return Some(typ),
+                            Some(ref ret_type) => {
+                                // If the types are the same, just return the existing acc.
+                                if *ret_type == typ {
+                                    return acc;
+                                }
+
+                                todo!("return type consolidation");
+                            }
+                        }
+                    }
+                    _ => acc,
+                }
+            });
+
+            match fn_inst.return_type {
+                // If there's an explicit return type, make sure it lines up with the actual one.
+                Some(expl_ret_type) => match ret_type {
+                    Some(ret_type) => {
+                        if expl_ret_type != *ret_type.borrow() {
+                            return Err(format!(
+                                "fn said it returned {:#?} but it actually returns {:#?}",
+                                expl_ret_type, ret_type
+                            ));
+                        }
+                    }
+                    None => todo!("has explicit ret type but no ret type"),
+                },
+                // If there's no explicit return type on the fn, set it.
+                None => {
+                    if let Some(ret_typ) = ret_type {
+                        fn_inst.return_type = Some(ret_typ.borrow().clone());
+
+                        // Patch the fn_inst in the scope.
+                        if let Some(name) = fn_inst.name {
+                            self.curr_scope.borrow_mut().add_ident(
+                                name.clone(),
+                                Type {
+                                    head: parser::TypeIdentType::LiteralType(Box::new(
+                                        parser::LiteralType::FnType {
+                                            params: fn_inst.params.clone(),
+                                            return_type: fn_inst.return_type.clone(),
+                                        },
+                                    )),
+                                    rest: None,
+                                },
+                            );
+                        }
+                    }
+                }
+            }
         }
 
         // Close up inst.
         self.write("})")?;
+
+        self.leave_scope();
 
         Ok(())
     }
@@ -204,7 +282,7 @@ impl Emitter {
         self.curr_scope.borrow().type_of(expr)
     }
 
-    fn emit_chained_obj_op(&mut self, chained_obj_op: parser::ChainedObjOp) -> Result<(), String> {
+    fn emit_chained_obj_op(&mut self, chained_obj_op: parser::ChainedObjOp) -> EmitResult {
         let mut curr_acc_type = match chained_obj_op.accessable {
             parser::Accessable::Ident(ref ident) => {
                 self.write(&self.mangle_ident(ident))?;
@@ -268,11 +346,72 @@ impl Emitter {
         Ok(())
     }
 
-    fn emit_str(&mut self, str: &str) -> Result<(), String> {
+    fn emit_str(&mut self, str: &str) -> EmitResult {
         self.write(&format!("new TsString(\"{str}\")"))
     }
 
-    fn write(&mut self, code: &str) -> Result<(), String> {
+    fn emit_num(&mut self, num: f32) -> EmitResult {
+        self.write(&format!("new TsNum({num})"))
+    }
+
+    fn emit_ident(&mut self, ident: &str) -> EmitResult {
+        self.write(&self.mangle_ident(ident))
+    }
+
+    fn emit_ident_assignment(&mut self, assignment: IdentAssignment) -> EmitResult {
+        self.emit_ident(&assignment.ident)?;
+        self.write(" = ")?;
+        self.emit_expr(assignment.assignment)?;
+
+        Ok(())
+    }
+
+    fn emit_obj_inst(&mut self, obj_inst: ObjInst) -> EmitResult {
+        // TODO: actually impl this thang.
+        let type_id = 1;
+
+        // Start the obj.
+        self.write(&format!("new TsObject({type_id}, "))?;
+
+        // Write the fields.
+        {
+            self.write("TsCoreHelpers::toVector<ToObjectField*>({")?;
+
+            let n = obj_inst.fields.len();
+            for (i, field) in obj_inst.fields.into_iter().enumerate() {
+                self.write("new TsObjectField(")?;
+
+                // Write the field descriptor.
+                {
+                    // TODO: actually impl this thang.
+                    let type_id = 0;
+
+                    self.write(&format!(
+                        "TsObjectFieldDescriptor(TsString(\"{}\"), {type_id})",
+                        field.name
+                    ))?;
+                }
+
+                // Write the value.
+                self.emit_expr(field.value)?;
+
+                self.write(")")?;
+
+                if i != n - 1 {
+                    self.write(", ")?;
+                }
+            }
+
+            self.write("})")?;
+        }
+
+        // End the obj.
+        self.write(")")?;
+
+        Ok(())
+    }
+
+    fn write(&mut self, code: &str) -> EmitResult {
         self.buffer.push_str(code);
 
         Ok(())
@@ -290,6 +429,36 @@ impl Emitter {
         match ident {
             "console" => true,
             _ => false,
+        }
+    }
+
+    fn enter_scope(&mut self) {
+        // Create the new scope.
+        let scope = Rc::new(RefCell::new(Scope {
+            parent: Some(self.curr_scope.clone()),
+            children: None,
+            ident_types: hashmap! {},
+        }));
+
+        // Add this scope to the list of child scopes for the parent.
+        {
+            let mut parent = self.curr_scope.borrow_mut();
+            match &mut parent.children {
+                Some(children) => children.push(scope.clone()),
+                None => parent.children = Some(vec![scope.clone()]),
+            };
+        }
+
+        // Update the current scope to point to this new scope.
+        self.curr_scope = scope
+    }
+
+    fn leave_scope(&mut self) {
+        let parent = self.curr_scope.borrow().parent.clone();
+
+        match &parent {
+            Some(parent) => self.curr_scope = parent.clone(),
+            None => unreachable!("can't leave a scope that doesn't have a parent"),
         }
     }
 }
