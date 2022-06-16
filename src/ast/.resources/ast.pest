@@ -29,7 +29,7 @@ stmt_or_expr = { stmt | expr }
 
 stmt = { (let_decl | return_expr | expr ) ~ ";"? }
 let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ assignment? }
-return_expr = { ("return" ~ expr) }
+return_expr = { ("return " ~ expr) }
 
 expr = { num | string | ident_assignment | fn_inst | chained_obj_op | obj_inst | ident }
 ident_assignment = {ident ~ assignment}

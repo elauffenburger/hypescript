@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::parser::{self, IdentAssignment, ObjInst};
+use crate::parser::{self, IdentAssignment, ObjInst, TypeIdentType};
 
 mod types;
 use maplit::hashmap;
@@ -93,7 +93,7 @@ impl Emitter {
                         Some(expl_typ) => match impl_type {
                             Some(impl_typ) => {
                                 if expl_typ != impl_typ {
-                                    return Err(format!("explicit type of {name} marked as {:#?}, but resolved implicit type as {:#?}", &expl_typ, &impl_typ));
+                                    return Err(format!("explicit type of {name} marked as {:?}, but resolved implicit type as {:?}", &expl_typ, &impl_typ));
                                 }
 
                                 Some(impl_typ)
@@ -146,8 +146,6 @@ impl Emitter {
     }
 
     fn emit_fn_inst(&mut self, mut fn_inst: parser::FnInst) -> EmitResult {
-        self.enter_scope();
-
         // If the fn is named, add a reference to it in the current scope.
         let fn_name = if let Some(ref name) = &fn_inst.name {
             self.curr_scope.borrow_mut().add_ident(
@@ -186,6 +184,8 @@ impl Emitter {
 
         // Write body of lambda.
         {
+            self.enter_scope();
+
             let mut did_return = false;
             for stmt_or_expr in fn_inst.body.clone().into_iter() {
                 match stmt_or_expr {
@@ -234,17 +234,32 @@ impl Emitter {
 
             match fn_inst.return_type {
                 // If there's an explicit return type, make sure it lines up with the actual one.
-                Some(expl_ret_type) => match ret_type {
-                    Some(ret_type) => {
-                        if expl_ret_type != *ret_type.borrow() {
-                            return Err(format!(
-                                "fn said it returned {:#?} but it actually returns {:#?}",
-                                expl_ret_type, ret_type
-                            ));
+                Some(expl_ret_type) => {
+                    match ret_type {
+                        Some(ret_type) => {
+                            if expl_ret_type != *ret_type.borrow() {
+                                return Err(format!(
+                                    "fn said it returned {:#?} but it actually returns {:#?}",
+                                    expl_ret_type, ret_type
+                                ));
+                            }
                         }
+                        None => match expl_ret_type {
+                            parser::TypeIdent {
+                                head: TypeIdentType::Name(type_name),
+                                rest: None,
+                            } => {
+                                if &type_name != "void" {
+                                    return Err("fn has explicit return type but actual return type does not match".into());
+                                }
+                            }
+                            _ => return Err(
+                                "fn has explicit return type but actual return type does not match"
+                                    .into(),
+                            ),
+                        },
                     }
-                    None => todo!("has explicit ret type but no ret type"),
-                },
+                }
                 // If there's no explicit return type on the fn, set it.
                 None => {
                     if let Some(ret_typ) = ret_type {
@@ -270,10 +285,10 @@ impl Emitter {
             }
         }
 
+        self.leave_scope();
+
         // Close up inst.
         self.write("})")?;
-
-        self.leave_scope();
 
         Ok(())
     }
@@ -295,6 +310,7 @@ impl Emitter {
             parser::Accessable::LiteralType(_) => todo!(),
         };
 
+        let mut last_op = None;
         for op in chained_obj_op.obj_ops {
             match op.clone() {
                 parser::ObjOp::Access(prop) => {
@@ -337,10 +353,22 @@ impl Emitter {
                     self.write("}))")?;
                 }
             }
+
+            last_op = Some(op)
         }
 
-        if let Some(_) = chained_obj_op.assignment {
-            todo!("assignment")
+        if let Some(assignment) = chained_obj_op.assignment {
+            let name = match last_op {
+                Some(op) => match op {
+                    parser::ObjOp::Access(name) => name,
+                    parser::ObjOp::Invoc { .. } => todo!(),
+                },
+                None => unreachable!("assignment without access is impossible"),
+            };
+
+            self.write(&format!("->setFieldValue(\"{name}\", "))?;
+            self.emit_expr(*assignment)?;
+            self.write(")")?;
         }
 
         Ok(())

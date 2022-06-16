@@ -1,9 +1,9 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{any::Any, cell::RefCell, collections::HashMap, rc::Rc};
 
 use maplit::hashmap;
 
 use super::types::*;
-use crate::parser::{self, Expr, TypeIdent};
+use crate::parser::{self, Expr, ObjTypeField};
 
 #[derive(Default, Debug)]
 pub struct Scope {
@@ -56,15 +56,21 @@ impl Scope {
             })),
             Expr::ChainedObjOp(_) => todo!(),
             Expr::ObjInst(ref obj_inst) => {
-                let obj_typ = parser::LiteralType::ObjType { fields: vec![] };
-
-                todo!("impl fields");
+                let mut fields = vec![];
                 for field in &obj_inst.fields {
-                    
+                    let typ = self.type_of(&field.value)?.borrow().clone();
+
+                    fields.push(parser::ObjTypeField {
+                        name: field.name.clone(),
+                        optional: false,
+                        typ: typ,
+                    })
                 }
 
                 Rc::new(RefCell::new(parser::TypeIdent {
-                    head: parser::TypeIdentType::LiteralType(Box::new(obj_typ)),
+                    head: parser::TypeIdentType::LiteralType(Box::new(
+                        parser::LiteralType::ObjType { fields },
+                    )),
                     rest: None,
                 }))
             }
