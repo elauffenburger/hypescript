@@ -6,7 +6,7 @@ use crate::ast::Rule;
 mod types;
 pub use types::*;
 
-pub type ParseError = String;
+pub type ParseError = Box<dyn std::error::Error>;
 
 #[derive(Debug, PartialEq)]
 pub struct ParserResult {
@@ -14,7 +14,7 @@ pub struct ParserResult {
 }
 
 pub fn parse(src: &str) -> Result<ParserResult, ParseError> {
-    let root_pairs = ast::TsParser::parse(Rule::ts, src).map_err(|e| format!("{e}"))?;
+    let root_pairs = ast::TsParser::parse(Rule::ts, src)?;
 
     let mut top_level_constructs = vec![];
     for pair in root_pairs {
@@ -175,7 +175,7 @@ fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     })
 }
 
-fn parse_ident(pair: Pair<Rule>) -> Result<String, String> {
+fn parse_ident(pair: Pair<Rule>) -> Result<String, ParseError> {
     assert_rule(&pair, Rule::ident)?;
 
     Ok(pair.as_str().into())
@@ -233,7 +233,7 @@ fn parse_stmt(pair: Pair<Rule>) -> Result<Stmt, ParseError> {
     })
 }
 
-fn parse_assignment(pair: Pair<Rule>) -> Result<Expr, String> {
+fn parse_assignment(pair: Pair<Rule>) -> Result<Expr, ParseError> {
     assert_rule(&pair, Rule::assignment)?;
 
     Ok(parse_expr(pair.into_inner().next().unwrap())?)

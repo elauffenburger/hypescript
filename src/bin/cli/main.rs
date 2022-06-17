@@ -101,7 +101,7 @@ const SRC: &'static str = r#"
     run();
 "#;
 
-fn main() -> Result<(), String> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // parser::parse(SRC).and(Ok(()))
 
     let emitted = emitter::Emitter::new().emit(parser::parse(
