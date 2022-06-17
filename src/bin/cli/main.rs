@@ -111,7 +111,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         num: number;
         bar: Bar;
         baz: Baz;
-        qux: string | number & Baz;
+        qux?: string | number & Baz;
     }
 
     interface Bar {

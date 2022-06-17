@@ -4,20 +4,20 @@ pub enum TopLevelConstruct {
     StmtOrExpr(StmtOrExpr),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Interface {
     pub name: String,
     pub fields: Vec<InterfaceField>,
     pub methods: Vec<InterfaceMethod>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct InterfaceMethod {
     pub name: String,
     pub params: Vec<FnParam>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct InterfaceField {
     pub name: String,
     pub optional: bool,
@@ -47,6 +47,7 @@ pub enum TypeIdentPart {
 pub enum TypeIdentType {
     Name(String),
     LiteralType(Box<LiteralType>),
+    Interface(Interface),
 }
 
 #[derive(Debug, PartialEq, Clone)]

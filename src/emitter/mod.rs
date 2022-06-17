@@ -15,7 +15,6 @@ pub struct EmitterResult {
 }
 
 type EmitterError = String;
-
 type EmitResult = Result<(), EmitterError>;
 
 pub struct Emitter {
@@ -51,7 +50,7 @@ impl Emitter {
 
         for construct in parsed.top_level_constructs {
             match construct {
-                parser::TopLevelConstruct::Interface(_) => {}
+                parser::TopLevelConstruct::Interface(iface) => self.reg_iface(iface)?,
                 parser::TopLevelConstruct::StmtOrExpr(stmt_or_expr) => match stmt_or_expr {
                     parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
                     parser::StmtOrExpr::Expr(_) => todo!(),
@@ -62,6 +61,12 @@ impl Emitter {
         self.write("}")?;
 
         Ok(EmitterResult { code: self.buffer })
+    }
+
+    fn reg_iface(&mut self, iface: parser::Interface) -> Result<(), EmitterError> {
+        self.curr_scope.borrow_mut().add_iface(iface);
+
+        Ok(())
     }
 
     fn emit_stmt(&mut self, stmt: parser::Stmt) -> EmitResult {
@@ -92,7 +97,7 @@ impl Emitter {
                     let typ = match expl_typ {
                         Some(expl_typ) => match impl_type {
                             Some(impl_typ) => {
-                                if expl_typ != impl_typ {
+                                if !self.types_equal(&expl_typ, &impl_typ)? {
                                     return Err(format!("explicit type of {name} marked as {:?}, but resolved implicit type as {:?}", &expl_typ, &impl_typ));
                                 }
 
@@ -302,7 +307,7 @@ impl Emitter {
             parser::Accessable::Ident(ref ident) => {
                 self.write(&self.mangle_ident(ident))?;
 
-                match self.curr_scope.borrow().get_ident(ident) {
+                match self.curr_scope.borrow().get_ident_type(ident) {
                     Some(typ) => typ.clone(),
                     None => return Err(format!("unknown ident '{ident}' in scope")),
                 }
@@ -322,7 +327,9 @@ impl Emitter {
 
                     let typ = (*curr_acc_type.borrow()).head.clone();
                     curr_acc_type = match typ {
-                        parser::TypeIdentType::Name(_) => todo!(),
+                        parser::TypeIdentType::Name(ref typ_name) => self
+                            .get_type(typ_name)
+                            .ok_or(format!("could not find type {typ_name}"))?,
                         parser::TypeIdentType::LiteralType(typ) => match *typ {
                             parser::LiteralType::FnType { .. } => todo!(),
                             parser::LiteralType::ObjType { fields } => {
@@ -334,6 +341,7 @@ impl Emitter {
                                 }
                             }
                         },
+                        TypeIdentType::Interface(_) => todo!(),
                     };
                 }
                 parser::ObjOp::Invoc { args } => {
@@ -446,17 +454,9 @@ impl Emitter {
     }
 
     fn mangle_ident(&self, ident: &str) -> String {
-        if Self::is_built_in_ident(ident) {
-            return ident.into();
-        }
-
-        return format!("_{ident}");
-    }
-
-    fn is_built_in_ident(ident: &str) -> bool {
         match ident {
-            "console" => true,
-            _ => false,
+            "console" => ident.into(),
+            _ => format!("_{ident}"),
         }
     }
 
@@ -466,6 +466,8 @@ impl Emitter {
             parent: Some(self.curr_scope.clone()),
             children: None,
             ident_types: hashmap! {},
+            types: hashmap! {},
+            this: self.curr_scope.borrow().this.clone(),
         }));
 
         // Add this scope to the list of child scopes for the parent.
@@ -488,5 +490,13 @@ impl Emitter {
             Some(parent) => self.curr_scope = parent.clone(),
             None => unreachable!("can't leave a scope that doesn't have a parent"),
         }
+    }
+
+    fn types_equal(&self, left: &Type, right: &Type) -> Result<bool, String> {
+        self.curr_scope.borrow().types_equal(left, right)
+    }
+
+    fn get_type(&self, name: &str) -> Option<Rc<RefCell<Type>>> {
+        self.curr_scope.borrow().get_type(name)
     }
 }
