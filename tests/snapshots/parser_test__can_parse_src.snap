@@ -2,7 +2,7 @@
 source: tests/parser_test.rs
 expression: parsed
 ---
-ParseResult {
+ParserResult {
     top_level_constructs: [
         Interface(
             Interface {
@@ -15,7 +15,7 @@ ParseResult {
                             head: Name(
                                 "string",
                             ),
-                            rest: [],
+                            rest: None,
                         },
                     },
                     InterfaceField {
@@ -25,7 +25,7 @@ ParseResult {
                             head: Name(
                                 "number",
                             ),
-                            rest: [],
+                            rest: None,
                         },
                     },
                     InterfaceField {
@@ -35,7 +35,7 @@ ParseResult {
                             head: Name(
                                 "Bar",
                             ),
-                            rest: [],
+                            rest: None,
                         },
                     },
                     InterfaceField {
@@ -45,7 +45,7 @@ ParseResult {
                             head: Name(
                                 "Baz",
                             ),
-                            rest: [],
+                            rest: None,
                         },
                     },
                     InterfaceField {
@@ -55,18 +55,20 @@ ParseResult {
                             head: Name(
                                 "string",
                             ),
-                            rest: [
-                                Union(
-                                    Name(
-                                        "number",
+                            rest: Some(
+                                [
+                                    Union(
+                                        Name(
+                                            "number",
+                                        ),
                                     ),
-                                ),
-                                Sum(
-                                    Name(
-                                        "Baz",
+                                    Sum(
+                                        Name(
+                                            "Baz",
+                                        ),
                                     ),
-                                ),
-                            ],
+                                ],
+                            ),
                         },
                     },
                 ],
@@ -84,7 +86,7 @@ ParseResult {
                             head: Name(
                                 "string",
                             ),
-                            rest: [],
+                            rest: None,
                         },
                     },
                 ],
@@ -102,7 +104,7 @@ ParseResult {
                             head: Name(
                                 "string",
                             ),
-                            rest: [],
+                            rest: None,
                         },
                     },
                 ],
@@ -126,7 +128,7 @@ ParseResult {
                                             head: Name(
                                                 "string",
                                             ),
-                                            rest: [],
+                                            rest: None,
                                         },
                                     ),
                                 },
@@ -138,7 +140,7 @@ ParseResult {
                                             head: Name(
                                                 "number",
                                             ),
-                                            rest: [],
+                                            rest: None,
                                         },
                                     ),
                                 },
@@ -179,7 +181,7 @@ ParseResult {
                                     head: Name(
                                         "number",
                                     ),
-                                    rest: [],
+                                    rest: None,
                                 },
                             ),
                         },
@@ -279,7 +281,7 @@ ParseResult {
                                                 head: Name(
                                                     "number",
                                                 ),
-                                                rest: [],
+                                                rest: None,
                                             },
                                         ),
                                         assignment: Some(
@@ -585,11 +587,11 @@ ParseResult {
                                     ),
                                 ),
                                 Stmt(
-                                    ReturnExpr(
+                                    Expr(
                                         ChainedObjOp(
                                             ChainedObjOp {
                                                 accessable: Ident(
-                                                    "sFn",
+                                                    "returnsFn",
                                                 ),
                                                 obj_ops: [
                                                     Invoc {
@@ -612,7 +614,7 @@ ParseResult {
                                                 head: Name(
                                                     "Foo",
                                                 ),
-                                                rest: [],
+                                                rest: None,
                                             },
                                         ),
                                         assignment: Some(
@@ -834,7 +836,7 @@ ParseResult {
                                                                             head: Name(
                                                                                 "string",
                                                                             ),
-                                                                            rest: [],
+                                                                            rest: None,
                                                                         },
                                                                     ),
                                                                 },
@@ -872,7 +874,7 @@ ParseResult {
                                     head: Name(
                                         "void",
                                     ),
-                                    rest: [],
+                                    rest: None,
                                 },
                             ),
                         },
