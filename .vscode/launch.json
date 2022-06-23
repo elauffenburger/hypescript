@@ -5,21 +5,22 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch Package",
-      "type": "go",
+      "type": "lldb",
       "request": "launch",
-      "mode": "auto",
-      "program": "${workspaceFolder}"
-    },
-    {
-      "name": "run main.exe",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "./build/main.exe",
+      "name": "Launch bin/cli",
+      "program": "${workspaceFolder}/target/debug/cli",
       "args": [],
       "cwd": "${workspaceFolder}",
-      "environment": [],
-      "preLaunchTask": "build main.exe"
-    }
+    },
+    // {
+    //   "name": "run main.exe",
+    //   "type": "cppvsdbg",
+    //   "request": "launch",
+    //   "program": "./build/main.exe",
+    //   "args": [],
+    //   "cwd": "${workspaceFolder}",
+    //   "environment": [],
+    //   "preLaunchTask": "build main.exe"
+    // }
   ]
 }

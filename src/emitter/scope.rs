@@ -65,56 +65,133 @@ impl Scope {
         typ
     }
 
-    pub fn type_of(&self, expr: &Expr) -> Result<Rc<RefCell<Type>>, String> {
+    fn type_ident_type_field_type(
+        &self,
+        typ: &TypeIdentType,
+        field_name: &str,
+    ) -> Result<Type, String> {
+        match typ {
+            TypeIdentType::Name(ref name) => {
+                let t = self.get_type(name).ok_or(format!("unknown type {name}"))?;
+                let t = t.borrow().clone();
+
+                if let Some(_) = t.rest {
+                    todo!("complex types")
+                }
+
+                self.type_ident_type_field_type(&t.head, field_name)
+            }
+            TypeIdentType::LiteralType(typ) => match *typ.clone() {
+                LiteralType::FnType { .. } => todo!(),
+                LiteralType::ObjType { ref fields } => {
+                    let field = fields
+                        .iter()
+                        .find(|field| &field.name == field_name)
+                        .ok_or(format!("failed to find field '{field_name}' on {:?}", typ))?;
+
+                    return Ok(field.typ.clone());
+                }
+            },
+            TypeIdentType::Interface(ref iface) => {
+                let field = iface
+                    .fields
+                    .iter()
+                    .find(|field| &field.name == field_name)
+                    .ok_or(format!("failed to find field '{field_name}' on {:?}", typ))?;
+
+                return Ok(field.typ.clone());
+            }
+        }
+    }
+
+    fn type_field_type(&self, typ: &Type, field_name: &str) -> Result<Type, String> {
+        if let Some(_) = typ.rest {
+            todo!("complex types")
+        }
+
+        self.type_ident_type_field_type(&typ.head, field_name)
+    }
+
+    pub fn invoc_type(&self, typ: &Type) -> Result<Type, String> {
+        if let Some(_) = &typ.rest {
+            todo!("complex types");
+        }
+
+        match typ.head.clone() {
+            TypeIdentType::Name(ref name) => {
+                let t = self.get_type(name).ok_or(format!("unknown type {name}"))?;
+                let t = t.borrow();
+
+                if let Some(_) = t.rest {
+                    todo!("complex types");
+                }
+
+                return self.invoc_type(&t);
+            }
+            TypeIdentType::LiteralType(typ) => match *typ {
+                LiteralType::FnType {
+                    return_type: ret_typ,
+                    ..
+                } => return Ok(ret_typ.ok_or("failed to resolve return type".to_owned())?),
+                LiteralType::ObjType { .. } => todo!(),
+            },
+            TypeIdentType::Interface(_) => todo!(),
+        }
+    }
+
+    pub fn type_of(&self, expr: &Expr) -> Result<Type, String> {
         Ok(match expr {
-            Expr::Num(_) => Rc::new(RefCell::new(Type {
+            Expr::Num(_) => Type {
                 head: TypeIdentType::Name("number".into()),
                 rest: None,
-            })),
-            Expr::Str(_) => Rc::new(RefCell::new(Type {
+            },
+            Expr::Str(_) => Type {
                 head: TypeIdentType::Name("string".into()),
                 rest: None,
-            })),
+            },
             Expr::IdentAssignment(ref ident_assign) => self
                 .ident_types
                 .get(&ident_assign.ident)
                 .ok_or(format!("unknown ident {}", &ident_assign.ident))?
+                .borrow()
                 .clone(),
-            Expr::FnInst(ref fn_inst) => Rc::new(RefCell::new(Type {
+            Expr::FnInst(ref fn_inst) => Type {
                 head: TypeIdentType::LiteralType(Box::new(LiteralType::FnType {
                     params: fn_inst.params.clone(),
                     return_type: fn_inst.return_type.clone(),
                 })),
                 rest: None,
-            })),
+            },
             Expr::ChainedObjOp(ref chained_op) => {
-                let typ = match chained_op.accessable {
+                let mut op_typ = match chained_op.accessable {
                     crate::parser::Accessable::Ident(ref ident) => self
                         .get_ident_type(ident)
-                        .ok_or(format!("could not find ident {ident}"))?,
-                    crate::parser::Accessable::LiteralType(ref typ) => {
-                        Rc::new(RefCell::new(Type {
-                            head: TypeIdentType::LiteralType(Box::new(typ.clone())),
-                            rest: None,
-                        }))
-                    }
+                        .ok_or(format!("could not find ident {ident}"))?
+                        .borrow()
+                        .clone(),
+                    crate::parser::Accessable::LiteralType(ref typ) => Type {
+                        head: TypeIdentType::LiteralType(Box::new(typ.clone())),
+                        rest: None,
+                    },
                 };
 
-                todo!();
                 for op in &chained_op.obj_ops {
                     match op {
-                        crate::parser::ObjOp::Access(access) => {
-                        },
-                        crate::parser::ObjOp::Invoc { .. } => todo!(),
+                        crate::parser::ObjOp::Access(ref access) => {
+                            op_typ = self.type_field_type(&op_typ, access)?;
+                        }
+                        crate::parser::ObjOp::Invoc { .. } => {
+                            op_typ = self.invoc_type(&op_typ)?;
+                        }
                     }
                 }
 
-                todo!()
+                op_typ
             }
             Expr::ObjInst(ref obj_inst) => {
                 let mut fields = vec![];
                 for field in &obj_inst.fields {
-                    let typ = self.type_of(&field.value)?.borrow().clone();
+                    let typ = self.type_of(&field.value)?;
 
                     fields.push(ObjTypeField {
                         name: field.name.clone(),
@@ -123,15 +200,16 @@ impl Scope {
                     })
                 }
 
-                Rc::new(RefCell::new(TypeIdent {
+                TypeIdent {
                     head: TypeIdentType::LiteralType(Box::new(LiteralType::ObjType { fields })),
                     rest: None,
-                }))
+                }
             }
             Expr::Ident(ref ident) => self
                 .ident_types
                 .get(ident)
                 .ok_or_else(|| format!("unknown ident {}", &ident))?
+                .borrow()
                 .clone(),
         })
     }

@@ -1,6 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::parser::{self, IdentAssignment, ObjInst, TypeIdentType};
+use crate::parser::{
+    self, Expr, FnInst, IdentAssignment, LiteralType, ObjInst, ObjTypeField, TypeIdentType,
+};
 
 mod types;
 use maplit::hashmap;
@@ -90,7 +92,7 @@ impl Emitter {
                 // Register the ident in the current scope.
                 {
                     let impl_type = match assignment {
-                        Some(ref assignment) => Some(self.type_of(assignment)?.borrow().clone()),
+                        Some(ref assignment) => Some(self.type_of(assignment)?),
                         None => todo!("let decls without assignments"),
                     };
 
@@ -214,35 +216,40 @@ impl Emitter {
         // Find all the return stmts in the body and see if we can figure out what the
         // actual return type is.
         {
-            let ret_type = fn_inst.body.iter().fold(None, |acc, stmt_or_expr| {
-                match stmt_or_expr {
-                    parser::StmtOrExpr::Stmt(parser::Stmt::ReturnExpr(ret_expr)) => {
-                        let typ = self
-                            .type_of(ret_expr)
-                            .expect("couldn't determine type of return expr");
+            let ret_type = {
+                let mut acc = None;
+                for stmt_or_expr in fn_inst.body.iter() {
+                    match stmt_or_expr {
+                        parser::StmtOrExpr::Stmt(parser::Stmt::ReturnExpr(ret_expr)) => {
+                            let typ = self.type_of(ret_expr).map_err(|e| {
+                                format!("couldn't determine type of return expr: {e}")
+                            })?;
 
-                        match acc {
-                            None => return Some(typ),
-                            Some(ref ret_type) => {
-                                // If the types are the same, just return the existing acc.
-                                if *ret_type == typ {
-                                    return acc;
+                            match acc {
+                                None => acc = Some(typ),
+                                Some(ref t) => {
+                                    // If the types are the same, just return the existing acc.
+                                    if t == &typ {
+                                        continue;
+                                    }
+
+                                    todo!("return type consolidation");
                                 }
-
-                                todo!("return type consolidation");
                             }
                         }
+                        _ => {}
                     }
-                    _ => acc,
                 }
-            });
+
+                acc
+            };
 
             match fn_inst.return_type {
                 // If there's an explicit return type, make sure it lines up with the actual one.
                 Some(expl_ret_type) => {
                     match ret_type {
                         Some(ret_type) => {
-                            if expl_ret_type != *ret_type.borrow() {
+                            if expl_ret_type != ret_type {
                                 return Err(format!(
                                     "fn said it returned {:#?} but it actually returns {:#?}",
                                     expl_ret_type, ret_type
@@ -268,7 +275,7 @@ impl Emitter {
                 // If there's no explicit return type on the fn, set it.
                 None => {
                     if let Some(ret_typ) = ret_type {
-                        fn_inst.return_type = Some(ret_typ.borrow().clone());
+                        fn_inst.return_type = Some(ret_typ);
 
                         // Patch the fn_inst in the scope.
                         if let Some(name) = fn_inst.name {
@@ -298,7 +305,7 @@ impl Emitter {
         Ok(())
     }
 
-    fn type_of(&self, expr: &parser::Expr) -> Result<Rc<RefCell<Type>>, EmitterError> {
+    fn type_of(&self, expr: &parser::Expr) -> Result<Type, EmitterError> {
         self.curr_scope.borrow().type_of(expr)
     }
 
@@ -406,6 +413,25 @@ impl Emitter {
         // TODO: actually impl this thang.
         let type_id = 1;
 
+        let obj_type = Rc::new(RefCell::new(Type {
+            head: TypeIdentType::LiteralType(Box::new(LiteralType::ObjType {
+                fields: {
+                    let mut fields = vec![];
+
+                    for field in obj_inst.fields.iter() {
+                        fields.push(ObjTypeField {
+                            name: field.name.clone(),
+                            optional: false,
+                            typ: self.type_of(&field.value)?,
+                        });
+                    }
+
+                    fields
+                },
+            })),
+            rest: None,
+        }));
+
         // Start the obj.
         self.write(&format!("new TsObject({type_id}, "))?;
 
@@ -426,6 +452,11 @@ impl Emitter {
                         "TsObjectFieldDescriptor(TsString(\"{}\"), {type_id})",
                         field.name
                     ))?;
+                }
+
+                self.enter_scope();
+                if let Expr::FnInst(_) = &field.value {
+                    self.curr_scope.borrow_mut().this = obj_type.clone();
                 }
 
                 // Write the value.

@@ -4,5 +4,5 @@ assertion_line: 16
 expression: "emitter::Emitter::new().emit(parsed).unwrap()"
 ---
 EmitterResult {
-    code: "TsFunction* _main = new TsFunction(\"main\",TsCoreHelpers::toVector<TsFunctionParam>({}), [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {{_console->get_value(\"log\")->invoke(\"hello, world!\");\n});\n_main->invoke();\n",
+    code: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nTsFunction* _main = new TsFunction(\"main\",TsCoreHelpers::toVector<TsFunctionParam>({}), [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {\nconsole->getFieldValue(\"log\")->invoke(TsCoreHelpers::toVector<TsFunctionArg>({TsFunctionArg(\"sdjkl\", new TsString(\"hello, world!\"))}));\nreturn NULL;\n});\n_main->invoke(TsCoreHelpers::toVector<TsFunctionArg>({}));\n}",
 }
