@@ -22,13 +22,23 @@ impl Emitter {
         };
 
         let mut last_op = None;
-        for op in chained_obj_op.obj_ops {
+        let has_assignment = chained_obj_op.assignment.is_some();
+        let n = chained_obj_op.obj_ops.len();
+        for (i, op) in chained_obj_op.obj_ops.iter().enumerate() {
             match op.clone() {
                 parser::ObjOp::Access(prop) => {
+                    // If this is the last op and there's an assignment we need to do,
+                    // don't emit a `getFieldValue`; just skip it and write the set in a sec.
+                    if has_assignment && i == n - 1 {
+                        last_op = Some(op);
+
+                        break;
+                    }
+
                     self.write(&format!("->getFieldValue(\"{prop}\")"))?;
 
                     if let Some(_) = (*curr_acc_type.borrow()).rest {
-                        todo!("anything other than a simple type")
+                        todo!("complex types")
                     }
 
                     let typ = (*curr_acc_type.borrow()).head.clone();
@@ -116,7 +126,7 @@ impl Emitter {
 
         // Write the fields.
         {
-            self.write("TsCoreHelpers::toVector<ToObjectField*>({")?;
+            self.write("TsCoreHelpers::toVector<TsObjectField*>({")?;
 
             let n = obj_inst.fields.len();
             for (i, field) in obj_inst.fields.into_iter().enumerate() {
@@ -128,7 +138,7 @@ impl Emitter {
                     let type_id = 0;
 
                     self.write(&format!(
-                        "TsObjectFieldDescriptor(TsString(\"{}\"), {type_id})",
+                        "TsObjectFieldDescriptor(TsString(\"{}\"), {type_id}), ",
                         field.name
                     ))?;
                 }

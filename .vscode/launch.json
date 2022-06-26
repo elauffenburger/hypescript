@@ -12,6 +12,14 @@
       "args": [],
       "cwd": "${workspaceFolder}",
     },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Run generated exe",
+      "program": "${workspaceFolder}/build/bin/out",
+      "args": [],
+      "cwd": "${workspaceFolder}/build",
+    },
     // {
     //   "name": "run main.exe",
     //   "type": "cppvsdbg",

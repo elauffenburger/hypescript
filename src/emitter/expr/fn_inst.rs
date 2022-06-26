@@ -29,11 +29,17 @@ impl Emitter {
 
         // Write params.
         self.write(&"TsCoreHelpers::toVector<TsFunctionParam>({")?;
-        for param in fn_inst.params.iter() {
+
+        let n = fn_inst.params.len();
+        for (i, param) in fn_inst.params.iter().enumerate() {
             let name = &param.name;
             // TODO: actually use type ids.
             let type_id = 0;
             self.write(&format!("TsFunctionParam(\"{name}\", {type_id})"))?;
+
+            if i != n - 1 {
+                self.write(", ")?;
+            }
         }
         self.write("})")?;
 

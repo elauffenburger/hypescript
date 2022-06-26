@@ -1,10 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::parser;
-
-mod types;
 use maplit::hashmap;
-pub use types::*;
+
+use crate::parser;
 
 mod scope;
 pub use scope::*;
@@ -12,16 +10,33 @@ pub use scope::*;
 mod stmt;
 pub use stmt::*;
 
+mod types;
+pub use types::*;
+
 mod expr;
 pub use expr::*;
 
-#[derive(Debug)]
-pub struct EmitterResult {
-    pub code: String,
-}
+mod runtime;
 
 type EmitterError = String;
 type EmitResult = Result<(), EmitterError>;
+
+#[derive(Debug)]
+pub struct EmitterResult {
+    pub files: Vec<EmittedFile>,
+}
+
+#[derive(Debug)]
+pub enum EmittedFile {
+    File {
+        name: String,
+        content: String,
+    },
+    Dir {
+        name: String,
+        files: Vec<EmittedFile>,
+    },
+}
 
 pub struct Emitter {
     curr_scope: Rc<RefCell<Scope>>,
@@ -40,33 +55,65 @@ impl Emitter {
     }
 
     pub fn emit(mut self, parsed: parser::ParserResult) -> Result<EmitterResult, EmitterError> {
-        for incl in [
-            "<stdlib.h>",
-            "<stdio.h>",
-            "<string>",
-            "<vector>",
-            "<algorithm>",
-            "<memory>",
-            "\"runtime.hpp\"",
-        ] {
-            self.write(&format!("#include {incl}\n"))?;
-        }
+        // Write includes to buffer.
+        {
+            let includes = [
+                "<stdlib.h>",
+                "<stdio.h>",
+                "<string>",
+                "<vector>",
+                "<algorithm>",
+                "<memory>",
+                "\"runtime.hpp\"",
+            ];
 
-        self.write("int main() {\n")?;
-
-        for construct in parsed.top_level_constructs {
-            match construct {
-                parser::TopLevelConstruct::Interface(iface) => self.reg_iface(iface)?,
-                parser::TopLevelConstruct::StmtOrExpr(stmt_or_expr) => match stmt_or_expr {
-                    parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
-                    parser::StmtOrExpr::Expr(_) => todo!(),
-                },
+            for incl in includes {
+                self.write(&format!("#include {incl}\n"))?;
             }
         }
 
-        self.write("}")?;
+        // Write main to buffer.
+        {
+            self.write("int main() {\n")?;
 
-        Ok(EmitterResult { code: self.buffer })
+            for construct in parsed.top_level_constructs {
+                match construct {
+                    parser::TopLevelConstruct::Interface(iface) => self.reg_iface(iface)?,
+                    parser::TopLevelConstruct::StmtOrExpr(stmt_or_expr) => match stmt_or_expr {
+                        parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
+                        parser::StmtOrExpr::Expr(_) => todo!(),
+                    },
+                }
+            }
+
+            self.write("}")?;
+        }
+
+        Ok(EmitterResult {
+            files: vec![
+                // out
+                EmittedFile::Dir {
+                    name: String::from("src"),
+                    files: vec![
+                        // out/main.cpp
+                        EmittedFile::File {
+                            name: String::from("main.cpp"),
+                            content: self.buffer,
+                        },
+                        // out/runtime.cpp
+                        EmittedFile::File {
+                            name: String::from("runtime.cpp"),
+                            content: String::from(runtime::RUNTIME_CPP),
+                        },
+                        // out/runtime.hpp
+                        EmittedFile::File {
+                            name: String::from("runtime.hpp"),
+                            content: String::from(runtime::RUNTIME_HPP),
+                        },
+                    ],
+                },
+            ],
+        })
     }
 
     fn reg_iface(&mut self, iface: parser::Interface) -> Result<(), EmitterError> {
