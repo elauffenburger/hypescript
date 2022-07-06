@@ -124,3 +124,17 @@ fn can_emit_complex_src() {
 
     insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
+
+#[test]
+fn can_use_for_loop() {
+     let parsed = parser::parse(
+        r#"
+        for (let i = 0; i < 10; i++) {
+            console.log(i);
+        }
+        "#,
+    )
+    .unwrap();
+
+    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());   
+}

@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use maplit::hashmap;
 
-use crate::parser;
+use crate::{parser, util::rcref};
 
 mod scope;
 pub use scope::*;
@@ -46,7 +46,7 @@ pub struct Emitter {
 
 impl Emitter {
     pub fn new() -> Self {
-        let global = Rc::new(RefCell::new(scope::new_global_scope()));
+        let global = rcref(scope::new_global_scope());
 
         Emitter {
             curr_scope: global.clone(),
@@ -141,13 +141,13 @@ impl Emitter {
 
     fn enter_scope(&mut self) {
         // Create the new scope.
-        let scope = Rc::new(RefCell::new(Scope {
+        let scope = rcref(Scope {
             parent: Some(self.curr_scope.clone()),
             children: None,
             ident_types: hashmap! {},
             types: hashmap! {},
             this: self.curr_scope.borrow().this.clone(),
-        }));
+        });
 
         // Add this scope to the list of child scopes for the parent.
         {

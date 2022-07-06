@@ -27,14 +27,31 @@ iface_defn = { "interface" ~ ident ~ "{" ~ iface_defn_body ~ "}" }
 // Statments & Expressions:
 stmt_or_expr = { stmt | expr }
 
-stmt = { (let_decl | return_expr | expr ) ~ ";"? }
+stmt = { (for_loop | let_decl | return_expr | expr) ~ ";"? }
 let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ assignment? }
 return_expr = { ("return " ~ expr) }
 
-expr = { num | string | ident_assignment | fn_inst | chained_obj_op | obj_inst | ident }
+expr = { comparison | incr_decr | num | string | ident_assignment | fn_inst | chained_obj_op | obj_inst | ident }
 ident_assignment = {ident ~ assignment}
 chained_obj_op = { accessable ~ obj_op ~ obj_op* ~ assignment? }
 /* _ */ accessable = _{ ident | ( "(" ~ literal_type ~ ")" ) }
+
+incr_decr = { increment | decrement }
+
+increment = { pre_incr | post_incr }
+incr_target = { ident }
+pre_incr = { "++" ~ incr_target }
+post_incr = { incr_target ~ "++" }
+
+decrement = { pre_decr | post_decr }
+pre_decr = { "++" ~ incr_target }
+post_decr = { incr_target ~ "++" }
+
+comparison = { comparison_term ~ comparison_op ~ comparison_term }
+comparison_term = { incr_decr | num | string | chained_obj_op | ident | ( "(" ~ comparison ~ ")" ) }
+comparison_op = { "==" | "!=" | "<" | ">" }
+
+for_loop = { "for" ~ "(" ~ let_decl ~ ";" ~ expr ~ ";" ~ expr ~ ")" ~ "{" ~ stmt_or_expr* ~ "}" }
 
 // Objects:
 obj_op = { obj_access | obj_invoc }

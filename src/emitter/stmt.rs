@@ -1,10 +1,34 @@
-use crate::parser::{Stmt, Expr};
+use crate::parser::{Expr, Stmt};
 
 use super::{EmitResult, Emitter};
 
 impl Emitter {
     pub(in crate::emitter) fn emit_stmt(&mut self, stmt: Stmt) -> EmitResult {
         match stmt {
+            Stmt::ForLoop {
+                init,
+                condition,
+                after,
+                body,
+            } => {
+                self.emit_stmt(*init)?;
+
+                self.write("for(; ")?;
+                self.emit_expr(condition)?;
+                self.write("->truthy()")?;
+                self.write("; ")?;
+                self.emit_expr(after)?;
+                self.write(") {\n")?;
+
+                for stmt_or_expr in body {
+                    match stmt_or_expr {
+                        crate::parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
+                        crate::parser::StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
+                    }
+                }
+
+                self.write("}\n")?;
+            }
             Stmt::LetDecl {
                 name,
                 typ: expl_typ,
@@ -43,7 +67,7 @@ impl Emitter {
                     };
 
                     match typ {
-                        Some(typ) => self.curr_scope.borrow_mut().add_ident(name, typ),
+                        Some(typ) => self.curr_scope.borrow_mut().add_ident(&name, typ),
                         None => return Err(format!("unable to determine the type of {name}")),
                     };
                 };

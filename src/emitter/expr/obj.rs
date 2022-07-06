@@ -50,7 +50,7 @@ impl Emitter {
                             parser::LiteralType::FnType { .. } => todo!(),
                             parser::LiteralType::ObjType { fields } => {
                                 match fields.iter().find(|field| field.name == prop) {
-                                    Some(field) => Rc::new(RefCell::new(field.typ.clone())),
+                                    Some(field) => rcref(field.typ.clone()),
                                     None => {
                                         return Err(format!("unknown field '{prop}' on target"))
                                     }
@@ -61,11 +61,11 @@ impl Emitter {
                     };
                 }
                 parser::ObjOp::Invoc { args } => {
-                    self.write("->invoke(TsCoreHelpers::toVector<TsFunctionArg>({")?;
+                    self.write("->invoke({")?;
 
                     let n = args.len();
                     for (i, arg) in args.into_iter().enumerate() {
-                        self.write(&format!("TsFunctionArg(\"{}\", ", "sdjkl"))?;
+                        self.write(&format!("TsFunctionArg(\"{}\", ", "arg_name"))?;
                         self.emit_expr(arg)?;
                         self.write(")")?;
 
@@ -74,7 +74,7 @@ impl Emitter {
                         }
                     }
 
-                    self.write("}))")?;
+                    self.write("})")?;
                 }
             }
 
@@ -102,8 +102,8 @@ impl Emitter {
         // TODO: actually impl this thang.
         let type_id = 1;
 
-        let obj_type = Rc::new(RefCell::new(Type {
-            head: parser::TypeIdentType::LiteralType(Box::new(parser::LiteralType::ObjType {
+        let obj_type = rcref(Type {
+            head: parser::TypeIdentType::literal(parser::LiteralType::ObjType {
                 fields: {
                     let mut fields = vec![];
 
@@ -117,16 +117,16 @@ impl Emitter {
 
                     fields
                 },
-            })),
+            }),
             rest: None,
-        }));
+        });
 
         // Start the obj.
         self.write(&format!("new TsObject({type_id}, "))?;
 
         // Write the fields.
         {
-            self.write("TsCoreHelpers::toVector<TsObjectField*>({")?;
+            self.write("{")?;
 
             let n = obj_inst.fields.len();
             for (i, field) in obj_inst.fields.into_iter().enumerate() {
@@ -158,7 +158,7 @@ impl Emitter {
                 }
             }
 
-            self.write("})")?;
+            self.write("}")?;
         }
 
         // End the obj.

@@ -1,18 +1,17 @@
 #pragma once
 
-#include <stdlib.h>
+#include <algorithm>
+#include <functional>
+#include <memory>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <memory>
-#include <functional>
 
 // TODO: don't do this.
 #define UNDEFINED 0xDEADBEEF
 
-template <typename T>
-class IntrinsicTsObject;
+template <typename T> class IntrinsicTsObject;
 
 class TsString;
 class TsFunctionParam;
@@ -21,186 +20,164 @@ class TsFunction;
 class TsObjectFieldDescriptor;
 class TsObjectField;
 
-class TsCoreHelpers
-{
-public:
-    template <class T>
-    static std::vector<T> toVector(std::initializer_list<T> args)
-    {
-        auto result = std::vector<T>();
-        for (auto arg : args)
-        {
-            result.push_back(arg);
-        }
-
-        return result;
-    }
-
-    template <typename T>
-    static std::vector<T> toVector()
-    {
-        return std::vector<T>();
-    }
+enum TypeId {
+  TypeIdNone = 0,
+  TypeIdTsObject = 1,
+  TypeIdTsNum = 2,
+  TypeIdTsString = 3,
+  TypeIdTsFunction = 4,
+  TypeIdVoid = 5,
+  TypeIdIntrinsic = 6,
+  TypeIdBool = 7,
 };
 
-enum TypeId
-{
-    TypeIdNone = 0,
-    TypeIdTsObject = 1,
-    TypeIdTsNum = 2,
-    TypeIdTsString = 3,
-    TypeIdTsFunction = 4,
-    TypeIdVoid = 5,
-    TypeIdIntrinsic = 6,
+class TsObject {
+public:
+  int typeId;
+  std::vector<TsObjectField *> fields;
+
+  TsObject(int typeId) : TsObject(typeId, std::vector<TsObjectField *>()) {}
+
+  TsObject(int typeId, std::vector<TsObjectField *> fields);
+
+  TsObjectField *getField(const std::string &field_name) const;
+
+  TsObjectFieldDescriptor
+  getFieldDescriptor(const std::string &field_name) const;
+
+  TsObject *getFieldValue(const std::string &fieldName) const;
+
+  void setFieldValue(const std::string &field_name, TsObject *value);
+
+  template <typename T>
+  void addIntrinsicField(const std::string &fieldName, T value);
+
+  template <typename T> T getIntrinsicField(const std::string &fieldName) const;
+
+  virtual TsObject *invoke(std::vector<TsFunctionArg> args);
+
+  virtual bool truthy() { throw "not implemented!"; }
+
+  virtual TsString *toTsString() { return NULL; }
 };
 
-class TsObject
-{
+class TsString : public TsObject {
 public:
-    int typeId;
-    std::vector<TsObjectField *> fields;
+  std::string value;
 
-    TsObject(int typeId)
-        : TsObject(typeId, std::vector<TsObjectField *>()) {}
+  TsString(std::string value) : value(value), TsObject(TypeIdTsString) {}
 
-    TsObject(int typeId, std::vector<TsObjectField *> fields);
+  bool operator==(const TsString &other) const { return value == other.value; }
 
-    TsObjectField *getField(const std::string &field_name) const;
+  bool operator==(const std::string &other) const { return value == other; }
 
-    TsObjectFieldDescriptor getFieldDescriptor(const std::string &field_name) const;
+  virtual bool truthy() override { return value != ""; }
 
-    TsObject *getFieldValue(const std::string &fieldName) const;
-
-    void setFieldValue(const std::string &field_name, TsObject *value);
-
-    template <typename T>
-    void addIntrinsicField(const std::string &fieldName, T value);
-
-    template <typename T>
-    T getIntrinsicField(const std::string &fieldName) const;
-
-    virtual TsObject *invoke(std::vector<TsFunctionArg> args);
+  virtual TsString *toTsString() override { return this; }
 };
 
-template <typename T>
-class IntrinsicTsObject : public TsObject
-{
+template <typename T> class IntrinsicTsObject : public TsObject {
 public:
-    T value;
+  T value;
 
-    IntrinsicTsObject(T value)
-        : value(value),
-          TsObject(TypeIdIntrinsic) {}
+  IntrinsicTsObject(T value) : value(value), TsObject(TypeIdIntrinsic) {}
 
-    bool operator==(const IntrinsicTsObject<T> &other) const
-    {
-        return value == other.value;
-    }
+  bool operator==(const IntrinsicTsObject<T> &other) const {
+    return value == other.value;
+  }
+
+  virtual TsString *toTsString() override { return new TsString("object"); }
 };
 
-class TsNum : public TsObject
-{
+class TsNum : public TsObject {
 public:
-    int num;
+  int value;
 
-    TsNum(int num)
-        : num(num),
-          TsObject(TypeIdTsNum) {}
+  TsNum(int value);
 
-    bool operator==(const TsNum &other) const
-    {
-        return num == other.num;
-    }
+  bool operator==(const TsNum &other) const { return value == other.value; }
+
+  virtual TsString *toTsString() override {
+    return new TsString(std::to_string(value));
+  }
+
+  virtual bool truthy() override { return value != 0; }
 };
 
-class TsString : public TsObject
-{
+class TsBool : public TsObject {
 public:
-    std::string value;
+  bool value;
 
-    TsString(std::string value)
-        : value(value),
-          TsObject(TypeIdTsString) {}
+  TsBool(bool value);
 
-    bool operator==(const TsString &other) const
-    {
-        return value == other.value;
-    }
+  bool operator==(const TsBool &other) const { return value == other.value; }
 
-    bool operator==(const std::string &other) const
-    {
-        return value == other;
-    }
+  operator bool() const { return value; }
+
+  virtual TsString *toTsString() override {
+    return new TsString(value ? "true" : "false");
+  }
+
+  virtual bool truthy() override { return value; }
 };
 
-class TsFunctionParam
-{
+class TsFunctionParam {
 public:
-    std::string name;
-    int type_id;
+  std::string name;
+  int type_id;
 
-    TsFunctionParam(std::string name, int type_id)
-        : name(name),
-          type_id(type_id) {}
+  TsFunctionParam(std::string name, int type_id);
 };
 
-class TsFunctionArg
-{
+class TsFunctionArg {
 public:
-    std::string name;
-    TsObject *value;
+  std::string name;
+  TsObject *value;
 
-    TsFunctionArg(std::string name, TsObject *value)
-        : name(name),
-          value(value) {}
+  TsFunctionArg(std::string name, TsObject *value);
 
-    static const TsFunctionArg &findArg(const std::vector<TsFunctionArg> &args, const std::string &argName);
+  static const TsFunctionArg &findArg(const std::vector<TsFunctionArg> &args,
+                                      const std::string &argName);
 };
 
-class TsFunction : public TsObject
-{
+class TsFunction : public TsObject {
 public:
-    std::string name;
-    std::vector<TsFunctionParam> params;
-    std::function<TsObject *()> thisFn;
+  std::string name;
+  std::vector<TsFunctionParam> params;
+  std::function<TsObject *()> thisFn;
 
-    std::function<TsObject *(TsObject *, std::vector<TsFunctionArg> args)> fn;
+  std::function<TsObject *(TsObject *, std::vector<TsFunctionArg> args)> fn;
 
-    TsFunction(
-        std::string name,
-        std::vector<TsFunctionParam> params,
-        std::function<TsObject *(TsObject *, std::vector<TsFunctionArg> args)> fn)
-        : name(name),
-          params(params),
-          fn(fn),
-          TsObject(TypeIdTsFunction) {}
+  TsFunction(
+      std::string name, std::vector<TsFunctionParam> params,
+      std::function<TsObject *(TsObject *, std::vector<TsFunctionArg> args)>
+          fn);
 
-    virtual TsObject *invoke(std::vector<TsFunctionArg> args) override;
+  virtual TsObject *invoke(std::vector<TsFunctionArg> args) override;
+
+  virtual TsString *toTsString() override {
+    return new TsString("function<" + name + ">");
+  }
+
+  virtual bool truthy() override { return true; }
 };
 
-class TsObjectFieldDescriptor
-{
+class TsObjectFieldDescriptor {
 public:
-    TsString name;
-    int typeId;
+  TsString name;
+  int typeId;
 
-    TsObjectFieldDescriptor(TsString name, int typeId)
-        : name(name),
-          typeId(typeId) {}
+  TsObjectFieldDescriptor(TsString name, int typeId);
 };
 
-class TsObjectField
-{
+class TsObjectField {
 public:
-    TsObjectFieldDescriptor descriptor;
-    TsObject *value;
+  TsObjectFieldDescriptor descriptor;
+  TsObject *value;
 
-    TsObjectField(TsObjectFieldDescriptor descriptor)
-        : TsObjectField(descriptor, NULL) {}
+  TsObjectField(TsObjectFieldDescriptor descriptor);
 
-    TsObjectField(TsObjectFieldDescriptor descriptor, TsObject *value)
-        : descriptor(descriptor),
-          value(value) {}
+  TsObjectField(TsObjectFieldDescriptor descriptor, TsObject *value);
 };
 
 extern TsObject *console;

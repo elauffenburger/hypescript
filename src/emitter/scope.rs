@@ -3,8 +3,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use maplit::hashmap;
 
 use super::types::*;
-use crate::parser::{
-    Expr, FnParam, Interface, LiteralType, ObjTypeField, TypeIdent, TypeIdentType,
+use crate::{
+    parser::{
+        self, Expr, FnParam, Interface, InterfaceField, LiteralType, ObjTypeField, TypeIdent,
+        TypeIdentType,
+    },
+    util::rcref,
 };
 
 #[derive(Debug)]
@@ -20,9 +24,9 @@ pub struct Scope {
 
 impl Scope {
     /// Adds an ident to the scope and returns an `Rc<RefCell<Type>>` handle to the type.
-    pub fn add_ident(&mut self, name: String, typ: Type) -> Rc<RefCell<Type>> {
-        let typ = Rc::new(RefCell::new(typ));
-        self.ident_types.insert(name, typ.clone());
+    pub fn add_ident(&mut self, name: &str, typ: Type) -> Rc<RefCell<Type>> {
+        let typ = rcref(typ);
+        self.ident_types.insert(name.to_owned(), typ.clone());
 
         typ
     }
@@ -55,10 +59,10 @@ impl Scope {
     pub fn add_iface(&mut self, iface: Interface) -> Rc<RefCell<Type>> {
         let name = iface.name.clone();
 
-        let typ = Rc::new(RefCell::new(Type {
+        let typ = rcref(Type {
             head: TypeIdentType::Interface(iface),
             rest: None,
-        }));
+        });
 
         self.types.insert(name, typ.clone());
 
@@ -141,14 +145,14 @@ impl Scope {
 
     pub fn type_of(&self, expr: &Expr) -> Result<Type, String> {
         Ok(match expr {
-            Expr::Num(_) => Type {
-                head: TypeIdentType::Name("number".into()),
-                rest: None,
+            Expr::Comparison(comp) => {
+                todo!()
             },
-            Expr::Str(_) => Type {
-                head: TypeIdentType::Name("string".into()),
-                rest: None,
+            Expr::IncrDecr(incr_decr) => {
+                todo!()
             },
+            Expr::Num(_) => BuiltInTypes::Number.to_type(),
+            Expr::Str(_) => BuiltInTypes::String.to_type(),
             Expr::IdentAssignment(ref ident_assign) => self
                 .ident_types
                 .get(&ident_assign.ident)
@@ -156,37 +160,37 @@ impl Scope {
                 .borrow()
                 .clone(),
             Expr::FnInst(ref fn_inst) => Type {
-                head: TypeIdentType::LiteralType(Box::new(LiteralType::FnType {
+                head: TypeIdentType::literal(LiteralType::FnType {
                     params: fn_inst.params.clone(),
                     return_type: fn_inst.return_type.clone(),
-                })),
+                }),
                 rest: None,
             },
             Expr::ChainedObjOp(ref chained_op) => {
-                let mut op_typ = match chained_op.accessable {
-                    crate::parser::Accessable::Ident(ref ident) => self
+                let mut typ = match chained_op.accessable {
+                    parser::Accessable::Ident(ref ident) => self
                         .get_ident_type(ident)
                         .ok_or(format!("could not find ident {ident}"))?
                         .borrow()
                         .clone(),
-                    crate::parser::Accessable::LiteralType(ref typ) => Type {
-                        head: TypeIdentType::LiteralType(Box::new(typ.clone())),
-                        rest: None,
-                    },
+                    parser::Accessable::LiteralType(ref typ) => {
+                        Type::simple(TypeIdentType::literal(typ.clone()))
+                    }
                 };
 
+                // Walk through each obj op and update the typ to match the last op's type.
                 for op in &chained_op.obj_ops {
                     match op {
-                        crate::parser::ObjOp::Access(ref access) => {
-                            op_typ = self.type_field_type(&op_typ, access)?;
+                        parser::ObjOp::Access(ref access) => {
+                            typ = self.type_field_type(&typ, access)?;
                         }
-                        crate::parser::ObjOp::Invoc { .. } => {
-                            op_typ = self.invoc_type(&op_typ)?;
+                        parser::ObjOp::Invoc { .. } => {
+                            typ = self.invoc_type(&typ)?;
                         }
                     }
                 }
 
-                op_typ
+                typ
             }
             Expr::ObjInst(ref obj_inst) => {
                 let mut fields = vec![];
@@ -200,10 +204,7 @@ impl Scope {
                     })
                 }
 
-                TypeIdent {
-                    head: TypeIdentType::LiteralType(Box::new(LiteralType::ObjType { fields })),
-                    rest: None,
-                }
+                Type::simple(TypeIdentType::literal(LiteralType::ObjType { fields }))
             }
             Expr::Ident(ref ident) => self
                 .ident_types
@@ -317,55 +318,48 @@ impl Scope {
 }
 
 pub fn new_global_scope() -> Scope {
-    Scope {
+    let mut scope = Scope {
         parent: None,
         children: None,
-        ident_types: hashmap! {
-            "console".into() => Rc::new(RefCell::new(Type{
-                head: TypeIdentType::Name("Console".into()),
-                rest: None
-            })),
-        },
-        types: hashmap! {
-            "Console".into() => Rc::new(RefCell::new(Type{
-                head: TypeIdentType::LiteralType(
-                    Box::new(LiteralType::ObjType {
-                        fields: vec![
-                            ObjTypeField {
-                                name: "log".into(),
-                                optional: false,
-                                typ: TypeIdent {
-                                    head: TypeIdentType::LiteralType(
-                                        Box::new(LiteralType::FnType {
-                                            params: vec![
-                                                FnParam{
-                                                    name: "msg".into(),
-                                                    optional: false,
-                                                    typ: Some(TypeIdent {
-                                                        head: TypeIdentType::Name(BuiltInTypes::String.type_name().into()),
-                                                        rest: None,
-                                                    })
-                                                },
-                                            ],
-                                            return_type: None,
-                                        })
-                                    ),
-                                    rest: None
-                                },
-                            },
-                        ]
-                    })
-                ),
-                rest: None
-            })),
-            "Global".into() => Rc::new(RefCell::new(Type{
-                head: TypeIdentType::LiteralType(Box::new(LiteralType::ObjType { fields: vec![]})),
+        ident_types: hashmap! {},
+        types: hashmap! {},
+        // Wire up the scope's `this` to have the type `Global`.
+        this: rcref(Type::simple(TypeIdentType::name("Global"))),
+    };
+
+    // Add `Global` interface.
+    scope.add_iface(Interface {
+        name: "Global".into(),
+        methods: vec![],
+        fields: vec![],
+    });
+
+    // Add `Console` interface.
+    scope.add_iface(Interface {
+        name: "Console".into(),
+        methods: vec![],
+        fields: vec![InterfaceField {
+            name: "log".into(),
+            optional: false,
+            typ: TypeIdent {
+                head: TypeIdentType::literal(LiteralType::FnType {
+                    params: vec![FnParam {
+                        name: "msg".into(),
+                        optional: false,
+                        typ: Some(TypeIdent {
+                            head: TypeIdentType::name(BuiltInTypes::String.type_name()),
+                            rest: None,
+                        }),
+                    }],
+                    return_type: None,
+                }),
                 rest: None,
-            }))
-        },
-        this: Rc::new(RefCell::new(Type {
-            head: TypeIdentType::Name("Global".into()),
-            rest: None,
-        })),
-    }
+            },
+        }],
+    });
+
+    // Add `console` ident.
+    scope.add_ident("console", Type::simple(TypeIdentType::name("Console")));
+
+    scope
 }

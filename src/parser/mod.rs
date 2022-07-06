@@ -92,8 +92,10 @@ fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
 
     let inner = pair.into_inner().next().unwrap();
     Ok(match inner.as_rule() {
-        Rule::num => Expr::Num(inner.as_str().parse::<f32>().map_err(|e| format!("{e}"))?),
-        Rule::string => Expr::Str(inner.into_inner().next().unwrap().as_str().into()),
+        Rule::comparison => Expr::Comparison(parse_comparison(inner)?),
+        Rule::incr_decr => Expr::IncrDecr(parse_incr_decr(inner)?),
+        Rule::num => Expr::Num(parse_num(inner)?),
+        Rule::string => Expr::Str(parse_str(inner)?),
         Rule::ident_assignment => {
             let mut inner = inner.into_inner();
 
@@ -103,60 +105,7 @@ fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
             Expr::IdentAssignment(Box::new(IdentAssignment { ident, assignment }))
         }
         Rule::fn_inst => Expr::FnInst(parse_fn_inst(inner)?),
-        Rule::chained_obj_op => {
-            let mut inner = inner.into_inner();
-
-            let accessable = {
-                let next = inner.next().unwrap();
-                match next.as_rule() {
-                    Rule::ident => Accessable::Ident(parse_ident(next)?),
-                    Rule::literal_type => Accessable::LiteralType(parse_literal_type(next)?),
-                    _ => unreachable!(),
-                }
-            };
-
-            let obj_ops = {
-                let mut ops = vec![];
-
-                while let Some(peeked) = inner.peek() {
-                    if peeked.as_rule() != Rule::obj_op {
-                        break;
-                    }
-
-                    let next = inner.next().unwrap().into_inner().next().unwrap();
-                    ops.push(match next.as_rule() {
-                        Rule::obj_access => {
-                            ObjOp::Access(parse_ident(next.into_inner().next().unwrap())?)
-                        }
-                        Rule::obj_invoc => {
-                            let mut args = vec![];
-
-                            for pair in next.into_inner() {
-                                args.push(parse_expr(pair)?);
-                            }
-
-                            ObjOp::Invoc { args }
-                        }
-                        _ => unreachable!(),
-                    });
-                }
-
-                ops
-            };
-
-            let assignment = {
-                match inner.next() {
-                    Some(next) => Some(Box::new(parse_expr(next.into_inner().next().unwrap())?)),
-                    None => None,
-                }
-            };
-
-            Expr::ChainedObjOp(ChainedObjOp {
-                accessable,
-                obj_ops,
-                assignment,
-            })
-        }
+        Rule::chained_obj_op => Expr::ChainedObjOp(parse_chained_obj_op(inner)?),
         Rule::obj_inst => {
             let mut fields = vec![];
             for pair in inner.into_inner() {
@@ -172,6 +121,154 @@ fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
         }
         Rule::ident => Expr::Ident(parse_ident(inner)?),
         _ => unreachable!(),
+    })
+}
+
+fn parse_comparison(pair: Pair<Rule>) -> Result<Comparison, ParseError> {
+    assert_rule(&pair, Rule::comparison)?;
+
+    let mut inner = pair.into_inner();
+
+    let left = parse_comparison_term(inner.next().unwrap())?;
+    let op = match inner.next().unwrap().as_str() {
+        "==" => ComparisonOp::LooseEq,
+        "!=" => ComparisonOp::LooseNeq,
+        "<" => ComparisonOp::Lt,
+        ">" => ComparisonOp::Gt,
+        _ => todo!(),
+    };
+    let right = parse_comparison_term(inner.next().unwrap())?;
+
+    Ok(Comparison { left, op, right })
+}
+
+fn parse_comparison_term(pair: Pair<Rule>) -> Result<ComparisonTerm, ParseError> {
+    assert_rule(&pair, Rule::comparison_term)?;
+
+    let inner = pair.into_inner().next().unwrap();
+    Ok(match inner.as_rule() {
+        Rule::incr_decr => ComparisonTerm::IncrDecr(parse_incr_decr(inner)?),
+        Rule::num => ComparisonTerm::Num(parse_num(inner)?),
+        Rule::string => ComparisonTerm::Str(parse_str(inner)?),
+        Rule::chained_obj_op => ComparisonTerm::ChainedObjOp(parse_chained_obj_op(inner)?),
+        Rule::ident => ComparisonTerm::Ident(parse_ident(inner)?),
+        Rule::comparison => ComparisonTerm::Comparison(Box::new(parse_comparison(inner)?)),
+        _ => todo!(),
+    })
+}
+
+fn parse_incr_decr(pair: Pair<Rule>) -> Result<IncrDecr, ParseError> {
+    assert_rule(&pair, Rule::incr_decr)?;
+
+    let inner = pair.into_inner().next().unwrap();
+    Ok(match inner.as_rule() {
+        Rule::increment => {
+            let mut inner = inner.into_inner();
+
+            let incr_type = inner.next().unwrap();
+            let incr_type_rule = incr_type.as_rule();
+            let target = parse_incr_decr_target(incr_type.into_inner().next().unwrap())?;
+
+            match incr_type_rule {
+                Rule::pre_incr => IncrDecr::Incr(Increment::Pre(target)),
+                Rule::post_incr => IncrDecr::Incr(Increment::Post(target)),
+                _ => todo!(),
+            }
+        }
+
+        Rule::decrement => {
+            let mut inner = inner.into_inner();
+
+            let decr_type = inner.next().unwrap();
+            let decr_type_rule = decr_type.as_rule();
+            let target = parse_incr_decr_target(decr_type.into_inner().next().unwrap())?;
+
+            match decr_type_rule {
+                Rule::pre_incr => IncrDecr::Decr(Decrement::Pre(target)),
+                Rule::post_incr => IncrDecr::Decr(Decrement::Post(target)),
+                _ => todo!(),
+            }
+        }
+
+        _ => todo!(),
+    })
+}
+
+fn parse_incr_decr_target(pair: Pair<Rule>) -> Result<IncrDecrTarget, ParseError> {
+    assert_rule(&pair, Rule::incr_target)?;
+
+    let inner = pair.into_inner().next().unwrap();
+
+    Ok(match inner.as_rule() {
+        Rule::ident => IncrDecrTarget::Ident(parse_ident(inner)?),
+        _ => todo!(),
+    })
+}
+
+fn parse_num(pair: Pair<Rule>) -> Result<f32, ParseError> {
+    assert_rule(&pair, Rule::num)?;
+
+    Ok(pair.as_str().parse::<f32>().map_err(|e| format!("{e}"))?)
+}
+
+fn parse_str(pair: Pair<Rule>) -> Result<String, ParseError> {
+    assert_rule(&pair, Rule::string)?;
+
+    Ok(pair.into_inner().next().unwrap().as_str().into())
+}
+
+fn parse_chained_obj_op(pair: Pair<Rule>) -> Result<ChainedObjOp, ParseError> {
+    assert_rule(&pair, Rule::chained_obj_op)?;
+
+    let mut inner = pair.into_inner();
+
+    let accessable = {
+        let next = inner.next().unwrap();
+        match next.as_rule() {
+            Rule::ident => Accessable::Ident(parse_ident(next)?),
+            Rule::literal_type => Accessable::LiteralType(parse_literal_type(next)?),
+            _ => unreachable!(),
+        }
+    };
+
+    let obj_ops = {
+        let mut ops = vec![];
+
+        while let Some(peeked) = inner.peek() {
+            if peeked.as_rule() != Rule::obj_op {
+                break;
+            }
+
+            let next = inner.next().unwrap().into_inner().next().unwrap();
+            ops.push(match next.as_rule() {
+                Rule::obj_access => ObjOp::Access(parse_ident(next.into_inner().next().unwrap())?),
+                Rule::obj_invoc => {
+                    let mut args = vec![];
+
+                    for pair in next.into_inner() {
+                        args.push(parse_expr(pair)?);
+                    }
+
+                    ObjOp::Invoc { args }
+                }
+                _ => unreachable!(),
+            });
+        }
+
+        ops
+    };
+
+    let assignment = {
+        match inner.next() {
+            Some(next) => Some(Box::new(parse_expr(next.into_inner().next().unwrap())?)),
+            None => None,
+        }
+    };
+
+    Ok(ChainedObjOp {
+        accessable,
+        obj_ops,
+        assignment,
     })
 }
 
@@ -208,6 +305,25 @@ fn parse_stmt(pair: Pair<Rule>) -> Result<Stmt, ParseError> {
 
     let inner = pair.into_inner().next().unwrap();
     Ok(match inner.as_rule() {
+        Rule::for_loop => {
+            let mut inner = inner.into_inner();
+
+            let init = parse_let_decl(inner.next().unwrap())?;
+            let condition = parse_expr(inner.next().unwrap())?;
+            let after = parse_expr(inner.next().unwrap())?;
+
+            let mut body = vec![];
+            while let Some(pair) = inner.next() {
+                body.push(parse_stmt_or_expr(pair)?);
+            }
+
+            Stmt::ForLoop {
+                init: Box::new(init),
+                condition,
+                after,
+                body,
+            }
+        }
         Rule::let_decl => {
             let mut inner = inner.into_inner();
 
@@ -229,7 +345,26 @@ fn parse_stmt(pair: Pair<Rule>) -> Result<Stmt, ParseError> {
         Rule::fn_inst => todo!("fn_inst"),
         Rule::expr => Stmt::Expr(parse_expr(inner)?),
         Rule::return_expr => Stmt::ReturnExpr(parse_expr(inner.into_inner().next().unwrap())?),
-        _ => unreachable!(),
+        _ => todo!(),
+    })
+}
+
+fn parse_let_decl(pair: Pair<Rule>) -> Result<Stmt, ParseError> {
+    let mut inner = pair.into_inner();
+
+    let (name, mut typ, mut assignment) = (parse_ident(inner.next().unwrap())?, None, None);
+    for pair in inner {
+        match pair.as_rule() {
+            Rule::type_ident => typ = Some(parse_type_ident(pair)?),
+            Rule::assignment => assignment = Some(parse_assignment(pair)?),
+            _ => unreachable!(),
+        }
+    }
+
+    Ok(Stmt::LetDecl {
+        name,
+        typ,
+        assignment,
     })
 }
 

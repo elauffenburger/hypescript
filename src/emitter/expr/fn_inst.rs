@@ -7,16 +7,13 @@ impl Emitter {
         // If the fn is named, add a reference to it in the current scope.
         let fn_name = if let Some(ref name) = &fn_inst.name {
             self.curr_scope.borrow_mut().add_ident(
-                name.clone(),
-                Type {
-                    head: parser::TypeIdentType::LiteralType(Box::new(
-                        parser::LiteralType::FnType {
-                            params: fn_inst.params.clone(),
-                            return_type: fn_inst.return_type.clone(),
-                        },
-                    )),
-                    rest: None,
-                },
+                name,
+                Type::simple(parser::TypeIdentType::literal(
+                    parser::LiteralType::FnType {
+                        params: fn_inst.params.clone(),
+                        return_type: fn_inst.return_type.clone(),
+                    },
+                )),
             );
 
             name
@@ -28,7 +25,7 @@ impl Emitter {
         self.write(&format!("new TsFunction(\"{fn_name}\","))?;
 
         // Write params.
-        self.write(&"TsCoreHelpers::toVector<TsFunctionParam>({")?;
+        self.write(&"{")?;
 
         let n = fn_inst.params.len();
         for (i, param) in fn_inst.params.iter().enumerate() {
@@ -41,7 +38,7 @@ impl Emitter {
                 self.write(", ")?;
             }
         }
-        self.write("})")?;
+        self.write("}")?;
 
         // Write start of lambda.
         self.write(", [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {\n")?;
@@ -135,18 +132,15 @@ impl Emitter {
                         fn_inst.return_type = Some(ret_typ);
 
                         // Patch the fn_inst in the scope.
-                        if let Some(name) = fn_inst.name {
+                        if let Some(ref name) = fn_inst.name {
                             self.curr_scope.borrow_mut().add_ident(
-                                name.clone(),
-                                Type {
-                                    head: parser::TypeIdentType::LiteralType(Box::new(
-                                        parser::LiteralType::FnType {
-                                            params: fn_inst.params.clone(),
-                                            return_type: fn_inst.return_type.clone(),
-                                        },
-                                    )),
-                                    rest: None,
-                                },
+                                name,
+                                Type::simple(parser::TypeIdentType::literal(
+                                    parser::LiteralType::FnType {
+                                        params: fn_inst.params.clone(),
+                                        return_type: fn_inst.return_type.clone(),
+                                    },
+                                )),
                             );
                         }
                     }

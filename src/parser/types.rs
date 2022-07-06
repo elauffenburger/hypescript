@@ -37,6 +37,15 @@ pub struct TypeIdent {
     pub rest: Option<Vec<TypeIdentPart>>,
 }
 
+impl TypeIdent {
+    pub fn simple(t: TypeIdentType) -> Self {
+        TypeIdent {
+            head: t,
+            rest: None,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeIdentPart {
     Union(TypeIdentType),
@@ -48,6 +57,16 @@ pub enum TypeIdentType {
     Name(String),
     LiteralType(Box<LiteralType>),
     Interface(Interface),
+}
+
+impl TypeIdentType {
+    pub fn name(name: &str) -> Self {
+        TypeIdentType::Name(name.into())
+    }
+
+    pub fn literal(t: LiteralType) -> Self {
+        TypeIdentType::LiteralType(Box::new(t))
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -76,6 +95,12 @@ pub enum StmtOrExpr {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
+    ForLoop {
+        init: Box<Stmt>,
+        condition: Expr,
+        after: Expr,
+        body: Vec<StmtOrExpr>,
+    },
     LetDecl {
         name: String,
         typ: Option<TypeIdent>,
@@ -87,12 +112,63 @@ pub enum Stmt {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
+    Comparison(Comparison),
+    IncrDecr(IncrDecr),
     Num(f32),
     Str(String),
     IdentAssignment(Box<IdentAssignment>),
     FnInst(FnInst),
     ChainedObjOp(ChainedObjOp),
     ObjInst(ObjInst),
+    Ident(String),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum IncrDecr {
+    Incr(Increment),
+    Decr(Decrement),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Comparison {
+    pub left: ComparisonTerm,
+    pub right: ComparisonTerm,
+    pub op: ComparisonOp,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ComparisonTerm {
+    IncrDecr(IncrDecr),
+    Num(f32),
+    Str(String),
+    IdentAssignment(Box<IdentAssignment>),
+    ChainedObjOp(ChainedObjOp),
+    Ident(String),
+    Comparison(Box<Comparison>),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ComparisonOp {
+    LooseEq,
+    LooseNeq,
+    Lt,
+    Gt,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Increment {
+    Pre(IncrDecrTarget),
+    Post(IncrDecrTarget),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Decrement {
+    Pre(IncrDecrTarget),
+    Post(IncrDecrTarget),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum IncrDecrTarget {
     Ident(String),
 }
 
