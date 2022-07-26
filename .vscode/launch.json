@@ -10,7 +10,7 @@
       "name": "Launch bin/cli",
       "program": "${workspaceFolder}/target/debug/cli",
       "args": [],
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}"
     },
     {
       "type": "lldb",
@@ -18,17 +18,7 @@
       "name": "Run generated exe",
       "program": "${workspaceFolder}/build/bin/out",
       "args": [],
-      "cwd": "${workspaceFolder}/build",
-    },
-    // {
-    //   "name": "run main.exe",
-    //   "type": "cppvsdbg",
-    //   "request": "launch",
-    //   "program": "./build/main.exe",
-    //   "args": [],
-    //   "cwd": "${workspaceFolder}",
-    //   "environment": [],
-    //   "preLaunchTask": "build main.exe"
-    // }
+      "cwd": "${workspaceFolder}/build"
+    }
   ]
 }

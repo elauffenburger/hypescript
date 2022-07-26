@@ -83,7 +83,7 @@ impl Emitter {
         let (target, fn_name) = match incr_decr {
             parser::IncrDecr::Incr(incr) => match incr {
                 parser::Increment::Pre(tgt) => match tgt {
-                    parser::IncrDecrTarget::Ident(ident) => {
+                    parser::IncrDecrTarget::Ident(_) => {
                         todo!()
                     }
                 },
@@ -95,12 +95,12 @@ impl Emitter {
             },
             parser::IncrDecr::Decr(decr) => match decr {
                 parser::Decrement::Pre(tgt) => match tgt {
-                    parser::IncrDecrTarget::Ident(ident) => {
+                    parser::IncrDecrTarget::Ident(_) => {
                         todo!()
                     }
                 },
                 parser::Decrement::Post(tgt) => match tgt {
-                    parser::IncrDecrTarget::Ident(ident) => {
+                    parser::IncrDecrTarget::Ident(_) => {
                         todo!()
                     }
                 },

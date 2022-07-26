@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-read -r -d '' SRC << EOF
+read -rd '' SRC <<EOF
 interface Foo {
     str: string;
     num: number;
@@ -44,6 +44,21 @@ function returnsFn() {
     return function() {
         console.log("in nested!");
     };
+}
+
+function fizzbuzz(n: int): void {
+    for (let i = 0; i < n; i++) {
+        let fizz = i % 3 == 0;
+        let buzz = i % 5 == 0;
+
+        if (fizz && buzz) {
+            console.log("fizzbuzz");
+        } else if (fizz) {
+            console.log("fizz");
+        } else if (buzz) {
+            console.log("buzz");
+        }
+    }
 }
 
 function run(): void {
@@ -100,6 +115,8 @@ function run(): void {
     for (let i = 0; i < 10; i++) {
         console.log(i);
     }
+
+    fizzbuzz();
 }
 
 run();

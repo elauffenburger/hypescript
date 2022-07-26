@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -o errexit -o pipefail -o nounset
+
 # Read the src from stdin.
 SRC=$(</dev/stdin)
 

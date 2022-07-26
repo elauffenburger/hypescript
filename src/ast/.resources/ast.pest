@@ -27,7 +27,7 @@ iface_defn = { "interface" ~ ident ~ "{" ~ iface_defn_body ~ "}" }
 // Statments & Expressions:
 stmt_or_expr = { stmt | expr }
 
-stmt = { (for_loop | let_decl | return_expr | expr) ~ ";"? }
+stmt = { (for_loop | if_stmt | let_decl | return_expr | expr) ~ ";"? }
 let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ assignment? }
 return_expr = { ("return " ~ expr) }
 
@@ -52,6 +52,9 @@ comparison_term = { incr_decr | num | string | chained_obj_op | ident | ( "(" ~ 
 comparison_op = { "==" | "!=" | "<" | ">" }
 
 for_loop = { "for" ~ "(" ~ let_decl ~ ";" ~ expr ~ ";" ~ expr ~ ")" ~ "{" ~ stmt_or_expr* ~ "}" }
+if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ "{" ~ stmt_or_expr* ~ "}" ~ else_if_stmt* ~ else_stmt? }
+/* _ */ else_if_stmt = { "else" ~ "if" ~ "(" ~ ")" ~ "{" ~  stmt_or_expr* ~ "}" }
+/* _ */ else_stmt = { "else" ~ "(" ~ expr ~ ")" ~ "{" ~ stmt_or_expr* ~ "}" }
 
 // Objects:
 obj_op = { obj_access | obj_invoc }

@@ -145,10 +145,10 @@ impl Scope {
 
     pub fn type_of(&self, expr: &Expr) -> Result<Type, String> {
         Ok(match expr {
-            Expr::Comparison(comp) => {
+            Expr::Comparison(_) => {
                 todo!()
             },
-            Expr::IncrDecr(incr_decr) => {
+            Expr::IncrDecr(_) => {
                 todo!()
             },
             Expr::Num(_) => BuiltInTypes::Number.to_type(),
