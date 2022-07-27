@@ -153,7 +153,49 @@ fn parse_comparison_term(pair: Pair<Rule>) -> Result<ComparisonTerm, ParseError>
         Rule::chained_obj_op => ComparisonTerm::ChainedObjOp(parse_chained_obj_op(inner)?),
         Rule::ident => ComparisonTerm::Ident(parse_ident(inner)?),
         Rule::comparison => ComparisonTerm::Comparison(Box::new(parse_comparison(inner)?)),
-        _ => todo!(),
+        Rule::arthm => ComparisonTerm::Arithmetic(parse_arithmetic(inner)?),
+        inner @ _ => todo!("{:?}", inner),
+    })
+}
+
+fn parse_arithmetic(pair: Pair<Rule>) -> Result<Arithmetic, ParseError> {
+    assert_rule(&pair, Rule::arthm)?;
+
+    let mut inner = pair.into_inner();
+    let term = parse_arithmetic_term(inner.next().unwrap())?;
+
+    let ops = {
+        let mut ops = vec![];
+        for pair in inner {
+            let mut inner = pair.into_inner();
+
+            let op = match inner.next().unwrap().as_rule() {
+                Rule::add => ArithmeticOp::Add,
+                Rule::sub => ArithmeticOp::Sub,
+                Rule::mult => ArithmeticOp::Mult,
+                Rule::div => ArithmeticOp::Div,
+                Rule::modu => ArithmeticOp::Modu,
+                rule @ _ => todo!("{:?}", rule),
+            };
+
+            let term = parse_arithmetic_term(inner.next().unwrap())?;
+
+            ops.push((op, term));
+        }
+
+        ops
+    };
+
+    Ok(Arithmetic { term, ops })
+}
+
+fn parse_arithmetic_term(pair: Pair<Rule>) -> Result<ArithmeticTerm, ParseError> {
+    assert_rule(&pair, Rule::arthm_term)?;
+
+    Ok(match pair.as_rule() {
+        Rule::ident => ArithmeticTerm::Ident(parse_ident(pair)?),
+        Rule::num => ArithmeticTerm::Num(parse_num(pair)?),
+        rule @ _ => todo!("{:?}", rule),
     })
 }
 
@@ -251,7 +293,7 @@ fn parse_chained_obj_op(pair: Pair<Rule>) -> Result<ChainedObjOp, ParseError> {
 
                     ObjOp::Invoc { args }
                 }
-                _ => unreachable!(),
+                rule @ _ => todo!("{:?}", rule),
             });
         }
 

@@ -28,14 +28,14 @@ impl Emitter {
     fn emit_comparison(&mut self, comp: parser::Comparison) -> EmitResult {
         self.emit_comparison_term(comp.left)?;
 
-        self.write("->getFieldValue(\"")?;
-        self.write(match comp.op {
+        self.emit_get_field_val(match comp.op {
             parser::ComparisonOp::LooseEq => "==",
             parser::ComparisonOp::LooseNeq => "!=",
             parser::ComparisonOp::Lt => "<",
             parser::ComparisonOp::Gt => ">",
         })?;
-        self.write("\")->invoke({")?;
+
+        self.write("->invoke({")?;
 
         self.write("TsFunctionArg(\"other\", ")?;
         self.emit_comparison_term(comp.right)?;
@@ -59,6 +59,38 @@ impl Emitter {
             }
             parser::ComparisonTerm::Ident(ident) => self.emit_ident(&ident),
             parser::ComparisonTerm::Comparison(comp) => self.emit_comparison(*comp),
+            parser::ComparisonTerm::Arithmetic(arthm) => self.emit_arithmetic(arthm),
+        }
+    }
+
+    fn emit_get_field_val(&mut self, field: &str) -> EmitResult {
+        self.write(&format!("->getFieldValue(\"{field}\")"))
+    }
+
+    fn emit_arithmetic(&mut self, arthm: parser::Arithmetic) -> EmitResult {
+        self.emit_arithmetic_term(arthm.term)?;
+
+        for op in arthm.ops {
+            self.emit_get_field_val(match op.0 {
+                parser::ArithmeticOp::Add => "+",
+                parser::ArithmeticOp::Sub => "-",
+                parser::ArithmeticOp::Mult => "*",
+                parser::ArithmeticOp::Div => "/",
+                parser::ArithmeticOp::Modu => "%",
+            })?;
+
+            self.write(&format!("->invoke({{"))?;
+            self.emit_arithmetic_term(op.1)?;
+            self.write("})")?;
+        }
+
+        Ok(())
+    }
+
+    fn emit_arithmetic_term(&mut self, term: parser::ArithmeticTerm) -> EmitResult {
+        match term {
+            parser::ArithmeticTerm::Ident(ident) => self.emit_ident(&ident),
+            parser::ArithmeticTerm::Num(num) => self.emit_num(num),
         }
     }
 
@@ -79,7 +111,6 @@ impl Emitter {
     }
 
     fn emit_incr_decr(&mut self, incr_decr: parser::IncrDecr) -> EmitResult {
-
         let (target, fn_name) = match incr_decr {
             parser::IncrDecr::Incr(incr) => match incr {
                 parser::Increment::Pre(tgt) => match tgt {
@@ -88,9 +119,7 @@ impl Emitter {
                     }
                 },
                 parser::Increment::Post(tgt) => match tgt {
-                    parser::IncrDecrTarget::Ident(ident) => {
-                        (self.mangle_ident(&ident), "_++")
-                    }
+                    parser::IncrDecrTarget::Ident(ident) => (self.mangle_ident(&ident), "_++"),
                 },
             },
             parser::IncrDecr::Decr(decr) => match decr {
@@ -107,7 +136,10 @@ impl Emitter {
             },
         };
 
-        self.write(&format!("{target}->getFieldValue(\"{fn_name}\")->invoke({{}})"))?;
+        self.write(&target)?;
+        self.emit_get_field_val(fn_name)?;
+
+        self.write("->invoke({})")?;
 
         Ok(())
     }

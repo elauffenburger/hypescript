@@ -127,7 +127,7 @@ fn can_emit_complex_src() {
 
 #[test]
 fn can_use_for_loop() {
-     let parsed = parser::parse(
+    let parsed = parser::parse(
         r#"
         for (let i = 0; i < 10; i++) {
             console.log(i);
@@ -136,5 +136,32 @@ fn can_use_for_loop() {
     )
     .unwrap();
 
-    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());   
+    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
+}
+
+#[test]
+fn can_emit_fizzbuzz() {
+    let parsed = parser::parse(
+        r#"
+            function fizzbuzz(n: int): void {
+                for (let i = 1; i < n + 1; i++) {
+                    let fizz = i % 3 == 0;
+                    let buzz = i % 5 == 0;
+
+                    if (fizz && buzz) {
+                        console.log("fizzbuzz");
+                    } else if (fizz) {
+                        console.log("fizz");
+                    } else if (buzz) {
+                        console.log("buzz");
+                    } else {
+                        console.log(i);
+                    }
+                }
+            }
+        "#,
+    )
+    .unwrap();
+
+    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }

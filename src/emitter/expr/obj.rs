@@ -33,7 +33,7 @@ impl Emitter {
                         break;
                     }
 
-                    self.write(&format!("->getFieldValue(\"{prop}\")"))?;
+                    self.emit_get_field_val(&prop)?;
 
                     if let Some(_) = (*curr_acc_type.borrow()).rest {
                         todo!("complex types")

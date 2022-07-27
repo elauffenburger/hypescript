@@ -47,7 +47,7 @@ function returnsFn() {
 }
 
 function fizzbuzz(n: int): void {
-    for (let i = 0; i < n; i++) {
+    for (let i = 1; i <= n; i++) {
         let fizz = i % 3 == 0;
         let buzz = i % 5 == 0;
 
@@ -57,6 +57,8 @@ function fizzbuzz(n: int): void {
             console.log("fizz");
         } else if (buzz) {
             console.log("buzz");
+        } else {
+            console.log(i);
         }
     }
 }

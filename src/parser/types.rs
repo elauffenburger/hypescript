@@ -145,6 +145,28 @@ pub enum ComparisonTerm {
     ChainedObjOp(ChainedObjOp),
     Ident(String),
     Comparison(Box<Comparison>),
+    Arithmetic(Arithmetic),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Arithmetic {
+    pub term: ArithmeticTerm,
+    pub ops: Vec<(ArithmeticOp, ArithmeticTerm)>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ArithmeticOp {
+    Add,
+    Sub,
+    Mult,
+    Div,
+    Modu,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ArithmeticTerm {
+    Ident(String),
+    Num(f32),
 }
 
 #[derive(Debug, PartialEq, Clone)]
