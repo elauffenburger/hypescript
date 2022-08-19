@@ -91,9 +91,9 @@ public:
 
 class TsNum : public TsObject {
 public:
-  int value;
+  float value;
 
-  TsNum(int value);
+  TsNum(float value);
 
   bool operator==(const TsNum &other) const { return value == other.value; }
 
@@ -164,10 +164,10 @@ public:
 
 class TsObjectFieldDescriptor {
 public:
-  TsString name;
+  std::string name;
   int typeId;
 
-  TsObjectFieldDescriptor(TsString name, int typeId);
+  TsObjectFieldDescriptor(std::string name, int typeId);
 };
 
 class TsObjectField {

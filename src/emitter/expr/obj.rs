@@ -138,7 +138,7 @@ impl Emitter {
                     let type_id = 0;
 
                     self.write(&format!(
-                        "TsObjectFieldDescriptor(TsString(\"{}\"), {type_id}), ",
+                        "TsObjectFieldDescriptor(\"{}\", {type_id}), ",
                         field.name
                     ))?;
                 }

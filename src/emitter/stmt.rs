@@ -8,7 +8,7 @@ impl Emitter {
             Stmt::If(if_stmt) => {
                 self.write("if(")?;
                 self.emit_expr(if_stmt.condition)?;
-                self.write(")")?;
+                self.write("->truthy())")?;
 
                 self.write("{")?;
                 self.emit_body(if_stmt.body)?;
@@ -17,7 +17,7 @@ impl Emitter {
                 for else_if in if_stmt.else_ifs {
                     self.write("else if(")?;
                     self.emit_expr(else_if.condition)?;
-                    self.write(")")?;
+                    self.write("->truthy())")?;
 
                     self.write("{")?;
                     self.emit_body(else_if.body)?;

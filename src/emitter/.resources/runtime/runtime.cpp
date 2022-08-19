@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <math.h>
 #include <memory>
 #include <stdexcept>
 #include <stdio.h>
@@ -11,11 +12,11 @@
 
 // TsNum
 
-TsNum::TsNum(int value) : value(value), TsObject(TypeIdTsNum) {
+TsNum::TsNum(float value) : value(value), TsObject(TypeIdTsNum) {
   this->fields.push_back(new TsObjectField(
-      TsObjectFieldDescriptor(TsString("_++"), 0),
+      TsObjectFieldDescriptor("++", 0),
       new TsFunction(
-          "_++", {},
+          "++", {},
           [=](TsObject *_this, std::vector<TsFunctionArg> args) -> TsObject * {
             this->value++;
 
@@ -23,7 +24,7 @@ TsNum::TsNum(int value) : value(value), TsObject(TypeIdTsNum) {
           })));
 
   this->fields.push_back(new TsObjectField(
-      TsObjectFieldDescriptor(TsString("<"), 0),
+      TsObjectFieldDescriptor("<", 0),
       new TsFunction(
           "<", {TsFunctionParam("other", 0)},
           [=](TsObject *_this, std::vector<TsFunctionArg> args) -> TsObject * {
@@ -32,11 +33,58 @@ TsNum::TsNum(int value) : value(value), TsObject(TypeIdTsNum) {
 
             return new TsBool(this->value < other->value);
           })));
+
+  this->fields.push_back(new TsObjectField(
+      TsObjectFieldDescriptor("+", 0),
+      new TsFunction(
+          "+", {TsFunctionParam("other", 0)},
+          [=](TsObject *_this, std::vector<TsFunctionArg> args) -> TsObject * {
+            auto other = dynamic_cast<TsNum *>(
+                TsFunctionArg::findArg(args, "other").value);
+
+            return new TsNum(this->value + other->value);
+          })));
+
+  this->fields.push_back(new TsObjectField(
+      TsObjectFieldDescriptor("%", 0),
+      new TsFunction(
+          "%", {TsFunctionParam("other", 0)},
+          [=](TsObject *_this, std::vector<TsFunctionArg> args) -> TsObject * {
+            auto other = dynamic_cast<TsNum *>(
+                TsFunctionArg::findArg(args, "other").value);
+
+            return new TsNum(fmod(this->value, other->value));
+          })));
+
+  this->fields.push_back(new TsObjectField(
+      TsObjectFieldDescriptor("==", 0),
+      new TsFunction(
+          "==", {TsFunctionParam("other", 0)},
+          [=](TsObject *_this, std::vector<TsFunctionArg> args) -> TsObject * {
+            auto other = TsFunctionArg::findArg(args, "other").value;
+
+            switch (other->typeId) {
+            case TypeIdTsNum:
+              return new TsBool(this->value ==
+                                dynamic_cast<TsNum *>(other)->value);
+            }
+          })));
 }
 
 // TsBool
 
-TsBool::TsBool(bool value) : value(value), TsObject(TypeIdBool) {}
+TsBool::TsBool(bool value) : value(value), TsObject(TypeIdBool) {
+  this->fields.push_back(new TsObjectField(
+      TsObjectFieldDescriptor("&&", 0),
+      new TsFunction(
+          "&&", {TsFunctionParam("other", 0)},
+          [=](TsObject *_this, std::vector<TsFunctionArg> args) -> TsObject * {
+            auto other = dynamic_cast<TsBool *>(
+                TsFunctionArg::findArg(args, "other").value);
+
+            return new TsBool(this->value && other->value);
+          })));
+}
 
 // TsFunction
 
@@ -58,7 +106,7 @@ TsFunction::TsFunction(
     std::function<TsObject *(TsObject *, std::vector<TsFunctionArg> args)> fn)
     : name(name), params(params), fn(fn), TsObject(TypeIdTsFunction) {}
 
-TsObjectFieldDescriptor::TsObjectFieldDescriptor(TsString name, int typeId)
+TsObjectFieldDescriptor::TsObjectFieldDescriptor(std::string name, int typeId)
     : name(name), typeId(typeId) {}
 
 // TsObject
@@ -124,8 +172,7 @@ void TsObject::setFieldValue(const std::string &field_name, TsObject *value) {
 
 template <typename T>
 void TsObject::addIntrinsicField(const std::string &fieldName, T value) {
-  auto descriptor =
-      TsObjectFieldDescriptor(TsString(fieldName), TypeIdIntrinsic);
+  auto descriptor = TsObjectFieldDescriptor(fieldName, TypeIdIntrinsic);
   auto object = new IntrinsicTsObject<T>(value);
   auto field = new TsObjectField(descriptor, object);
 
@@ -156,7 +203,7 @@ TsObject *TsFunction::invoke(std::vector<TsFunctionArg> args) {
 TsObject *console = new TsObject(
     TypeIdTsObject,
     {new TsObjectField(
-        TsObjectFieldDescriptor(TsString("log"), TypeIdTsFunction),
+        TsObjectFieldDescriptor("log", TypeIdTsFunction),
         new TsFunction("log", {}, [](auto _this, auto args) -> TsObject * {
           auto fmt = args[0].value->toTsString();
 

@@ -79,7 +79,9 @@ impl Emitter {
             })?;
 
             self.write(&format!("->invoke({{"))?;
+            self.write("TsFunctionArg(\"other\", ")?;
             self.emit_arithmetic_term(op.1)?;
+            self.write(")")?;
             self.write("})")?;
         }
 
@@ -118,7 +120,7 @@ impl Emitter {
                     }
                 },
                 parser::Increment::Post(tgt) => match tgt {
-                    parser::IncrDecrTarget::Ident(ident) => (self.mangle_ident(&ident), "_++"),
+                    parser::IncrDecrTarget::Ident(ident) => (self.mangle_ident(&ident), "++"),
                 },
             },
             parser::IncrDecr::Decr(decr) => match decr {

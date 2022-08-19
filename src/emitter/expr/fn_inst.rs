@@ -47,6 +47,12 @@ impl Emitter {
         // Write start of lambda.
         self.write(", [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {\n")?;
 
+        // Convert args into local vars.
+        for (i, param) in fn_inst.params.iter().enumerate() {
+            let name = self.mangle_ident(&param.name);
+            self.write(&format!("auto {name} = args.at({i}).value;\n"))?;
+        }
+
         // Write body of lambda.
         {
             self.enter_scope();

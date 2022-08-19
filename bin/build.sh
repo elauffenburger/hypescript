@@ -18,6 +18,9 @@ BIN_DIR="$BUILD_DIR"/bin
 # Pipe src to hsc and compile to the temp dir.
 echo "$SRC" | ./target/debug/hsc -o "$BUILD_DIR"
 
+# Format the output files.
+clang-format $SRC_DIR/* -i
+
 # Compilation time!
 
 # Make the bin dir

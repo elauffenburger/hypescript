@@ -46,10 +46,10 @@ function returnsFn() {
     };
 }
 
-function fizzbuzz(n: int): void {
-    for (let i = 1; i <= n; i++) {
-        let fizz = i % 3 == 0;
-        let buzz = i % 5 == 0;
+function fizzbuzz(n: number): void {
+    for (let i = 1; i < n + 1; i++) {
+        let fizz: boolean = i % 3 == 0;
+        let buzz: boolean = i % 5 == 0;
 
         if (fizz && buzz) {
             console.log("fizzbuzz");
@@ -118,7 +118,7 @@ function run(): void {
         console.log(i);
     }
 
-    fizzbuzz();
+    fizzbuzz(100);
 }
 
 run();
