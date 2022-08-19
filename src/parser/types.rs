@@ -108,6 +108,27 @@ pub enum Stmt {
     },
     Expr(Expr),
     ReturnExpr(Expr),
+    If(IfStmt),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct IfStmt {
+    pub condition: Expr,
+    pub body: Vec<StmtOrExpr>,
+
+    pub else_ifs: Vec<ElseIfStmt>,
+    pub els: Option<ElseStmt>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ElseIfStmt {
+    pub condition: Expr,
+    pub body: Vec<StmtOrExpr>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ElseStmt {
+    pub body: Vec<StmtOrExpr>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -150,7 +171,6 @@ pub enum ComparisonTerm {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Arithmetic {
-    pub term: ArithmeticTerm,
     pub ops: Vec<(ArithmeticOp, ArithmeticTerm)>,
 }
 
@@ -175,6 +195,7 @@ pub enum ComparisonOp {
     LooseNeq,
     Lt,
     Gt,
+    And,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -219,6 +240,7 @@ pub enum Accessable {
 pub enum ObjOp {
     Access(String),
     Invoc { args: Vec<Expr> },
+    Arithmetic(Arithmetic),
 }
 
 #[derive(Debug, PartialEq, Clone)]

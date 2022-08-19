@@ -143,7 +143,7 @@ fn can_use_for_loop() {
 fn can_emit_fizzbuzz() {
     let parsed = parser::parse(
         r#"
-            function fizzbuzz(n: int): void {
+            function fizzbuzz(n: number): void {
                 for (let i = 1; i < n + 1; i++) {
                     let fizz = i % 3 == 0;
                     let buzz = i % 5 == 0;

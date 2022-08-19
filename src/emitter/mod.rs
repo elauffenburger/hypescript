@@ -2,7 +2,10 @@ use std::{cell::RefCell, rc::Rc};
 
 use maplit::hashmap;
 
-use crate::{parser, util::rcref};
+use crate::{
+    parser::{self, StmtOrExpr},
+    util::rcref,
+};
 
 mod scope;
 pub use scope::*;
@@ -114,6 +117,17 @@ impl Emitter {
                 },
             ],
         })
+    }
+
+    fn emit_body(&mut self, body: Vec<StmtOrExpr>) -> Result<(), EmitterError> {
+        for stmt_or_expr in body {
+            match stmt_or_expr {
+                crate::parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
+                crate::parser::StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
+            }
+        }
+
+        Ok(())
     }
 
     fn reg_iface(&mut self, iface: parser::Interface) -> Result<(), EmitterError> {

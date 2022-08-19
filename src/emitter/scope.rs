@@ -145,9 +145,7 @@ impl Scope {
 
     pub fn type_of(&self, expr: &Expr) -> Result<Type, String> {
         Ok(match expr {
-            Expr::Comparison(_) => {
-                todo!()
-            },
+            Expr::Comparison(_) => BuiltInTypes::Boolean.to_type(),
             Expr::IncrDecr(_) => {
                 todo!()
             },
@@ -186,6 +184,9 @@ impl Scope {
                         }
                         parser::ObjOp::Invoc { .. } => {
                             typ = self.invoc_type(&typ)?;
+                        }
+                        parser::ObjOp::Arithmetic(ref arthm) => {
+                            todo!()
                         }
                     }
                 }

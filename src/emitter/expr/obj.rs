@@ -74,6 +74,7 @@ impl Emitter {
 
                     self.write("})")?;
                 }
+                parser::ObjOp::Arithmetic(artm) => self.emit_arithmetic(artm)?,
             }
 
             last_op = Some(op)
@@ -84,6 +85,7 @@ impl Emitter {
                 Some(op) => match op {
                     parser::ObjOp::Access(name) => name,
                     parser::ObjOp::Invoc { .. } => todo!(),
+                    parser::ObjOp::Arithmetic(_) => todo!(),
                 },
                 None => unreachable!("assignment without access is impossible"),
             };

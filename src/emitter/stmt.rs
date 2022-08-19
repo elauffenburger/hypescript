@@ -5,6 +5,31 @@ use super::{EmitResult, Emitter};
 impl Emitter {
     pub(in crate::emitter) fn emit_stmt(&mut self, stmt: Stmt) -> EmitResult {
         match stmt {
+            Stmt::If(if_stmt) => {
+                self.write("if(")?;
+                self.emit_expr(if_stmt.condition)?;
+                self.write(")")?;
+
+                self.write("{")?;
+                self.emit_body(if_stmt.body)?;
+                self.write("}")?;
+
+                for else_if in if_stmt.else_ifs {
+                    self.write("else if(")?;
+                    self.emit_expr(else_if.condition)?;
+                    self.write(")")?;
+
+                    self.write("{")?;
+                    self.emit_body(else_if.body)?;
+                    self.write("}")?;
+                }
+
+                if let Some(els) = if_stmt.els {
+                    self.write("else {")?;
+                    self.emit_body(els.body)?;
+                    self.write("}")?;
+                }
+            }
             Stmt::ForLoop {
                 init,
                 condition,
@@ -19,14 +44,7 @@ impl Emitter {
                 self.write("; ")?;
                 self.emit_expr(after)?;
                 self.write(") {\n")?;
-
-                for stmt_or_expr in body {
-                    match stmt_or_expr {
-                        crate::parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
-                        crate::parser::StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
-                    }
-                }
-
+                self.emit_body(body)?;
                 self.write("}\n")?;
             }
             Stmt::LetDecl {
@@ -87,6 +105,7 @@ impl Emitter {
                 self.emit_expr(expr)?;
                 self.write("\n")?;
             }
+            stmt @ _ => todo!("{:?}", stmt),
         }
 
         self.write(";\n")?;

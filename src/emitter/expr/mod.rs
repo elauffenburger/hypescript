@@ -33,6 +33,7 @@ impl Emitter {
             parser::ComparisonOp::LooseNeq => "!=",
             parser::ComparisonOp::Lt => "<",
             parser::ComparisonOp::Gt => ">",
+            parser::ComparisonOp::And => "&&",
         })?;
 
         self.write("->invoke({")?;
@@ -68,8 +69,6 @@ impl Emitter {
     }
 
     fn emit_arithmetic(&mut self, arthm: parser::Arithmetic) -> EmitResult {
-        self.emit_arithmetic_term(arthm.term)?;
-
         for op in arthm.ops {
             self.emit_get_field_val(match op.0 {
                 parser::ArithmeticOp::Add => "+",

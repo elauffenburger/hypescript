@@ -4,6 +4,8 @@ use crate::ast;
 use crate::ast::Rule;
 
 mod types;
+#[macro_use]
+mod macros;
 pub use types::*;
 
 pub type ParseError = Box<dyn std::error::Error>;
@@ -35,7 +37,7 @@ pub fn parse(src: &str) -> Result<ParserResult, ParseError> {
 }
 
 fn parse_interface(pair: Pair<Rule>) -> Result<Interface, ParseError> {
-    assert_rule(&pair, Rule::iface_defn)?;
+    assert_rule!(pair, Rule::iface_defn);
 
     let mut inner = pair.into_inner();
 
@@ -77,7 +79,7 @@ fn parse_interface(pair: Pair<Rule>) -> Result<Interface, ParseError> {
 }
 
 fn parse_stmt_or_expr(pair: Pair<Rule>) -> Result<StmtOrExpr, ParseError> {
-    assert_rule(&pair, Rule::stmt_or_expr)?;
+    assert_rule!(pair, Rule::stmt_or_expr);
 
     let inner = pair.into_inner().next().unwrap();
     Ok(match inner.as_rule() {
@@ -88,7 +90,7 @@ fn parse_stmt_or_expr(pair: Pair<Rule>) -> Result<StmtOrExpr, ParseError> {
 }
 
 fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
-    assert_rule(&pair, Rule::expr)?;
+    assert_rule!(pair, Rule::expr);
 
     let inner = pair.into_inner().next().unwrap();
     Ok(match inner.as_rule() {
@@ -125,7 +127,7 @@ fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
 }
 
 fn parse_comparison(pair: Pair<Rule>) -> Result<Comparison, ParseError> {
-    assert_rule(&pair, Rule::comparison)?;
+    assert_rule!(pair, Rule::comparison);
 
     let mut inner = pair.into_inner();
 
@@ -135,7 +137,8 @@ fn parse_comparison(pair: Pair<Rule>) -> Result<Comparison, ParseError> {
         "!=" => ComparisonOp::LooseNeq,
         "<" => ComparisonOp::Lt,
         ">" => ComparisonOp::Gt,
-        _ => todo!(),
+        "&&" => ComparisonOp::And,
+        op @ _ => todo!("{:?}", op),
     };
     let right = parse_comparison_term(inner.next().unwrap())?;
 
@@ -143,7 +146,7 @@ fn parse_comparison(pair: Pair<Rule>) -> Result<Comparison, ParseError> {
 }
 
 fn parse_comparison_term(pair: Pair<Rule>) -> Result<ComparisonTerm, ParseError> {
-    assert_rule(&pair, Rule::comparison_term)?;
+    assert_rule!(pair, Rule::comparison_term);
 
     let inner = pair.into_inner().next().unwrap();
     Ok(match inner.as_rule() {
@@ -159,17 +162,14 @@ fn parse_comparison_term(pair: Pair<Rule>) -> Result<ComparisonTerm, ParseError>
 }
 
 fn parse_arithmetic(pair: Pair<Rule>) -> Result<Arithmetic, ParseError> {
-    assert_rule(&pair, Rule::arthm)?;
-
-    let mut inner = pair.into_inner();
-    let term = parse_arithmetic_term(inner.next().unwrap())?;
+    assert_rule!(pair, Rule::arthm);
 
     let ops = {
-        let mut ops = vec![];
-        for pair in inner {
-            let mut inner = pair.into_inner();
+        let mut inner = pair.into_inner();
 
-            let op = match inner.next().unwrap().as_rule() {
+        let mut ops = vec![];
+        while let Some(op) = inner.next() {
+            let op = match op.as_rule() {
                 Rule::add => ArithmeticOp::Add,
                 Rule::sub => ArithmeticOp::Sub,
                 Rule::mult => ArithmeticOp::Mult,
@@ -186,21 +186,22 @@ fn parse_arithmetic(pair: Pair<Rule>) -> Result<Arithmetic, ParseError> {
         ops
     };
 
-    Ok(Arithmetic { term, ops })
+    Ok(Arithmetic { ops })
 }
 
 fn parse_arithmetic_term(pair: Pair<Rule>) -> Result<ArithmeticTerm, ParseError> {
-    assert_rule(&pair, Rule::arthm_term)?;
+    assert_rule!(pair, Rule::arthm_term);
 
-    Ok(match pair.as_rule() {
-        Rule::ident => ArithmeticTerm::Ident(parse_ident(pair)?),
-        Rule::num => ArithmeticTerm::Num(parse_num(pair)?),
+    let term = pair.into_inner().next().unwrap();
+    Ok(match term.as_rule() {
+        Rule::ident => ArithmeticTerm::Ident(parse_ident(term)?),
+        Rule::num => ArithmeticTerm::Num(parse_num(term)?),
         rule @ _ => todo!("{:?}", rule),
     })
 }
 
 fn parse_incr_decr(pair: Pair<Rule>) -> Result<IncrDecr, ParseError> {
-    assert_rule(&pair, Rule::incr_decr)?;
+    assert_rule!(pair, Rule::incr_decr);
 
     let inner = pair.into_inner().next().unwrap();
     Ok(match inner.as_rule() {
@@ -237,7 +238,7 @@ fn parse_incr_decr(pair: Pair<Rule>) -> Result<IncrDecr, ParseError> {
 }
 
 fn parse_incr_decr_target(pair: Pair<Rule>) -> Result<IncrDecrTarget, ParseError> {
-    assert_rule(&pair, Rule::incr_target)?;
+    assert_rule!(pair, Rule::incr_target);
 
     let inner = pair.into_inner().next().unwrap();
 
@@ -248,19 +249,19 @@ fn parse_incr_decr_target(pair: Pair<Rule>) -> Result<IncrDecrTarget, ParseError
 }
 
 fn parse_num(pair: Pair<Rule>) -> Result<f32, ParseError> {
-    assert_rule(&pair, Rule::num)?;
+    assert_rule!(pair, Rule::num);
 
     Ok(pair.as_str().parse::<f32>().map_err(|e| format!("{e}"))?)
 }
 
 fn parse_str(pair: Pair<Rule>) -> Result<String, ParseError> {
-    assert_rule(&pair, Rule::string)?;
+    assert_rule!(pair, Rule::string);
 
     Ok(pair.into_inner().next().unwrap().as_str().into())
 }
 
 fn parse_chained_obj_op(pair: Pair<Rule>) -> Result<ChainedObjOp, ParseError> {
-    assert_rule(&pair, Rule::chained_obj_op)?;
+    assert_rule!(pair, Rule::chained_obj_op);
 
     let mut inner = pair.into_inner();
 
@@ -293,6 +294,7 @@ fn parse_chained_obj_op(pair: Pair<Rule>) -> Result<ChainedObjOp, ParseError> {
 
                     ObjOp::Invoc { args }
                 }
+                Rule::arthm => ObjOp::Arithmetic(parse_arithmetic(next)?),
                 rule @ _ => todo!("{:?}", rule),
             });
         }
@@ -315,13 +317,13 @@ fn parse_chained_obj_op(pair: Pair<Rule>) -> Result<ChainedObjOp, ParseError> {
 }
 
 fn parse_ident(pair: Pair<Rule>) -> Result<String, ParseError> {
-    assert_rule(&pair, Rule::ident)?;
+    assert_rule!(pair, Rule::ident);
 
     Ok(pair.as_str().into())
 }
 
 fn parse_fn_inst(pair: Pair<Rule>) -> Result<FnInst, ParseError> {
-    assert_rule(&pair, Rule::fn_inst)?;
+    assert_rule!(pair, Rule::fn_inst);
 
     let (mut name, mut params, mut return_type, mut body) = (None, None, None, vec![]);
     for inner in pair.into_inner() {
@@ -343,7 +345,7 @@ fn parse_fn_inst(pair: Pair<Rule>) -> Result<FnInst, ParseError> {
 }
 
 fn parse_stmt(pair: Pair<Rule>) -> Result<Stmt, ParseError> {
-    assert_rule(&pair, Rule::stmt)?;
+    assert_rule!(pair, Rule::stmt);
 
     let inner = pair.into_inner().next().unwrap();
     Ok(match inner.as_rule() {
@@ -387,11 +389,85 @@ fn parse_stmt(pair: Pair<Rule>) -> Result<Stmt, ParseError> {
         Rule::fn_inst => todo!("fn_inst"),
         Rule::expr => Stmt::Expr(parse_expr(inner)?),
         Rule::return_expr => Stmt::ReturnExpr(parse_expr(inner.into_inner().next().unwrap())?),
-        _ => todo!(),
+        Rule::if_stmt => Stmt::If(parse_if_stmt(inner)?),
+        rule @ _ => todo!("{:?}", rule),
+    })
+}
+
+fn parse_if_stmt(pair: Pair<Rule>) -> Result<IfStmt, ParseError> {
+    assert_rule!(pair, Rule::if_stmt);
+
+    let mut inner = pair.into_inner();
+
+    let condition = parse_expr(inner.next().unwrap())?;
+    let body = {
+        let mut body = vec![];
+
+        while let Some(pair) = inner.peek() {
+            match pair.as_rule() {
+                Rule::stmt_or_expr => body.push(parse_stmt_or_expr(inner.next().unwrap())?),
+                Rule::else_if_stmt => break,
+                rule @ _ => todo!("{:?}", rule),
+            }
+        }
+
+        body
+    };
+
+    let else_ifs = {
+        let mut else_ifs = vec![];
+
+        while let Some(pair) = inner.peek() {
+            match pair.as_rule() {
+                Rule::else_if_stmt => {
+                    let mut inner = inner.next().unwrap().into_inner();
+
+                    let condition = parse_expr(inner.next().unwrap())?;
+                    let body = {
+                        let mut body = vec![];
+
+                        for pair in inner {
+                            body.push(parse_stmt_or_expr(pair)?);
+                        }
+
+                        body
+                    };
+
+                    else_ifs.push(ElseIfStmt { condition, body })
+                }
+                Rule::else_stmt => break,
+                rule @ _ => todo!("{:?}", rule),
+            }
+        }
+
+        else_ifs
+    };
+
+    let els = match inner.next() {
+        Some(pair) => {
+            let inner = pair.into_inner();
+
+            let mut body = vec![];
+            for pair in inner {
+                body.push(parse_stmt_or_expr(pair)?);
+            }
+
+            Some(ElseStmt { body })
+        }
+        None => None,
+    };
+
+    Ok(IfStmt {
+        condition,
+        body,
+        else_ifs,
+        els,
     })
 }
 
 fn parse_let_decl(pair: Pair<Rule>) -> Result<Stmt, ParseError> {
+    assert_rule!(pair, Rule::let_decl);
+
     let mut inner = pair.into_inner();
 
     let (name, mut typ, mut assignment) = (parse_ident(inner.next().unwrap())?, None, None);
@@ -411,13 +487,13 @@ fn parse_let_decl(pair: Pair<Rule>) -> Result<Stmt, ParseError> {
 }
 
 fn parse_assignment(pair: Pair<Rule>) -> Result<Expr, ParseError> {
-    assert_rule(&pair, Rule::assignment)?;
+    assert_rule!(pair, Rule::assignment);
 
     Ok(parse_expr(pair.into_inner().next().unwrap())?)
 }
 
 fn parse_type_ident(pair: Pair<Rule>) -> Result<TypeIdent, ParseError> {
-    assert_rule(&pair, Rule::type_ident)?;
+    assert_rule!(pair, Rule::type_ident);
 
     let mut inner = pair.into_inner();
 
@@ -447,7 +523,7 @@ fn parse_type_ident(pair: Pair<Rule>) -> Result<TypeIdent, ParseError> {
 }
 
 fn parse_type_ident_type(pair: Pair<Rule>) -> Result<TypeIdentType, ParseError> {
-    assert_rule(&pair, Rule::type_ident_type)?;
+    assert_rule!(pair, Rule::type_ident_type);
 
     let inner = pair.into_inner().next().unwrap();
     Ok(match inner.as_rule() {
@@ -458,7 +534,7 @@ fn parse_type_ident_type(pair: Pair<Rule>) -> Result<TypeIdentType, ParseError> 
 }
 
 fn parse_literal_type(pair: Pair<Rule>) -> Result<LiteralType, ParseError> {
-    assert_rule(&pair, Rule::literal_type)?;
+    assert_rule!(pair, Rule::literal_type);
 
     let inner = pair.into_inner().next().unwrap();
     Ok(match inner.as_rule() {
@@ -505,7 +581,7 @@ fn parse_literal_type(pair: Pair<Rule>) -> Result<LiteralType, ParseError> {
 }
 
 fn parse_fn_params(pair: Pair<Rule>) -> Result<Vec<FnParam>, ParseError> {
-    assert_rule(&pair, Rule::fn_param_list)?;
+    assert_rule!(pair, Rule::fn_param_list);
 
     let mut fn_params = vec![];
 
@@ -542,13 +618,4 @@ fn parse_fn_params(pair: Pair<Rule>) -> Result<Vec<FnParam>, ParseError> {
     }
 
     return Ok(fn_params);
-}
-
-fn assert_rule(pair: &Pair<Rule>, expected: Rule) -> Result<(), ParseError> {
-    let rule = pair.as_rule();
-    if rule == expected {
-        Ok(())
-    } else {
-        panic!("expected {expected:?}, got: {rule:?}")
-    }
 }

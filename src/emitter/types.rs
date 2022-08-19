@@ -5,6 +5,7 @@ pub type Type = parser::TypeIdent;
 pub enum BuiltInTypes {
     String,
     Number,
+    Boolean,
 }
 
 impl BuiltInTypes {
@@ -12,6 +13,7 @@ impl BuiltInTypes {
         match self {
             BuiltInTypes::String => "string",
             BuiltInTypes::Number => "number",
+            BuiltInTypes::Boolean => "boolean",
         }
     }
 

@@ -30,6 +30,10 @@ impl Emitter {
         let n = fn_inst.params.len();
         for (i, param) in fn_inst.params.iter().enumerate() {
             let name = &param.name;
+
+            // TODO: support params w/o a type.
+            self.curr_scope.borrow_mut().add_ident(name, param.typ.as_ref().unwrap().clone());
+
             // TODO: actually use type ids.
             let type_id = 0;
             self.write(&format!("TsFunctionParam(\"{name}\", {type_id})"))?;
