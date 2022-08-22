@@ -63,6 +63,16 @@ function fizzbuzz(n: number): void {
     }
 }
 
+interface NumGetter {
+    num: number;
+    get(): number;
+}
+
+function fizzbuzzWithIface(nGetter: NumGetter): void {
+    fizzbuzz(nGetter.num);
+    fizzbuzz(nGetter.get());
+}
+
 function run(): void {
     function baz() {
         console.log("in baz!");
@@ -118,7 +128,21 @@ function run(): void {
         console.log(i);
     }
 
-    fizzbuzz(100);
+    fizzbuzz(10);
+    fizzbuzzWithIface({
+        num: 5,
+        get: function() {
+            return 23;
+        }
+    })
+
+    function fizzer() {
+        return 5;
+    }
+
+    fizzbuzz(fizzer());
+    fizzbuzz((7));
+    fizzbuzz((function() { return 6; })());
 }
 
 run();

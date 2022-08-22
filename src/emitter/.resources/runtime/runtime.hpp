@@ -98,6 +98,10 @@ public:
   bool operator==(const TsNum &other) const { return value == other.value; }
 
   virtual TsString *toTsString() override {
+    if (value == (int)value) {
+      return new TsString(std::to_string((int)value));
+    }
+
     return new TsString(std::to_string(value));
   }
 

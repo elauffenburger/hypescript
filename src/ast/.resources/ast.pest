@@ -22,7 +22,7 @@ fn_param_list = { fn_param ~ ("," ~ fn_param)* }
 iface_defn = { "interface" ~ ident ~ "{" ~ iface_defn_body ~ "}" }
 /* _ */ iface_defn_body = { (iface_field_defn | iface_method_defn )* }
 /* _ */ iface_field_defn = { ident ~ optional? ~ ":" ~ type_ident ~ ";" }
-/* _ */ iface_method_defn = { ident ~ "(" ~ fn_param_list ~ ")" }
+/* _ */ iface_method_defn = { ident ~ "(" ~ fn_param_list? ~ ")" ~ (":" ~ type_ident)? ~ ";" }
 
 // Statments & Expressions:
 stmt_or_expr = { stmt | expr }
@@ -31,10 +31,12 @@ stmt = { (for_loop | if_stmt | let_decl | return_expr | expr) ~ ";"? }
 let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ assignment? }
 return_expr = { ("return " ~ expr) }
 
-expr = { comparison | incr_decr | num | string | ident_assignment | fn_inst | chained_obj_op | obj_inst | ident }
+expr = { ("(" ~ expr_inner ~ ")") | expr_inner }
+/* _ */ expr_inner = _{ incr_decr | num | string | ident_assignment | comparison | chained_obj_op | fn_inst | obj_inst | ident }
 ident_assignment = {ident ~ assignment}
 chained_obj_op = { accessable ~ obj_op ~ obj_op* ~ assignment? }
-/* _ */ accessable = _{ ident | ( "(" ~ literal_type ~ ")" ) }
+/* _ */ accessable = _{ accessable_inner | ("(" ~ accessable_inner ~ ")" ) }
+/* _ */ accessable_inner = _{ incr_decr | num | string | fn_inst | obj_inst | ident }
 
 incr_decr = { increment | decrement }
 
@@ -101,3 +103,4 @@ reserved = _{ "if" | "else" | "for" | "function" | "let" | "const" }
 
 // Pest config:
 WHITESPACE = _{" " | "\t" | "\r" | "\n" }
+COMMENT = _{("/*" ~ (!"*/" ~ ANY)* ~ "*/") | ("//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE ) }

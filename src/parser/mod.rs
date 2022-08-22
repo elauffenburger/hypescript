@@ -43,6 +43,7 @@ fn parse_interface(pair: Pair<Rule>) -> Result<Interface, ParseError> {
 
     let name: String = parse_ident(inner.next().unwrap())?;
     let mut fields = vec![];
+    let mut methods = vec![];
 
     for body_pair in inner.next().unwrap().into_inner() {
         match body_pair.as_rule() {
@@ -66,7 +67,40 @@ fn parse_interface(pair: Pair<Rule>) -> Result<Interface, ParseError> {
                     typ: parse_type_ident(field_type_pair)?,
                 });
             }
-            Rule::iface_method_defn => todo!("iface_method_defn"),
+            Rule::iface_method_defn => {
+                let mut inner = body_pair.into_inner();
+
+                let name = parse_ident(inner.next().unwrap())?;
+                let (params, typ) = {
+                    let next = inner.next();
+
+                    // See if there's anything left.
+                    match next {
+                        Some(next) => {
+                            // If there is, see if it's a list of params or a return type.
+                            match next.as_rule() {
+                                Rule::fn_param_list => {
+                                    // Parse the params.
+                                    let params = parse_fn_param_list(next)?;
+
+                                    // See if there's a type.
+                                    let typ = match inner.next() {
+                                        Some(next) => Some(parse_type_ident(next)?),
+                                        None => None,
+                                    };
+
+                                    (params, typ)
+                                }
+                                Rule::type_ident => (vec![], Some(parse_type_ident(next)?)),
+                                _ => todo!(),
+                            }
+                        }
+                        None => (vec![], None),
+                    }
+                };
+
+                methods.push(InterfaceMethod { name, params, typ });
+            }
             _ => unreachable!(),
         }
     }
@@ -74,7 +108,7 @@ fn parse_interface(pair: Pair<Rule>) -> Result<Interface, ParseError> {
     Ok(Interface {
         name,
         fields,
-        methods: vec![],
+        methods,
     })
 }
 
@@ -269,8 +303,8 @@ fn parse_chained_obj_op(pair: Pair<Rule>) -> Result<ChainedObjOp, ParseError> {
         let next = inner.next().unwrap();
         match next.as_rule() {
             Rule::ident => Accessable::Ident(parse_ident(next)?),
-            Rule::literal_type => Accessable::LiteralType(parse_literal_type(next)?),
-            _ => unreachable!(),
+            Rule::fn_inst => Accessable::FnInst(parse_fn_inst(next)?),
+            rule @ _ => todo!("{:#?}", rule),
         }
     };
 
@@ -329,7 +363,7 @@ fn parse_fn_inst(pair: Pair<Rule>) -> Result<FnInst, ParseError> {
     for inner in pair.into_inner() {
         match inner.as_rule() {
             Rule::ident => name = Some(parse_ident(inner)?),
-            Rule::fn_param_list => params = Some(parse_fn_params(inner)?),
+            Rule::fn_param_list => params = Some(parse_fn_param_list(inner)?),
             Rule::type_ident => return_type = Some(parse_type_ident(inner)?),
             Rule::stmt_or_expr => body.push(parse_stmt_or_expr(inner)?),
             _ => unreachable!(),
@@ -541,7 +575,7 @@ fn parse_literal_type(pair: Pair<Rule>) -> Result<LiteralType, ParseError> {
         Rule::fn_type => {
             let mut inner = inner.into_inner();
 
-            let params = parse_fn_params(inner.next().unwrap())?;
+            let params = parse_fn_param_list(inner.next().unwrap())?;
             let return_type = parse_type_ident(inner.next().unwrap())?;
 
             LiteralType::FnType {
@@ -580,7 +614,7 @@ fn parse_literal_type(pair: Pair<Rule>) -> Result<LiteralType, ParseError> {
     })
 }
 
-fn parse_fn_params(pair: Pair<Rule>) -> Result<Vec<FnParam>, ParseError> {
+fn parse_fn_param_list(pair: Pair<Rule>) -> Result<Vec<FnParam>, ParseError> {
     assert_rule!(pair, Rule::fn_param_list);
 
     let mut fn_params = vec![];

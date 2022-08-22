@@ -16,7 +16,6 @@ impl Emitter {
                     None => return Err(format!("unknown ident '{ident}' in scope")),
                 }
             }
-            parser::Accessable::LiteralType(_) => todo!(),
         };
 
         let mut last_op = None;

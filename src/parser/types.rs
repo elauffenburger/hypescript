@@ -15,6 +15,7 @@ pub struct Interface {
 pub struct InterfaceMethod {
     pub name: String,
     pub params: Vec<FnParam>,
+    pub typ: Option<TypeIdent>, 
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -233,7 +234,7 @@ pub struct ChainedObjOp {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Accessable {
     Ident(String),
-    LiteralType(LiteralType),
+    FnInst(FnInst),
 }
 
 #[derive(Debug, PartialEq, Clone)]

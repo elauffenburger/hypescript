@@ -171,9 +171,6 @@ impl Scope {
                         .ok_or(format!("could not find ident {ident}"))?
                         .borrow()
                         .clone(),
-                    parser::Accessable::LiteralType(ref typ) => {
-                        Type::simple(TypeIdentType::literal(typ.clone()))
-                    }
                 };
 
                 // Walk through each obj op and update the typ to match the last op's type.
