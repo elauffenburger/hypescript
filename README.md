@@ -7,28 +7,28 @@ It compiles to Rust, so as long as your platform has a Rust toolchain installed,
 ## TODO
 
 - `function`s
-    - [ ] named
-    - [ ] anonymous
+    - [x] named
+    - [x] anonymous
     - [ ] hoisting
-    - [ ] closures
+    - [x ] closures
 - Objects
-    - [ ] literals
-    - [ ] chained access
-    - [ ] invocation
-    - [ ] methods
-- [ ] Closures
+    - [x] literals
+    - [x] chained access
+    - [x] invocation
+    - [x] methods
+- [x] Closures
 - Variables
     - [ ] `let` declarations
-    - [ ] `const` declarations
+    - [x] `const` declarations
     - [ ] `var` declarations
 - Types
-    - [ ] `function` params
+    - [x] `function` params
         - [ ] optional params
-        - [ ] typechecking
+        - [x] typechecking
     - [ ] variable types
     - `interface`s
-        - [ ] declarations
-        - [ ] type checking
+        - [x] declarations
+        - [x] type checking
     - `class`es
         - [ ] declarations
         - [ ] type checking
@@ -43,7 +43,7 @@ It compiles to Rust, so as long as your platform has a Rust toolchain installed,
     - [ ] generics
     - [ ] arrays
 - [ ] scoped identifiers
-- [ ] `this`
+- [x] `this`
 - [ ] `new`
 - [ ] `import`s
 - [ ] `export`s
