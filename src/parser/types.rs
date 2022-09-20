@@ -1,4 +1,7 @@
-use std::{rc::Rc, cell::{Cell, RefCell}};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 #[derive(Debug, PartialEq)]
 pub enum TopLevelConstruct {
@@ -17,7 +20,7 @@ pub struct Interface {
 pub struct InterfaceMethod {
     pub name: String,
     pub params: Vec<FnParam>,
-    pub typ: Option<TypeIdent>, 
+    pub typ: Option<TypeIdent>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -135,17 +138,22 @@ pub struct ElseStmt {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Expr {
+pub struct Expr {
+    pub inner: ExprInner,
+    pub is_sub_expr: bool,
+    pub ops: Vec<ObjOp>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ExprInner {
     Comparison(Comparison),
     IncrDecr(IncrDecr),
     Num(f32),
     Str(String),
     IdentAssignment(Box<IdentAssignment>),
     FnInst(FnInst),
-    ChainedObjOp(ChainedObjOp),
     ObjInst(ObjInst),
     Ident(String),
-    SubExpr(Rc<RefCell<Expr>>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -167,7 +175,6 @@ pub enum ComparisonTerm {
     Num(f32),
     Str(String),
     IdentAssignment(Box<IdentAssignment>),
-    ChainedObjOp(ChainedObjOp),
     Ident(String),
     Comparison(Box<Comparison>),
     Arithmetic(Arithmetic),
@@ -245,6 +252,8 @@ pub enum ObjOp {
     Access(String),
     Invoc { args: Vec<Expr> },
     Arithmetic(Arithmetic),
+    ComparisonOp(ComparisonOp),
+    Assignment(Expr),
 }
 
 #[derive(Debug, PartialEq, Clone)]

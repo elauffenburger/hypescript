@@ -1,6 +1,6 @@
 ---
 source: tests/emitter_test.rs
-assertion_line: 182
+assertion_line: 204
 expression: "emitter::Emitter::new().emit(parsed).unwrap()"
 ---
 EmitterResult {
@@ -10,7 +10,7 @@ EmitterResult {
             files: [
                 File {
                     name: "main.cpp",
-                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nTsFunction* _foo = new TsFunction(\"foo\",{TsFunctionParam(\"num\", 0)}, [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {\nauto _num = args.at(0).value;\nconsole->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", _num)});\nreturn NULL;\n});\n_foo;\n([=] {\nauto _result = ->invoke({});\nreturn _result;\n})()\n;\n}",
+                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nauto _foo = new TsObject(1, {new TsObjectField(TsObjectFieldDescriptor(\"bar\", 0), new TsObject(1, {new TsObjectField(TsObjectFieldDescriptor(\"str\", 0), new TsString(\"hello, world!\"))})), new TsObjectField(TsObjectFieldDescriptor(\"baz\", 0), new TsObject(1, {new TsObjectField(TsObjectFieldDescriptor(\"name\", 0), new TsString(\"i'm a baz!\"))}))});\nconsole->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", _foo->getFieldValue(\"bar\")->getFieldValue(\"str\"))});\nconsole->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", _foo->getFieldValue(\"baz\")->getFieldValue(\"name\"))});\n}",
                 },
                 File {
                     name: "runtime.cpp",

@@ -108,3 +108,16 @@ fn can_parse_src() {
 
     insta::assert_debug_snapshot!(parsed);
 }
+
+#[test]
+fn can_parse_expr_with_ops() {
+    let parsed = parser::parse(
+        r#"
+            console.log(foo.bar.str);
+            console.log(foo.baz.name);
+        "#,
+    )
+    .unwrap();
+
+    insta::assert_debug_snapshot!(parsed);
+}

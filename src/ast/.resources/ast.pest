@@ -31,13 +31,10 @@ stmt = { (for_loop | if_stmt | let_decl | return_expr | expr) ~ ";"? }
 let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ assignment? }
 return_expr = { ("return " ~ expr) }
 
-expr = { sub_expr | expr_inner }
+expr = { (sub_expr | expr_inner) ~ obj_op* }
 /* _ */ sub_expr = { "(" ~ expr_inner ~ ")" }
-/* _ */ expr_inner = { incr_decr | num | string | ident_assignment | comparison | chained_obj_op | fn_inst | obj_inst | ident }
+/* _ */ expr_inner = { incr_decr | num | string | ident_assignment | comparison | fn_inst | obj_inst | ident }
 ident_assignment = {ident ~ assignment}
-chained_obj_op = { accessable ~ obj_op ~ obj_op* ~ assignment? }
-/* _ */ accessable = _{ accessable_inner }
-/* _ */ accessable_inner = _{ incr_decr | num | string | fn_inst | obj_inst | ident }
 
 incr_decr = { increment | decrement }
 
@@ -51,8 +48,8 @@ pre_decr = { "++" ~ incr_target }
 post_decr = { incr_target ~ "++" }
 
 comparison = { comparison_term ~ comparison_op ~ comparison_term }
-comparison_term = { incr_decr | num | string | chained_obj_op | ident | ( "(" ~ comparison ~ ")" ) }
-comparison_op = { "==" | "!=" | "<" | ">" | "%" | "&&" }
+comparison_term = { incr_decr | num | string | ident | ( "(" ~ comparison ~ ")" ) }
+comparison_op = { "==" | "!=" | "<" | ">" | "&&" }
 
 for_loop = { "for" ~ "(" ~ let_decl ~ ";" ~ expr ~ ";" ~ expr ~ ")" ~ "{" ~ stmt_or_expr* ~ "}" }
 if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ "{" ~ stmt_or_expr* ~ "}" ~ else_if_stmt* ~ else_stmt? }
@@ -60,7 +57,7 @@ if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ "{" ~ stmt_or_expr* ~ "}" ~ else_if_stmt* 
 /* _ */ else_stmt = { "else" ~ "{" ~ stmt_or_expr* ~ "}" }
 
 // Objects:
-obj_op = { obj_access | obj_invoc | arthm }
+obj_op = { obj_access | obj_invoc | arthm | comparison_op | assignment }
 /* _ */ obj_access = { "." ~ ident }
 /* _ */ obj_invoc = { "(" ~ (expr ~ ("," ~ expr)*)? ~ ")" }
 

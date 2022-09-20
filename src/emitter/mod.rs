@@ -140,6 +140,10 @@ impl Emitter {
         self.curr_scope.borrow().type_of(expr)
     }
 
+    fn type_of_expr_inner(&self, expr_inner: &parser::ExprInner) -> Result<Type, EmitterError> {
+        self.curr_scope.borrow().type_of_expr_inner(expr_inner)
+    }
+
     fn write(&mut self, code: &str) -> EmitResult {
         self.buffer.push_str(code);
 

@@ -1,0 +1,79 @@
+---
+source: tests/parser_test.rs
+assertion_line: 122
+expression: parsed
+---
+ParserResult {
+    top_level_constructs: [
+        StmtOrExpr(
+            Stmt(
+                Expr(
+                    Expr {
+                        inner: Ident(
+                            "console",
+                        ),
+                        is_sub_expr: false,
+                        ops: [
+                            Access(
+                                "log",
+                            ),
+                            Invoc {
+                                args: [
+                                    Expr {
+                                        inner: Ident(
+                                            "foo",
+                                        ),
+                                        is_sub_expr: false,
+                                        ops: [
+                                            Access(
+                                                "bar",
+                                            ),
+                                            Access(
+                                                "str",
+                                            ),
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ),
+            ),
+        ),
+        StmtOrExpr(
+            Stmt(
+                Expr(
+                    Expr {
+                        inner: Ident(
+                            "console",
+                        ),
+                        is_sub_expr: false,
+                        ops: [
+                            Access(
+                                "log",
+                            ),
+                            Invoc {
+                                args: [
+                                    Expr {
+                                        inner: Ident(
+                                            "foo",
+                                        ),
+                                        is_sub_expr: false,
+                                        ops: [
+                                            Access(
+                                                "baz",
+                                            ),
+                                            Access(
+                                                "name",
+                                            ),
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ),
+            ),
+        ),
+    ],
+}

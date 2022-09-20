@@ -181,3 +181,41 @@ fn can_iife() {
 
     insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
+
+#[test]
+fn can_emit_expr_with_ops() {
+    let parsed = parser::parse(
+        r#"
+            let foo = {
+                bar: {
+                    str: "hello, world!"
+                },
+                baz: {
+                    name: "i'm a baz!"
+                }
+            }
+
+            console.log(foo.bar.str);
+            console.log(foo.baz.name);
+        "#,
+    )
+    .unwrap();
+
+    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
+}
+
+#[test]
+fn can_emit_expr_with_assignment() {
+    let parsed = parser::parse(
+        r#"
+            let foo = {
+                name: "i'm a bar!"
+            };
+
+            foo.name = "i'm a foo!";
+        "#,
+    )
+    .unwrap();
+
+    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
+}

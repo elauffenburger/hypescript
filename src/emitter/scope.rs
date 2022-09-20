@@ -5,8 +5,8 @@ use maplit::hashmap;
 use super::types::*;
 use crate::{
     parser::{
-        self, Expr, FnParam, Interface, InterfaceField, LiteralType, ObjTypeField, TypeIdent,
-        TypeIdentType,
+        self, Expr, ExprInner, FnParam, Interface, InterfaceField, LiteralType, ObjTypeField,
+        TypeIdent, TypeIdentType,
     },
     util::rcref,
 };
@@ -143,65 +143,25 @@ impl Scope {
         }
     }
 
-    pub fn type_of(&self, expr: &Expr) -> Result<Type, String> {
-        Ok(match expr {
-            Expr::SubExpr(expr) => {
-                let inner: Expr = expr.borrow().clone();
-
-                self.type_of(&inner)?
-            },
-            Expr::Comparison(_) => BuiltInTypes::Boolean.to_type(),
-            Expr::IncrDecr(_) => {
-                todo!()
-            }
-            Expr::Num(_) => BuiltInTypes::Number.to_type(),
-            Expr::Str(_) => BuiltInTypes::String.to_type(),
-            Expr::IdentAssignment(ref ident_assign) => self
-                .ident_types
-                .get(&ident_assign.ident)
-                .ok_or(format!("unknown ident {}", &ident_assign.ident))?
+    pub fn type_of_expr_inner(&self, expr_inner: &ExprInner) -> Result<Type, String> {
+        Ok(match expr_inner {
+            ExprInner::Comparison(_) => BuiltInTypes::Boolean.to_type(),
+            ExprInner::IncrDecr(incr_decr) => BuiltInTypes::Number.to_type(),
+            ExprInner::Num(_) => BuiltInTypes::Number.to_type(),
+            ExprInner::Str(_) => BuiltInTypes::String.to_type(),
+            ExprInner::IdentAssignment(ref ident_assign) => self
+                .get_ident_type(&ident_assign.ident)
+                .unwrap()
                 .borrow()
                 .clone(),
-            Expr::FnInst(ref fn_inst) => Type {
+            ExprInner::FnInst(ref fn_inst) => Type {
                 head: TypeIdentType::literal(LiteralType::FnType {
                     params: fn_inst.params.clone(),
                     return_type: fn_inst.return_type.clone(),
                 }),
                 rest: None,
             },
-            Expr::ChainedObjOp(ref chained_op) => {
-                let mut typ = match chained_op.accessable {
-                    parser::Accessable::Ident(ref ident) => self
-                        .get_ident_type(ident)
-                        .ok_or(format!("could not find ident {ident}"))?
-                        .borrow()
-                        .clone(),
-                    parser::Accessable::FnInst(ref fn_inst) => parser::TypeIdent::simple(
-                        parser::TypeIdentType::LiteralType(Box::new(parser::LiteralType::FnType {
-                            params: fn_inst.params.iter().map(|f| f.clone()).collect(),
-                            return_type: fn_inst.return_type.clone(),
-                        })),
-                    ),
-                };
-
-                // Walk through each obj op and update the typ to match the last op's type.
-                for op in &chained_op.obj_ops {
-                    match op {
-                        parser::ObjOp::Access(ref access) => {
-                            typ = self.type_field_type(&typ, access)?;
-                        }
-                        parser::ObjOp::Invoc { .. } => {
-                            typ = self.invoc_type(&typ)?;
-                        }
-                        parser::ObjOp::Arithmetic(ref arthm) => {
-                            todo!()
-                        }
-                    }
-                }
-
-                typ
-            }
-            Expr::ObjInst(ref obj_inst) => {
+            ExprInner::ObjInst(ref obj_inst) => {
                 let mut fields = vec![];
                 for field in &obj_inst.fields {
                     let typ = self.type_of(&field.value)?;
@@ -215,13 +175,27 @@ impl Scope {
 
                 Type::simple(TypeIdentType::literal(LiteralType::ObjType { fields }))
             }
-            Expr::Ident(ref ident) => self
-                .ident_types
-                .get(ident)
-                .ok_or_else(|| format!("unknown ident {}", &ident))?
-                .borrow()
-                .clone(),
+            ExprInner::Ident(ref ident) => self.get_ident_type(ident).unwrap().borrow().clone(),
         })
+    }
+
+    pub fn type_of(&self, expr: &Expr) -> Result<Type, String> {
+        let mut typ = self.type_of_expr_inner(&expr.inner)?;
+
+        // Walk through each obj op and update the typ to match the last op's type.
+        for op in &expr.ops {
+            match op {
+                parser::ObjOp::Access(ref access) => {
+                    typ = self.type_field_type(&typ, access)?;
+                }
+                parser::ObjOp::Invoc { .. } => {
+                    typ = self.invoc_type(&typ)?;
+                }
+                r @ _ => todo!("{:?}", r),
+            }
+        }
+
+        Ok(typ)
     }
 
     pub fn types_equal(&self, left: &Type, right: &Type) -> Result<bool, String> {

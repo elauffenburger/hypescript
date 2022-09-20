@@ -46,33 +46,6 @@ function returnsFn() {
     };
 }
 
-function fizzbuzz(n: number): void {
-    for (let i = 1; i < n + 1; i++) {
-        let fizz: boolean = i % 3 == 0;
-        let buzz: boolean = i % 5 == 0;
-
-        if (fizz && buzz) {
-            console.log("fizzbuzz");
-        } else if (fizz) {
-            console.log("fizz");
-        } else if (buzz) {
-            console.log("buzz");
-        } else {
-            console.log(i);
-        }
-    }
-}
-
-interface NumGetter {
-    num: number;
-    get(): number;
-}
-
-function fizzbuzzWithIface(nGetter: NumGetter): void {
-    fizzbuzz(nGetter.num);
-    fizzbuzz(nGetter.get());
-}
-
 function run(): void {
     function baz() {
         console.log("in baz!");
@@ -127,22 +100,6 @@ function run(): void {
     for (let i = 0; i < 10; i++) {
         console.log(i);
     }
-
-    fizzbuzz(10);
-    fizzbuzzWithIface({
-        num: 5,
-        get: function() {
-            return 23;
-        }
-    })
-
-    function fizzer() {
-        return 5;
-    }
-
-    fizzbuzz(fizzer());
-    fizzbuzz((7));
-    fizzbuzz((function() { return 6; })());
 }
 
 run();

@@ -1,4 +1,4 @@
-use crate::parser::{Expr, Stmt};
+use crate::parser::{ExprInner, Stmt};
 
 use super::{EmitResult, Emitter};
 
@@ -91,7 +91,7 @@ impl Emitter {
                 };
             }
             Stmt::Expr(expr) => {
-                if let Expr::FnInst(ref fn_inst) = expr {
+                if let ExprInner::FnInst(ref fn_inst) = expr.inner {
                     if let Some(ref name) = fn_inst.name {
                         let mangled_name = self.mangle_ident(name);
                         self.write(&format!("TsFunction* {mangled_name} = "))?;
