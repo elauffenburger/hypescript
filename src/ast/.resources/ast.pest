@@ -31,11 +31,12 @@ stmt = { (for_loop | if_stmt | let_decl | return_expr | expr) ~ ";"? }
 let_decl = { "let" ~ ident ~ (":" ~ type_ident)? ~ assignment? }
 return_expr = { ("return " ~ expr) }
 
-expr = { ("(" ~ expr_inner ~ ")") | expr_inner }
-/* _ */ expr_inner = _{ incr_decr | num | string | ident_assignment | comparison | chained_obj_op | fn_inst | obj_inst | ident }
+expr = { sub_expr | expr_inner }
+/* _ */ sub_expr = { "(" ~ expr_inner ~ ")" }
+/* _ */ expr_inner = { incr_decr | num | string | ident_assignment | comparison | chained_obj_op | fn_inst | obj_inst | ident }
 ident_assignment = {ident ~ assignment}
 chained_obj_op = { accessable ~ obj_op ~ obj_op* ~ assignment? }
-/* _ */ accessable = _{ accessable_inner | ("(" ~ accessable_inner ~ ")" ) }
+/* _ */ accessable = _{ accessable_inner }
 /* _ */ accessable_inner = _{ incr_decr | num | string | fn_inst | obj_inst | ident }
 
 incr_decr = { increment | decrement }

@@ -22,7 +22,19 @@ impl Emitter {
             parser::Expr::ChainedObjOp(chained_obj_op) => self.emit_chained_obj_op(chained_obj_op),
             parser::Expr::ObjInst(obj_inst) => self.emit_obj_inst(obj_inst),
             parser::Expr::Ident(ident) => self.emit_ident(&ident),
+            parser::Expr::SubExpr(expr) => self.emit_sub_expr(expr.borrow().clone()),
         }
+    }
+
+    fn emit_sub_expr(&mut self, expr: parser::Expr) -> EmitResult {
+        self.write("([=] {\n")?;
+        self.write("auto _result = ")?;
+        self.emit_expr(expr)?;
+        self.write(";\n")?;
+        self.write("return _result;\n")?;
+        self.write("})()\n")?;
+
+        Ok(())
     }
 
     fn emit_comparison(&mut self, comp: parser::Comparison) -> EmitResult {
@@ -78,7 +90,7 @@ impl Emitter {
                 parser::ArithmeticOp::Modu => "%",
             })?;
 
-            self.write(&format!("->invoke({{"))?;
+            self.write("->invoke({")?;
             self.write("TsFunctionArg(\"other\", ")?;
             self.emit_arithmetic_term(op.1)?;
             self.write(")")?;

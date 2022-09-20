@@ -165,3 +165,19 @@ fn can_emit_fizzbuzz() {
 
     insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
+
+#[test]
+fn can_iife() {
+    let parsed = parser::parse(
+        r#"
+            function foo(num: number) {
+                console.log(num);
+            }
+
+            foo((function(){ return 42; })());
+        "#,
+    )
+    .unwrap();
+
+    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
+}

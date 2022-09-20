@@ -1,7 +1,11 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use pest::{iterators::Pair, Parser};
 
 use crate::ast;
 use crate::ast::Rule;
+use crate::util::rcref;
 
 mod types;
 #[macro_use]
@@ -124,40 +128,51 @@ fn parse_stmt_or_expr(pair: Pair<Rule>) -> Result<StmtOrExpr, ParseError> {
 }
 
 fn parse_expr(pair: Pair<Rule>) -> Result<Expr, ParseError> {
-    assert_rule!(pair, Rule::expr);
-
-    let inner = pair.into_inner().next().unwrap();
-    Ok(match inner.as_rule() {
-        Rule::comparison => Expr::Comparison(parse_comparison(inner)?),
-        Rule::incr_decr => Expr::IncrDecr(parse_incr_decr(inner)?),
-        Rule::num => Expr::Num(parse_num(inner)?),
-        Rule::string => Expr::Str(parse_str(inner)?),
-        Rule::ident_assignment => {
-            let mut inner = inner.into_inner();
-
-            let ident = parse_ident(inner.next().unwrap())?;
-            let assignment = parse_assignment(inner.next().unwrap())?;
-
-            Expr::IdentAssignment(Box::new(IdentAssignment { ident, assignment }))
+    match pair.as_rule() {
+        Rule::expr => parse_expr(pair.into_inner().next().unwrap()),
+        Rule::sub_expr => {
+            parse_expr(pair.into_inner().next().unwrap()).map(|expr| Expr::SubExpr(rcref(expr)))
         }
-        Rule::fn_inst => Expr::FnInst(parse_fn_inst(inner)?),
-        Rule::chained_obj_op => Expr::ChainedObjOp(parse_chained_obj_op(inner)?),
-        Rule::obj_inst => {
-            let mut fields = vec![];
-            for pair in inner.into_inner() {
-                let mut inner = pair.into_inner();
+        Rule::expr_inner => {
+            let inner = pair.into_inner().next().unwrap();
 
-                let name = parse_ident(inner.next().unwrap())?;
-                let value = parse_expr(inner.next().unwrap())?;
+            Ok(match inner.as_rule() {
+                Rule::comparison => Expr::Comparison(parse_comparison(inner)?),
+                Rule::incr_decr => Expr::IncrDecr(parse_incr_decr(inner)?),
+                Rule::num => Expr::Num(parse_num(inner)?),
+                Rule::string => Expr::Str(parse_str(inner)?),
+                Rule::ident_assignment => {
+                    let mut inner = inner.into_inner();
 
-                fields.push(ObjFieldInst { name, value });
-            }
+                    let ident = parse_ident(inner.next().unwrap())?;
+                    let assignment = parse_assignment(inner.next().unwrap())?;
 
-            Expr::ObjInst(ObjInst { fields })
-        }
-        Rule::ident => Expr::Ident(parse_ident(inner)?),
-        _ => unreachable!(),
-    })
+                    Expr::IdentAssignment(Box::new(IdentAssignment { ident, assignment }))
+                }
+                Rule::fn_inst => Expr::FnInst(parse_fn_inst(inner)?),
+                Rule::chained_obj_op => Expr::ChainedObjOp(parse_chained_obj_op(inner)?),
+                Rule::obj_inst => {
+                    let mut fields = vec![];
+                    for pair in inner.into_inner() {
+                        let mut inner = pair.into_inner();
+
+                        let name = parse_ident(inner.next().unwrap())?;
+                        let value = parse_expr(inner.next().unwrap())?;
+
+                        fields.push(ObjFieldInst { name, value });
+                    }
+
+                    Expr::ObjInst(ObjInst { fields })
+                }
+                Rule::ident => Expr::Ident(parse_ident(inner)?),
+                Rule::sub_expr => {
+                    Expr::SubExpr(rcref(parse_expr(inner.into_inner().next().unwrap())?))
+                }
+                r @ _ => todo!("{:?}", r),
+            })
+        },
+        r @ _ => todo!("{:?}", r)
+    }
 }
 
 fn parse_comparison(pair: Pair<Rule>) -> Result<Comparison, ParseError> {

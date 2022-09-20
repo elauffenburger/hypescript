@@ -11,6 +11,7 @@ It compiles to Rust, so as long as your platform has a Rust toolchain installed,
     - [x] anonymous
     - [ ] hoisting
     - [x] closures
+    - [ ] iifes
 - Objects
     - [x] literals
     - [x] chained access

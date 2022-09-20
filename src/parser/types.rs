@@ -1,3 +1,5 @@
+use std::{rc::Rc, cell::{Cell, RefCell}};
+
 #[derive(Debug, PartialEq)]
 pub enum TopLevelConstruct {
     Interface(Interface),
@@ -143,6 +145,7 @@ pub enum Expr {
     ChainedObjOp(ChainedObjOp),
     ObjInst(ObjInst),
     Ident(String),
+    SubExpr(Rc<RefCell<Expr>>),
 }
 
 #[derive(Debug, PartialEq, Clone)]

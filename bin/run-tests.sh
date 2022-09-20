@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-read -rd '' SRC <<EOF
+SRC=$(cat <<EOF
 interface Foo {
     str: string;
     num: number;
@@ -147,5 +147,6 @@ function run(): void {
 
 run();
 EOF
+)
 
 echo "$SRC" | ./bin/run.sh

@@ -145,10 +145,15 @@ impl Scope {
 
     pub fn type_of(&self, expr: &Expr) -> Result<Type, String> {
         Ok(match expr {
+            Expr::SubExpr(expr) => {
+                let inner: Expr = expr.borrow().clone();
+
+                self.type_of(&inner)?
+            },
             Expr::Comparison(_) => BuiltInTypes::Boolean.to_type(),
             Expr::IncrDecr(_) => {
                 todo!()
-            },
+            }
             Expr::Num(_) => BuiltInTypes::Number.to_type(),
             Expr::Str(_) => BuiltInTypes::String.to_type(),
             Expr::IdentAssignment(ref ident_assign) => self
@@ -171,6 +176,12 @@ impl Scope {
                         .ok_or(format!("could not find ident {ident}"))?
                         .borrow()
                         .clone(),
+                    parser::Accessable::FnInst(ref fn_inst) => parser::TypeIdent::simple(
+                        parser::TypeIdentType::LiteralType(Box::new(parser::LiteralType::FnType {
+                            params: fn_inst.params.iter().map(|f| f.clone()).collect(),
+                            return_type: fn_inst.return_type.clone(),
+                        })),
+                    ),
                 };
 
                 // Walk through each obj op and update the typ to match the last op's type.

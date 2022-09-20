@@ -16,6 +16,18 @@ impl Emitter {
                     None => return Err(format!("unknown ident '{ident}' in scope")),
                 }
             }
+            parser::Accessable::FnInst(ref fn_inst) => {
+                self.write("(")?;
+                self.emit_fn_inst(fn_inst.clone())?;
+                self.write(")")?;
+
+                rcref(parser::TypeIdent::simple(
+                    parser::TypeIdentType::LiteralType(Box::new(parser::LiteralType::FnType {
+                        params: fn_inst.params.iter().map(|f| f.clone()).collect(),
+                        return_type: fn_inst.return_type.clone(),
+                    })),
+                ))
+            }
         };
 
         let mut last_op = None;
