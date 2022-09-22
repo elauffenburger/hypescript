@@ -48,8 +48,8 @@ pre_decr = { "++" ~ incr_target }
 post_decr = { incr_target ~ "++" }
 
 comparison = { comparison_term ~ comparison_op ~ comparison_term }
-comparison_term = { incr_decr | num | string | ident | ( "(" ~ comparison ~ ")" ) }
-comparison_op = { "==" | "!=" | "<" | ">" | "&&" }
+comparison_term = { incr_decr | arthm | num | string | ident | ( "(" ~ comparison ~ ")" ) }
+comparison_op = { "==" | "!=" | "<" | ">" | "%" | "&&" }
 
 for_loop = { "for" ~ "(" ~ let_decl ~ ";" ~ expr ~ ";" ~ expr ~ ")" ~ "{" ~ stmt_or_expr* ~ "}" }
 if_stmt = { "if" ~ "(" ~ expr ~ ")" ~ "{" ~ stmt_or_expr* ~ "}" ~ else_if_stmt* ~ else_stmt? }
@@ -61,7 +61,7 @@ obj_op = { obj_access | obj_invoc | arthm | comparison_op | assignment }
 /* _ */ obj_access = { "." ~ ident }
 /* _ */ obj_invoc = { "(" ~ (expr ~ ("," ~ expr)*)? ~ ")" }
 
-arthm = { (arthm_op ~ arthm_term)+ }
+arthm = { arthm_term ~ (arthm_op ~ arthm_term)+ }
 arthm_term = { ident | num }
 arthm_op = _{ add | sub | mult | div | modu }
 add = { "+" }

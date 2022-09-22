@@ -22,7 +22,7 @@ impl Emitter {
         };
 
         // Write start of inst.
-        self.write(&format!("new TsFunction(\"{fn_name}\","))?;
+        self.write(&format!("(new TsFunction(\"{fn_name}\","))?;
 
         // Write params.
         self.write(&"{")?;
@@ -161,7 +161,7 @@ impl Emitter {
         self.leave_scope();
 
         // Close up inst.
-        self.write("})")?;
+        self.write("}))")?;
 
         Ok(())
     }

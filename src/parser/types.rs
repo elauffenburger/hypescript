@@ -182,6 +182,7 @@ pub enum ComparisonTerm {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Arithmetic {
+    pub term: ArithmeticTerm,
     pub ops: Vec<(ArithmeticOp, ArithmeticTerm)>,
 }
 

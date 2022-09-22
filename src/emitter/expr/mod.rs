@@ -14,7 +14,10 @@ pub use obj::*;
 impl Emitter {
     pub(in crate::emitter) fn emit_expr(&mut self, expr: parser::Expr) -> EmitResult {
         if expr.is_sub_expr {
-            self.emit_sub_expr(expr.clone())?;
+            let mut expr = expr.clone();
+            expr.is_sub_expr = false;
+
+            return self.emit_sub_expr(expr)
         } else {
             match expr.clone().inner {
                 parser::ExprInner::Comparison(comp) => self.emit_comparison(comp),
@@ -188,6 +191,8 @@ impl Emitter {
     }
 
     fn emit_arithmetic(&mut self, arthm: parser::Arithmetic) -> EmitResult {
+        self.emit_arithmetic_term(arthm.term)?;
+
         for op in arthm.ops {
             self.emit_get_field_val(match op.0 {
                 parser::ArithmeticOp::Add => "+",

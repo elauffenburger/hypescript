@@ -246,9 +246,11 @@ fn parse_comparison_term(pair: Pair<Rule>) -> Result<ComparisonTerm, ParseError>
 fn parse_arithmetic(pair: Pair<Rule>) -> Result<Arithmetic, ParseError> {
     assert_rule!(pair, Rule::arthm);
 
-    let ops = {
-        let mut inner = pair.into_inner();
+    let mut inner = pair.into_inner();
 
+    let term = parse_arithmetic_term(inner.next().unwrap())?;
+
+    let ops = {
         let mut ops = vec![];
         while let Some(op) = inner.next() {
             let op = match op.as_rule() {
@@ -268,7 +270,7 @@ fn parse_arithmetic(pair: Pair<Rule>) -> Result<Arithmetic, ParseError> {
         ops
     };
 
-    Ok(Arithmetic { ops })
+    Ok(Arithmetic { term, ops })
 }
 
 fn parse_arithmetic_term(pair: Pair<Rule>) -> Result<ArithmeticTerm, ParseError> {

@@ -170,11 +170,7 @@ fn can_emit_fizzbuzz() {
 fn can_iife() {
     let parsed = parser::parse(
         r#"
-            function foo(num: number) {
-                console.log(num);
-            }
-
-            foo((function(){ return 42; })());
+            (function(){ return 42; })()
         "#,
     )
     .unwrap();
@@ -213,6 +209,18 @@ fn can_emit_expr_with_assignment() {
             };
 
             foo.name = "i'm a foo!";
+        "#,
+    )
+    .unwrap();
+
+    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
+}
+
+#[test]
+fn can_emit_subexpr() {
+    let parsed = parser::parse(
+        r#"
+            (42);
         "#,
     )
     .unwrap();
