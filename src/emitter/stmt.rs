@@ -105,7 +105,6 @@ impl Emitter {
                 self.emit_expr(expr)?;
                 self.write("\n")?;
             }
-            stmt @ _ => todo!("{:?}", stmt),
         }
 
         self.write(";\n")?;

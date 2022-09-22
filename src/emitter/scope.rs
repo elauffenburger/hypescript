@@ -146,7 +146,7 @@ impl Scope {
     pub fn type_of_expr_inner(&self, expr_inner: &ExprInner) -> Result<Type, String> {
         Ok(match expr_inner {
             ExprInner::Comparison(_) => BuiltInTypes::Boolean.to_type(),
-            ExprInner::IncrDecr(incr_decr) => BuiltInTypes::Number.to_type(),
+            ExprInner::IncrDecr(_) => BuiltInTypes::Number.to_type(),
             ExprInner::Num(_) => BuiltInTypes::Number.to_type(),
             ExprInner::Str(_) => BuiltInTypes::String.to_type(),
             ExprInner::IdentAssignment(ref ident_assign) => self
