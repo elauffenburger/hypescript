@@ -1,6 +1,6 @@
 ---
 source: tests/emitter_test.rs
-assertion_line: 166
+assertion_line: 146
 expression: "emitter::Emitter::new().emit(parsed).unwrap()"
 ---
 EmitterResult {
@@ -10,7 +10,7 @@ EmitterResult {
             files: [
                 File {
                     name: "main.cpp",
-                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nTsFunction* _fizzbuzz = new TsFunction(\"fizzbuzz\",{TsFunctionParam(\"n\", 0)}, [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {\nauto _n = args.at(0).value;\nauto _i = new TsNum(1);\nfor(; _i->getFieldValue(\"<\")->invoke({TsFunctionArg(\"other\", _n)})->getFieldValue(\"+\")->invoke({TsFunctionArg(\"other\", new TsNum(1))})->truthy(); _i->getFieldValue(\"++\")->invoke({})) {\nauto _fizz = _i->getFieldValue(\"%\")->invoke({TsFunctionArg(\"other\", new TsNum(3))})->getFieldValue(\"==\");\nnew TsNum(0);\nauto _buzz = _i->getFieldValue(\"%\")->invoke({TsFunctionArg(\"other\", new TsNum(5))})->getFieldValue(\"==\");\nnew TsNum(0);\nif(_fizz->getFieldValue(\"&&\")->invoke({TsFunctionArg(\"other\", _buzz)})->truthy()){console->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", new TsString(\"fizzbuzz\"))});\n}else if(_fizz->truthy()){console->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", new TsString(\"fizz\"))});\n}else if(_buzz->truthy()){console->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", new TsString(\"buzz\"))});\n}else {console->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", _i)});\n};\n}\n;\nreturn NULL;\n});\n}",
+                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nTsFunction* _fizzbuzz = (new TsFunction(\"fizzbuzz\",{TsFunctionParam(\"n\", 0)}, [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {\nauto _n = args.at(0).value;\nauto _i = new TsNum(1);\nfor(; _i->getFieldValue(\"<\")->invoke({TsFunctionArg(\"other\", _n->getFieldValue(\"+\")->invoke({TsFunctionArg(\"other\", new TsNum(1))}))})->truthy(); _i->getFieldValue(\"++\")->invoke({})) {\nauto _fizz = _i->getFieldValue(\"%\")->invoke({TsFunctionArg(\"other\", new TsNum(3))})->getFieldValue(\"==\")->invoke({TsFunctionArg(\"other\", new TsNum(0))});\nauto _buzz = _i->getFieldValue(\"%\")->invoke({TsFunctionArg(\"other\", new TsNum(5))})->getFieldValue(\"==\")->invoke({TsFunctionArg(\"other\", new TsNum(0))});\nif(_fizz->getFieldValue(\"&&\")->invoke({TsFunctionArg(\"other\", _buzz)})->truthy()){console->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", new TsString(\"fizzbuzz\"))});\n}else if(_fizz->truthy()){console->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", new TsString(\"fizz\"))});\n}else if(_buzz->truthy()){console->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", new TsString(\"buzz\"))});\n}else {console->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", _i)});\n};\n}\n;\nreturn NULL;\n}));\n}",
                 },
                 File {
                     name: "runtime.cpp",

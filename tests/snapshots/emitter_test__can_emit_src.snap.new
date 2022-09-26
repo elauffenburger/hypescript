@@ -10,7 +10,7 @@ EmitterResult {
             files: [
                 File {
                     name: "main.cpp",
-                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nTsFunction* _main = new TsFunction(\"main\",{}, [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {\nconsole->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", new TsString(\"hello, world!\"))});\nreturn NULL;\n});\n_main->invoke({});\n}",
+                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nTsFunction* _main = (new TsFunction(\"main\",{}, [=](TsObject* _this, std::vector<TsFunctionArg> args) -> TsObject* {\nconsole->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", new TsString(\"hello, world!\"))});\nreturn NULL;\n}));\n_main->invoke({});\n}",
                 },
                 File {
                     name: "runtime.cpp",

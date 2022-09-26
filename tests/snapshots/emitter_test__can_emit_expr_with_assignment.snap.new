@@ -1,6 +1,6 @@
 ---
 source: tests/emitter_test.rs
-assertion_line: 220
+assertion_line: 198
 expression: "emitter::Emitter::new().emit(parsed).unwrap()"
 ---
 EmitterResult {
@@ -10,7 +10,7 @@ EmitterResult {
             files: [
                 File {
                     name: "main.cpp",
-                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nauto _foo = new TsObject(1, {new TsObjectField(TsObjectFieldDescriptor(\"name\", 0), new TsString(\"i'm a bar!\"))});\n_foo;\n}",
+                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nauto _foo = new TsObject(1, {new TsObjectField(TsObjectFieldDescriptor(\"name\", 0), new TsString(\"i'm a bar!\"))});\n_foo->setFieldValue(\"name\", new TsString(\"i'm a foo!\"));\n}",
                 },
                 File {
                     name: "runtime.cpp",

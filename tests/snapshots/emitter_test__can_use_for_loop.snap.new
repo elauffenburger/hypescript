@@ -1,6 +1,6 @@
 ---
 source: tests/emitter_test.rs
-assertion_line: 211
+assertion_line: 135
 expression: "emitter::Emitter::new().emit(parsed).unwrap()"
 ---
 EmitterResult {
@@ -10,7 +10,7 @@ EmitterResult {
             files: [
                 File {
                     name: "main.cpp",
-                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\n([=] {\nauto _result = new TsNum(42);\nreturn _result;\n})()\n;\n}",
+                    content: "#include <stdlib.h>\n#include <stdio.h>\n#include <string>\n#include <vector>\n#include <algorithm>\n#include <memory>\n#include \"runtime.hpp\"\nint main() {\nauto _i = new TsNum(0);\nfor(; _i->getFieldValue(\"<\")->invoke({TsFunctionArg(\"other\", new TsNum(10))})->truthy(); _i->getFieldValue(\"++\")->invoke({})) {\nconsole->getFieldValue(\"log\")->invoke({TsFunctionArg(\"arg_name\", _i)});\n}\n;\n}",
                 },
                 File {
                     name: "runtime.cpp",

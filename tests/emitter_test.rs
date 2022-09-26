@@ -1,24 +1,32 @@
 use hypescript::{emitter, parser};
 
+#[macro_use]
+mod macros {
+    macro_rules! insta_test {
+        ($code:expr) => {{
+            let parsed = parser::parse($code).unwrap();
+
+            insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
+        }};
+    }
+}
+
 #[test]
 fn can_emit_src() {
-    let parsed = parser::parse(
+    insta_test!(
         r#"
         function main() {
             console.log("hello, world!");
         } 
 
         main();
-        "#,
+    "#
     )
-    .unwrap();
-
-    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
 
 #[test]
 fn can_emit_complex_src() {
-    let parsed = parser::parse(
+    insta_test!(
         r#"
         interface Foo {
             str: string;
@@ -118,30 +126,24 @@ fn can_emit_complex_src() {
         }
 
         run();
-        "#,
+    "#
     )
-    .unwrap();
-
-    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
 
 #[test]
 fn can_use_for_loop() {
-    let parsed = parser::parse(
+    insta_test!(
         r#"
         for (let i = 0; i < 10; i++) {
             console.log(i);
         }
-        "#,
+        "#
     )
-    .unwrap();
-
-    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
 
 #[test]
 fn can_emit_fizzbuzz() {
-    let parsed = parser::parse(
+    insta_test!(
         r#"
             function fizzbuzz(n: number): void {
                 for (let i = 1; i < n + 1; i++) {
@@ -159,28 +161,22 @@ fn can_emit_fizzbuzz() {
                     }
                 }
             }
-        "#,
+        "#
     )
-    .unwrap();
-
-    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
 
 #[test]
 fn can_iife() {
-    let parsed = parser::parse(
+    insta_test!(
         r#"
             (function(){ return 42; })()
-        "#,
+        "#
     )
-    .unwrap();
-
-    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
 
 #[test]
 fn can_emit_expr_with_ops() {
-    let parsed = parser::parse(
+    insta_test!(
         r#"
             let foo = {
                 bar: {
@@ -193,37 +189,28 @@ fn can_emit_expr_with_ops() {
 
             console.log(foo.bar.str);
             console.log(foo.baz.name);
-        "#,
+        "#
     )
-    .unwrap();
-
-    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
 
 #[test]
 fn can_emit_expr_with_assignment() {
-    let parsed = parser::parse(
+    insta_test!(
         r#"
             let foo = {
                 name: "i'm a bar!"
             };
 
             foo.name = "i'm a foo!";
-        "#,
+        "#
     )
-    .unwrap();
-
-    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }
 
 #[test]
 fn can_emit_subexpr() {
-    let parsed = parser::parse(
+    insta_test!(
         r#"
             (42);
-        "#,
+        "#
     )
-    .unwrap();
-
-    insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
 }

@@ -1,6 +1,6 @@
 ---
 source: tests/emitter_test.rs
-assertion_line: 204
+assertion_line: 179
 expression: "emitter::Emitter::new().emit(parsed).unwrap()"
 ---
 EmitterResult {
