@@ -1,8 +1,10 @@
-use hypescript::parser;
+use hypescript::{parser::{self, Module}, util::rcref};
 
 #[test]
 fn can_parse_src() {
-    let parsed = parser::parse(
+    let parser = parser::Parser::new(rcref(Module{}));
+
+    let parsed = parser.parse(
         r#"
         interface Foo {
             str: string;
@@ -111,7 +113,9 @@ fn can_parse_src() {
 
 #[test]
 fn can_parse_expr_with_ops() {
-    let parsed = parser::parse(
+    let parser = parser::Parser::new(rcref(Module{}));
+
+    let parsed = parser.parse(
         r#"
             console.log(foo.bar.str);
             console.log(foo.baz.name);

@@ -2,11 +2,20 @@ use hypescript::{emitter, parser};
 
 #[macro_use]
 mod macros {
-    macro_rules! insta_test {
-        ($code:expr) => {{
-            let parsed = parser::parse($code).unwrap();
 
-            insta::assert_debug_snapshot!(emitter::Emitter::new().emit(parsed).unwrap());
+    macro_rules! insta_test {
+        ($($file:expr,)*) => {{
+            use std::{cell::RefCell, rc::Rc};
+            use crate::parser::{Module};
+
+            let parser = parser::Parser::new(Rc::new(RefCell::new(Module{})));
+
+            let mut parsed = vec![];
+            $(
+                parsed.push(parser.parse($file).unwrap());
+            )*
+
+            insta::assert_debug_snapshot!(emitter::Emitter::new().emit(&parsed).unwrap());
         }};
     }
 }
@@ -20,7 +29,7 @@ fn can_emit_src() {
         } 
 
         main();
-    "#
+    "#,
     )
 }
 
@@ -126,7 +135,7 @@ fn can_emit_complex_src() {
         }
 
         run();
-    "#
+    "#,
     )
 }
 
@@ -137,7 +146,7 @@ fn can_use_for_loop() {
         for (let i = 0; i < 10; i++) {
             console.log(i);
         }
-        "#
+        "#,
     )
 }
 
@@ -161,7 +170,7 @@ fn can_emit_fizzbuzz() {
                     }
                 }
             }
-        "#
+        "#,
     )
 }
 
@@ -170,7 +179,7 @@ fn can_iife() {
     insta_test!(
         r#"
             (function(){ return 42; })()
-        "#
+        "#,
     )
 }
 
@@ -189,7 +198,7 @@ fn can_emit_expr_with_ops() {
 
             console.log(foo.bar.str);
             console.log(foo.baz.name);
-        "#
+        "#,
     )
 }
 
@@ -202,7 +211,7 @@ fn can_emit_expr_with_assignment() {
             };
 
             foo.name = "i'm a foo!";
-        "#
+        "#,
     )
 }
 
@@ -211,6 +220,6 @@ fn can_emit_subexpr() {
     insta_test!(
         r#"
             (42);
-        "#
+        "#,
     )
 }

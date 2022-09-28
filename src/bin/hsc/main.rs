@@ -5,7 +5,7 @@ use std::{
     io::{self, Read},
 };
 
-use hypescript::{emitter, parser};
+use hypescript::{emitter, parser::{self, Module}, util::rcref};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let src = {
@@ -18,7 +18,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = parse_args()?;
     let output_dir = args.output_dir.expect("output dir required!");
 
-    let emitted = emitter::Emitter::new().emit(parser::parse(&src)?)?;
+    let parser = parser::Parser::new(rcref(Module{}));
+    let emitted = emitter::Emitter::new().emit(&[parser.parse(&src)?])?;
 
     for file in &emitted.files {
         write_emitted_file(&file, &output_dir)?;

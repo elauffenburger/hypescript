@@ -8,6 +8,7 @@ impl Emitter {
         let type_id = 1;
 
         let obj_type = rcref(Type {
+            module: self.curr_scope.borrow().module.clone(),
             head: parser::TypeIdentType::literal(parser::LiteralType::ObjType {
                 fields: {
                     let mut fields = vec![];

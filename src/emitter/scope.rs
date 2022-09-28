@@ -5,8 +5,8 @@ use maplit::hashmap;
 use super::types::*;
 use crate::{
     parser::{
-        self, Expr, ExprInner, FnParam, Interface, InterfaceField, LiteralType, ObjTypeField,
-        TypeIdent, TypeIdentType,
+        self, Expr, ExprInner, FnParam, Interface, InterfaceField, LiteralType, Module,
+        ObjTypeField, TypeIdent, TypeIdentType,
     },
     util::rcref,
 };
@@ -20,6 +20,7 @@ pub struct Scope {
     pub types: HashMap<String, Rc<RefCell<Type>>>,
 
     pub this: Rc<RefCell<Type>>,
+    pub module: Rc<RefCell<Module>>,
 }
 
 impl Scope {
@@ -60,6 +61,7 @@ impl Scope {
         let name = iface.name.clone();
 
         let typ = rcref(Type {
+            module: self.module.clone(),
             head: TypeIdentType::Interface(iface),
             rest: None,
         });
@@ -155,6 +157,7 @@ impl Scope {
                 .borrow()
                 .clone(),
             ExprInner::FnInst(ref fn_inst) => Type {
+                module: self.module.clone(),
                 head: TypeIdentType::literal(LiteralType::FnType {
                     params: fn_inst.params.clone(),
                     return_type: fn_inst.return_type.clone(),
@@ -173,7 +176,10 @@ impl Scope {
                     })
                 }
 
-                Type::simple(TypeIdentType::literal(LiteralType::ObjType { fields }))
+                Type::simple(
+                    self.module.clone(),
+                    TypeIdentType::literal(LiteralType::ObjType { fields }),
+                )
             }
             ExprInner::Ident(ref ident) => self.get_ident_type(ident).unwrap().borrow().clone(),
         })
@@ -299,13 +305,16 @@ impl Scope {
 }
 
 pub fn new_global_scope() -> Scope {
+    let mod_core = MOD_CORE.with(|m| m.clone());
+
     let mut scope = Scope {
+        module: mod_core.clone(),
         parent: None,
         children: None,
         ident_types: hashmap! {},
         types: hashmap! {},
         // Wire up the scope's `this` to have the type `Global`.
-        this: rcref(Type::simple(TypeIdentType::name("Global"))),
+        this: rcref(Type::simple(mod_core.clone(), TypeIdentType::name("Global"))),
     };
 
     // Add `Global` interface.
@@ -323,11 +332,13 @@ pub fn new_global_scope() -> Scope {
             name: "log".into(),
             optional: false,
             typ: TypeIdent {
+                module: mod_core.clone(),
                 head: TypeIdentType::literal(LiteralType::FnType {
                     params: vec![FnParam {
                         name: "msg".into(),
                         optional: false,
                         typ: Some(TypeIdent {
+                            module: mod_core.clone(),
                             head: TypeIdentType::name(BuiltInTypes::String.type_name()),
                             rest: None,
                         }),
@@ -340,7 +351,7 @@ pub fn new_global_scope() -> Scope {
     });
 
     // Add `console` ident.
-    scope.add_ident("console", Type::simple(TypeIdentType::name("Console")));
+    scope.add_ident("console", Type::simple(mod_core.clone(), TypeIdentType::name("Console")));
 
     scope
 }

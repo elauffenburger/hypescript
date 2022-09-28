@@ -57,7 +57,10 @@ impl Emitter {
         }
     }
 
-    pub fn emit(mut self, parsed: parser::ParserResult) -> Result<EmitterResult, EmitterError> {
+    pub fn emit(
+        mut self,
+        parsed_mods: &[parser::ParserResult],
+    ) -> Result<EmitterResult, EmitterError> {
         // Write includes to buffer.
         {
             let includes = [
@@ -79,13 +82,17 @@ impl Emitter {
         {
             self.write("int main() {\n")?;
 
-            for construct in parsed.top_level_constructs {
-                match construct {
-                    parser::TopLevelConstruct::Interface(iface) => self.reg_iface(iface)?,
-                    parser::TopLevelConstruct::StmtOrExpr(stmt_or_expr) => match stmt_or_expr {
-                        parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
-                        parser::StmtOrExpr::Expr(_) => todo!(),
-                    },
+            for module in parsed_mods {
+                for construct in module.top_level_constructs.iter() {
+                    let construct = construct.clone();
+
+                    match construct {
+                        parser::TopLevelConstruct::Interface(iface) => self.reg_iface(iface)?,
+                        parser::TopLevelConstruct::StmtOrExpr(stmt_or_expr) => match stmt_or_expr {
+                            parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
+                            parser::StmtOrExpr::Expr(_) => todo!(),
+                        },
+                    }
                 }
             }
 
@@ -158,8 +165,14 @@ impl Emitter {
     }
 
     fn enter_scope(&mut self) {
+        let module = self.curr_scope.borrow().module.clone();
+        self.enter_scope_in_module(module)
+    }
+
+    fn enter_scope_in_module(&mut self, module: Rc<RefCell<parser::Module>>) {
         // Create the new scope.
         let scope = rcref(Scope {
+            module,
             parent: Some(self.curr_scope.clone()),
             children: None,
             ident_types: hashmap! {},
@@ -178,6 +191,7 @@ impl Emitter {
 
         // Update the current scope to point to this new scope.
         self.curr_scope = scope
+
     }
 
     fn leave_scope(&mut self) {
