@@ -5,7 +5,6 @@ use pest::{iterators::Pair, Parser as PestParser};
 
 use crate::ast;
 use crate::ast::Rule;
-use crate::util::rcref;
 
 mod types;
 #[macro_use]
