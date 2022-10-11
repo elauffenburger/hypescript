@@ -5,10 +5,7 @@ mod macros {
 
     macro_rules! insta_test {
         ($($file:expr,)*) => {{
-            use std::{cell::RefCell, rc::Rc};
-            use crate::parser::{Module};
-
-            let parser = parser::Parser::new(Rc::new(RefCell::new(Module{})));
+            let parser = parser::Parser::new("_/test".into());
 
             let mut parsed = vec![];
             $(

@@ -10,6 +10,9 @@ use crate::{
 mod scope;
 pub use scope::*;
 
+mod module;
+pub use module::*;
+
 mod stmt;
 pub use stmt::*;
 
@@ -49,10 +52,10 @@ pub struct Emitter {
 
 impl Emitter {
     pub fn new() -> Self {
-        let global = rcref(scope::new_global_scope());
-
         Emitter {
-            curr_scope: global.clone(),
+            // Create a dummy scope.
+            // HACK: this feels...wrong -- probably should be using an Option, but it feels weird because you should have a handle when we're actually running the emitter.
+            curr_scope: rcref(Scope::new("_/dummy".into())),
             buffer: String::new(),
         }
     }
@@ -165,14 +168,14 @@ impl Emitter {
     }
 
     fn enter_scope(&mut self) {
-        let module = self.curr_scope.borrow().module.clone();
-        self.enter_scope_in_module(module)
+        let mod_path = self.curr_scope.borrow().mod_path.clone();
+        self.enter_scope_in_module(&mod_path)
     }
 
-    fn enter_scope_in_module(&mut self, module: Rc<RefCell<parser::Module>>) {
+    fn enter_scope_in_module(&mut self, mod_path: &str) {
         // Create the new scope.
         let scope = rcref(Scope {
-            module,
+            mod_path: mod_path.into(),
             parent: Some(self.curr_scope.clone()),
             children: None,
             ident_types: hashmap! {},

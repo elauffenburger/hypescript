@@ -1,11 +1,12 @@
-use hypescript::{parser::{self, Module}, util::rcref};
+use hypescript::parser;
 
 #[test]
 fn can_parse_src() {
-    let parser = parser::Parser::new(rcref(Module{}));
+    let parser = parser::Parser::new("_/test".into());
 
-    let parsed = parser.parse(
-        r#"
+    let parsed = parser
+        .parse(
+            r#"
         interface Foo {
             str: string;
             num: number;
@@ -105,23 +106,24 @@ fn can_parse_src() {
 
         run();
 "#,
-    )
-    .unwrap();
+        )
+        .unwrap();
 
     insta::assert_debug_snapshot!(parsed);
 }
 
 #[test]
 fn can_parse_expr_with_ops() {
-    let parser = parser::Parser::new(rcref(Module{}));
+    let parser = parser::Parser::new("_/test".into());
 
-    let parsed = parser.parse(
-        r#"
+    let parsed = parser
+        .parse(
+            r#"
             console.log(foo.bar.str);
             console.log(foo.baz.name);
         "#,
-    )
-    .unwrap();
+        )
+        .unwrap();
 
     insta::assert_debug_snapshot!(parsed);
 }

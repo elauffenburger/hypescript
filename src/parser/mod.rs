@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use pest::{iterators::Pair, Parser as PestParser};
 
 use crate::ast;
@@ -19,12 +16,12 @@ pub struct ParserResult {
 }
 
 pub struct Parser {
-    module: Rc<RefCell<Module>>,
+    mod_path: String,
 }
 
 impl Parser {
-    pub fn new(module: Rc<RefCell<Module>>) -> Self {
-        Parser{module}
+    pub fn new(mod_path: String) -> Self {
+        Parser{mod_path}
     }
 
     pub fn parse(&self, src: &str) -> Result<ParserResult, ParseError> {
@@ -544,8 +541,6 @@ impl Parser {
     fn parse_type_ident(&self, pair: Pair<Rule>) -> Result<TypeIdent, ParseError> {
         assert_rule!(pair, Rule::type_ident);
 
-        let module = self.module.clone();
-
         let mut inner = pair.into_inner();
 
         let head = self.parse_type_ident_type(inner.next().unwrap())?;
@@ -559,12 +554,12 @@ impl Parser {
 
                 parts.push(match op_pair.as_rule() {
                     Rule::union => TypeIdentPart::Union(TypeIdent {
-                        module: module.clone(),
+                        mod_path: self.mod_path.clone(),
                         head: typ,
                         rest: None,
                     }),
                     Rule::sum => TypeIdentPart::Sum(TypeIdent {
-                        module: module.clone(),
+                        mod_path: self.mod_path.clone(),
                         head: typ,
                         rest: None,
                     }),
@@ -576,7 +571,7 @@ impl Parser {
         };
 
         Ok(TypeIdent {
-            module: module.clone(),
+            mod_path: self.mod_path.clone(),
             head,
             rest: if rest.is_empty() { None } else { Some(rest) },
         })

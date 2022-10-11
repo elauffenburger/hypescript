@@ -6,11 +6,11 @@ impl Emitter {
     pub(in crate::emitter) fn emit_fn_inst(&mut self, mut fn_inst: parser::FnInst) -> EmitResult {
         // If the fn is named, add a reference to it in the current scope.
         let fn_name = if let Some(ref name) = &fn_inst.name {
-            let module = self.curr_scope.borrow().module.clone();
+            let mod_path = self.curr_scope.borrow().mod_path.clone();
 
             self.curr_scope.borrow_mut().add_ident(
                 name,
-                Type::simple(module, parser::TypeIdentType::literal(
+                Type::simple(&mod_path, parser::TypeIdentType::literal(
                     parser::LiteralType::FnType {
                         params: fn_inst.params.clone(),
                         return_type: fn_inst.return_type.clone(),
@@ -124,7 +124,7 @@ impl Emitter {
                         }
                         None => match expl_ret_type {
                             parser::TypeIdent {
-                                module: _,
+                                mod_path: _,
                                 head: parser::TypeIdentType::Name(type_name),
                                 rest: None,
                             } => {
@@ -146,11 +146,11 @@ impl Emitter {
 
                         // Patch the fn_inst in the scope.
                         if let Some(ref name) = fn_inst.name {
-                            let module = self.curr_scope.borrow().module.clone();
+                            let mod_path = self.curr_scope.borrow().mod_path.clone();
 
                             self.curr_scope.borrow_mut().add_ident(
                                 name,
-                                Type::simple(module, parser::TypeIdentType::literal(
+                                Type::simple(&mod_path, parser::TypeIdentType::literal(
                                     parser::LiteralType::FnType {
                                         params: fn_inst.params.clone(),
                                         return_type: fn_inst.return_type.clone(),

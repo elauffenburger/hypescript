@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum TopLevelConstruct {
     Interface(Interface),
@@ -35,19 +33,20 @@ pub struct FnParam {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Module {}
-
-#[derive(Debug, PartialEq, Clone)]
 pub struct TypeIdent {
-    pub module: Rc<RefCell<Module>>,
+    pub mod_path: String,
 
     pub head: TypeIdentType,
     pub rest: Option<Vec<TypeIdentPart>>,
 }
 
 impl TypeIdent {
-    pub fn simple(module: Rc<RefCell<Module>>, t: TypeIdentType) -> Self {
-        TypeIdent { module, head: t, rest: None, }
+    pub fn simple(mod_path: &str, t: TypeIdentType) -> Self {
+        TypeIdent {
+            mod_path: mod_path.into(),
+            head: t,
+            rest: None,
+        }
     }
 }
 

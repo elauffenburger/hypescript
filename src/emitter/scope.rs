@@ -4,14 +4,11 @@ use maplit::hashmap;
 
 use super::types::*;
 use crate::{
-    parser::{
-        self, Expr, ExprInner, FnParam, Interface, InterfaceField, LiteralType, Module,
-        ObjTypeField, TypeIdent, TypeIdentType,
-    },
+    parser::{self, Expr, ExprInner, Interface, LiteralType, ObjTypeField, TypeIdentType},
     util::rcref,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Scope {
     pub parent: Option<Rc<RefCell<Scope>>>,
     pub children: Option<Vec<Rc<RefCell<Scope>>>>,
@@ -20,10 +17,21 @@ pub struct Scope {
     pub types: HashMap<String, Rc<RefCell<Type>>>,
 
     pub this: Rc<RefCell<Type>>,
-    pub module: Rc<RefCell<Module>>,
+    pub mod_path: String,
 }
 
 impl Scope {
+    pub fn new(mod_path: String) -> Self {
+        Scope {
+            parent: None,
+            children: None,
+            ident_types: hashmap! {},
+            types: hashmap! {},
+            this: rcref(Type::simple(MOD_CORE_PATH, TypeIdentType::name("Global"))),
+            mod_path,
+        }
+    }
+
     /// Adds an ident to the scope and returns an `Rc<RefCell<Type>>` handle to the type.
     pub fn add_ident(&mut self, name: &str, typ: Type) -> Rc<RefCell<Type>> {
         let typ = rcref(typ);
@@ -61,7 +69,7 @@ impl Scope {
         let name = iface.name.clone();
 
         let typ = rcref(Type {
-            module: self.module.clone(),
+            mod_path: self.mod_path.clone(),
             head: TypeIdentType::Interface(iface),
             rest: None,
         });
@@ -157,7 +165,7 @@ impl Scope {
                 .borrow()
                 .clone(),
             ExprInner::FnInst(ref fn_inst) => Type {
-                module: self.module.clone(),
+                mod_path: self.mod_path.clone(),
                 head: TypeIdentType::literal(LiteralType::FnType {
                     params: fn_inst.params.clone(),
                     return_type: fn_inst.return_type.clone(),
@@ -177,7 +185,7 @@ impl Scope {
                 }
 
                 Type::simple(
-                    self.module.clone(),
+                    &self.mod_path.clone(),
                     TypeIdentType::literal(LiteralType::ObjType { fields }),
                 )
             }
@@ -304,54 +312,17 @@ impl Scope {
     }
 }
 
-pub fn new_global_scope() -> Scope {
-    let mod_core = MOD_CORE.with(|m| m.clone());
-
-    let mut scope = Scope {
-        module: mod_core.clone(),
+pub fn new_global_scope(mod_path: String) -> Scope {
+    Scope {
+        mod_path,
         parent: None,
         children: None,
         ident_types: hashmap! {},
         types: hashmap! {},
         // Wire up the scope's `this` to have the type `Global`.
-        this: rcref(Type::simple(mod_core.clone(), TypeIdentType::name("Global"))),
-    };
-
-    // Add `Global` interface.
-    scope.add_iface(Interface {
-        name: "Global".into(),
-        methods: vec![],
-        fields: vec![],
-    });
-
-    // Add `Console` interface.
-    scope.add_iface(Interface {
-        name: "Console".into(),
-        methods: vec![],
-        fields: vec![InterfaceField {
-            name: "log".into(),
-            optional: false,
-            typ: TypeIdent {
-                module: mod_core.clone(),
-                head: TypeIdentType::literal(LiteralType::FnType {
-                    params: vec![FnParam {
-                        name: "msg".into(),
-                        optional: false,
-                        typ: Some(TypeIdent {
-                            module: mod_core.clone(),
-                            head: TypeIdentType::name(BuiltInTypes::String.type_name()),
-                            rest: None,
-                        }),
-                    }],
-                    return_type: None,
-                }),
-                rest: None,
-            },
-        }],
-    });
-
-    // Add `console` ident.
-    scope.add_ident("console", Type::simple(mod_core.clone(), TypeIdentType::name("Console")));
-
-    scope
+        this: rcref(Type::simple(
+            MOD_CORE_PATH.clone(),
+            TypeIdentType::name("Global"),
+        )),
+    }
 }
