@@ -17,7 +17,7 @@ impl Emitter {
             let mut expr = expr.clone();
             expr.is_sub_expr = false;
 
-            return self.emit_sub_expr(expr)
+            return self.emit_sub_expr(expr);
         } else {
             match expr.clone().inner {
                 parser::ExprInner::Comparison(comp) => self.emit_comparison(comp),
@@ -76,9 +76,9 @@ impl Emitter {
 
                     let typ = (*curr_acc_type.borrow()).head.clone();
                     curr_acc_type = match typ {
-                        parser::TypeIdentType::Name(ref typ_name) => self
-                            .get_type(typ_name)
-                            .ok_or(format!("could not find type {typ_name}"))?,
+                        parser::TypeIdentType::Name(ref type_ref) => self
+                            .get_type(type_ref)
+                            .ok_or(format!("could not find type {type_ref:?}"))?,
                         parser::TypeIdentType::LiteralType(typ) => match *typ {
                             parser::LiteralType::FnType { .. } => todo!(),
                             parser::LiteralType::ObjType { fields } => {

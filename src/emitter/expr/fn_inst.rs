@@ -10,12 +10,13 @@ impl Emitter {
 
             self.curr_scope.borrow_mut().add_ident(
                 name,
-                Type::simple(&mod_path, parser::TypeIdentType::literal(
-                    parser::LiteralType::FnType {
+                Type::simple(
+                    &mod_path,
+                    parser::TypeIdentType::literal(parser::LiteralType::FnType {
                         params: fn_inst.params.clone(),
                         return_type: fn_inst.return_type.clone(),
-                    },
-                )),
+                    }),
+                ),
             );
 
             name
@@ -34,7 +35,9 @@ impl Emitter {
             let name = &param.name;
 
             // TODO: support params w/o a type.
-            self.curr_scope.borrow_mut().add_ident(name, param.typ.as_ref().unwrap().clone());
+            self.curr_scope
+                .borrow_mut()
+                .add_ident(name, param.typ.as_ref().unwrap().clone());
 
             // TODO: actually use type ids.
             let type_id = 0;
@@ -123,9 +126,13 @@ impl Emitter {
                             }
                         }
                         None => match expl_ret_type {
-                            parser::TypeIdent {
+                            parser::Type {
                                 mod_path: _,
-                                head: parser::TypeIdentType::Name(type_name),
+                                head:
+                                    parser::TypeIdentType::Name(parser::TypeRef {
+                                        mod_path: _,
+                                        name: type_name,
+                                    }),
                                 rest: None,
                             } => {
                                 if &type_name != "void" {
@@ -150,12 +157,13 @@ impl Emitter {
 
                             self.curr_scope.borrow_mut().add_ident(
                                 name,
-                                Type::simple(&mod_path, parser::TypeIdentType::literal(
-                                    parser::LiteralType::FnType {
+                                Type::simple(
+                                    &mod_path,
+                                    parser::TypeIdentType::literal(parser::LiteralType::FnType {
                                         params: fn_inst.params.clone(),
                                         return_type: fn_inst.return_type.clone(),
-                                    },
-                                )),
+                                    }),
+                                ),
                             );
                         }
                     }

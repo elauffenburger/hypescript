@@ -1,6 +1,6 @@
 ---
 source: tests/parser_test.rs
-assertion_line: 122
+assertion_line: 128
 expression: parsed
 ---
 ParserResult {

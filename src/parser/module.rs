@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use super::Scope;
+use super::{Scope, Type};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Module {
@@ -16,5 +16,9 @@ impl Module {
             path: path.into(),
             scope,
         }
+    }
+
+    pub fn get_type(&self, name: &str) -> Option<Rc<RefCell<Type>>> {
+        self.scope.borrow().get_type(name)
     }
 }

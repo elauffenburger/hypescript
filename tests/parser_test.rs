@@ -127,3 +127,20 @@ fn can_parse_expr_with_ops() {
 
     insta::assert_debug_snapshot!(parsed);
 }
+
+#[test]
+fn can_parse_iface() {
+    let parser = parser::Parser::new("_/test".into());
+
+    let parsed = parser
+        .parse(
+            r#"
+            interface Foo {
+                name: string;
+            }
+            "#,
+        )
+        .unwrap();
+
+    insta::assert_debug_snapshot!(parsed);
+}

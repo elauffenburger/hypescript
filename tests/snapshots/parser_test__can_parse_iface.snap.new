@@ -1,0 +1,32 @@
+---
+source: tests/parser_test.rs
+assertion_line: 145
+expression: parsed
+---
+ParserResult {
+    top_level_constructs: [
+        Interface(
+            Interface {
+                name: "Foo",
+                fields: [
+                    InterfaceField {
+                        name: "name",
+                        optional: false,
+                        typ: Type {
+                            mod_path: "_/test",
+                            head: Interface(
+                                Interface {
+                                    name: "string",
+                                    fields: [],
+                                    methods: [],
+                                },
+                            ),
+                            rest: None,
+                        },
+                    },
+                ],
+                methods: [],
+            },
+        ),
+    ],
+}

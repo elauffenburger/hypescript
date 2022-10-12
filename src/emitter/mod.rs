@@ -1,23 +1,14 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, collections::HashMap};
 
 use maplit::hashmap;
 
 use crate::{
-    parser::{self, StmtOrExpr},
+    parser::{self, Scope, StmtOrExpr, Module, Type},
     util::rcref,
 };
 
-mod scope;
-pub use scope::*;
-
-mod module;
-pub use module::*;
-
 mod stmt;
 pub use stmt::*;
-
-mod types;
-pub use types::*;
 
 mod expr;
 pub use expr::*;
@@ -46,6 +37,7 @@ pub enum EmittedFile {
 
 pub struct Emitter {
     curr_scope: Rc<RefCell<Scope>>,
+    modules: HashMap<String, Rc<RefCell<Module>>>,
 
     buffer: String,
 }
@@ -56,6 +48,7 @@ impl Emitter {
             // Create a dummy scope.
             // HACK: this feels...wrong -- probably should be using an Option, but it feels weird because you should have a handle when we're actually running the emitter.
             curr_scope: rcref(Scope::new("_/dummy".into())),
+            modules: HashMap::new(),
             buffer: String::new(),
         }
     }
@@ -194,7 +187,6 @@ impl Emitter {
 
         // Update the current scope to point to this new scope.
         self.curr_scope = scope
-
     }
 
     fn leave_scope(&mut self) {
@@ -210,7 +202,11 @@ impl Emitter {
         self.curr_scope.borrow().types_equal(left, right)
     }
 
-    fn get_type(&self, name: &str) -> Option<Rc<RefCell<Type>>> {
-        self.curr_scope.borrow().get_type(name)
+    fn get_type(&self, type_ref: &parser::TypeRef) -> Option<Rc<RefCell<Type>>> {
+        let mod_path: String = type_ref.mod_path.clone().into();
+        match self.modules.get(&mod_path) {
+            Some(module) => module.borrow().get_type(&type_ref.name),
+            None => None
+        }
     }
 }

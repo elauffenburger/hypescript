@@ -2,11 +2,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use maplit::hashmap;
 
-use super::types::*;
 use crate::{
     parser::{self, Expr, ExprInner, Interface, LiteralType, ObjTypeField, TypeIdentType},
     util::rcref,
 };
+
+use super::{BuiltInTypes, Type, GLOBAL_SCOPE, MOD_CORE_PATH};
 
 #[derive(Debug, PartialEq)]
 pub struct Scope {
@@ -27,7 +28,10 @@ impl Scope {
             children: None,
             ident_types: hashmap! {},
             types: hashmap! {},
-            this: rcref(Type::simple(MOD_CORE_PATH, TypeIdentType::name("Global"))),
+            this: rcref(Type::simple(
+                MOD_CORE_PATH,
+                TypeIdentType::name(MOD_CORE_PATH, "Global"),
+            )),
             mod_path,
         }
     }
@@ -85,8 +89,10 @@ impl Scope {
         field_name: &str,
     ) -> Result<Type, String> {
         match typ {
-            TypeIdentType::Name(ref name) => {
-                let t = self.get_type(name).ok_or(format!("unknown type {name}"))?;
+            TypeIdentType::Name(ref type_ref) => {
+                let t = self
+                    .get_type(&type_ref.name)
+                    .ok_or(format!("unknown type {type_ref:?}"))?;
                 let t = t.borrow().clone();
 
                 if let Some(_) = t.rest {
@@ -132,8 +138,10 @@ impl Scope {
         }
 
         match typ.head.clone() {
-            TypeIdentType::Name(ref name) => {
-                let t = self.get_type(name).ok_or(format!("unknown type {name}"))?;
+            TypeIdentType::Name(ref type_ref) => {
+                let t = self
+                    .get_type(&type_ref.name)
+                    .ok_or(format!("unknown type {type_ref:?}"))?;
                 let t = t.borrow();
 
                 if let Some(_) = t.rest {
@@ -244,8 +252,8 @@ impl Scope {
                     (left, TypeIdentType::Name(right)) => Ok(left == right),
                     (left, right @ _) => {
                         let left = self
-                            .get_type(left)
-                            .ok_or(format!("unknown type '{left}'"))?;
+                            .get_type(&left.name)
+                            .ok_or(format!("unknown type '{left:?}'"))?;
                         let left = left.borrow();
 
                         if let Some(_) = left.rest {
@@ -302,7 +310,7 @@ impl Scope {
                         }
                     },
                     TypeIdentType::Interface(ref other) => Ok(iface == other),
-                    TypeIdentType::Name(_) => {
+                    TypeIdentType::Name { .. } => {
                         unreachable!("should have already resolved named types")
                     }
                 }
@@ -312,17 +320,19 @@ impl Scope {
     }
 }
 
-pub fn new_global_scope(mod_path: String) -> Scope {
-    Scope {
-        mod_path,
-        parent: None,
-        children: None,
-        ident_types: hashmap! {},
-        types: hashmap! {},
-        // Wire up the scope's `this` to have the type `Global`.
-        this: rcref(Type::simple(
-            MOD_CORE_PATH.clone(),
-            TypeIdentType::name("Global"),
-        )),
-    }
+pub fn new_mod_scope(mod_path: String) -> Scope {
+    GLOBAL_SCOPE.with(|global_scope| {
+        Scope {
+            mod_path,
+            parent: Some(global_scope.clone()),
+            children: None,
+            ident_types: hashmap! {},
+            types: hashmap! {},
+            // Wire up the scope's `this` to have the type `Global`.
+            this: rcref(Type::simple(
+                MOD_CORE_PATH.clone(),
+                TypeIdentType::name(MOD_CORE_PATH, "Global"),
+            )),
+        }
+    })
 }

@@ -1,10 +1,11 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    emitter::{Module, Scope},
-    parser::{self, FnParam, Interface, InterfaceField, LiteralType, TypeIdent, TypeIdentType},
+    parser::{FnParam, Interface, InterfaceField, LiteralType, TypeIdentType, Scope, Module},
     util::rcref,
 };
+
+use super::Type;
 
 pub const MOD_CORE_PATH: &str = "_/core";
 
@@ -19,14 +20,14 @@ thread_local! {
             fields: vec![InterfaceField {
                 name: "log".into(),
                 optional: false,
-                typ: TypeIdent::simple(MOD_CORE_PATH, TypeIdentType::literal(
+                typ: Type::simple(MOD_CORE_PATH, TypeIdentType::literal(
                     LiteralType::FnType {
                         params: vec![FnParam {
                             name: "msg".into(),
                             optional: false,
-                            typ: Some(TypeIdent {
+                            typ: Some(Type {
                                 mod_path: MOD_CORE_PATH.into(),
-                                head: TypeIdentType::name(BuiltInTypes::String.type_name()),
+                                head: TypeIdentType::name(MOD_CORE_PATH, BuiltInTypes::String.type_name()),
                                 rest: None,
                             }),
                         }],
@@ -37,20 +38,24 @@ thread_local! {
         });
 
         // Add `console` ident.
-        scope.add_ident("console", TypeIdent::simple(MOD_CORE_PATH, TypeIdentType::name("Console")));
+        scope.add_ident("console", Type::simple(MOD_CORE_PATH, TypeIdentType::name(MOD_CORE_PATH, "Console")));
 
         // Add `global` interface.
         scope.add_iface(Interface{name: "Global".into(), fields: vec![], methods: vec![]});
 
+        // Add `string` interface.
+        scope.add_iface(Interface{name: "string".into(), fields: vec![], methods: vec![]});
+
+        // Add `number` interface.
+        scope.add_iface(Interface{name: "number".into(), fields: vec![], methods: vec![]});
+
         rcref(scope)
     };
 
-    pub static MOD_CORE: Rc<RefCell<Module>> = {
+    pub static MOD_CORE: Rc<RefCell<crate::parser::Module>> = {
         GLOBAL_SCOPE.with(|scope| rcref(Module::new(MOD_CORE_PATH, "__hypescript_core", scope.clone())))
     };
 }
-
-pub type Type = parser::TypeIdent;
 
 pub enum BuiltInTypes {
     String,
@@ -68,6 +73,9 @@ impl BuiltInTypes {
     }
 
     pub fn to_type(&self) -> Type {
-        Type::simple(MOD_CORE_PATH, TypeIdentType::name(self.type_name()))
+        Type::simple(
+            MOD_CORE_PATH,
+            TypeIdentType::name(MOD_CORE_PATH, self.type_name()),
+        )
     }
 }
