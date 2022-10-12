@@ -1,9 +1,5 @@
-use crate::{
-    parser::{self, ObjOp},
-    util::rcref,
-};
-
-use super::{EmitResult, Emitter};
+use crate::util::rcref;
+use super::*;
 
 mod fn_inst;
 pub use fn_inst::*;
@@ -12,7 +8,7 @@ mod obj;
 pub use obj::*;
 
 impl Emitter {
-    pub(in crate::emitter) fn emit_expr(&mut self, expr: parser::Expr) -> EmitResult {
+    pub(in crate::emitter) fn emit_expr(&mut self, expr: super::Expr) -> EmitResult {
         if expr.is_sub_expr {
             let mut expr = expr.clone();
             expr.is_sub_expr = false;
@@ -20,16 +16,16 @@ impl Emitter {
             return self.emit_sub_expr(expr);
         } else {
             match expr.clone().inner {
-                parser::ExprInner::Comparison(comp) => self.emit_comparison(comp),
-                parser::ExprInner::IncrDecr(incr_decr) => self.emit_incr_decr(incr_decr),
-                parser::ExprInner::Num(num) => self.emit_num(num),
-                parser::ExprInner::Str(str) => self.emit_str(&str),
-                parser::ExprInner::IdentAssignment(ident_assignment) => {
+                super::ExprInner::Comparison(comp) => self.emit_comparison(comp),
+                super::ExprInner::IncrDecr(incr_decr) => self.emit_incr_decr(incr_decr),
+                super::ExprInner::Num(num) => self.emit_num(num),
+                super::ExprInner::Str(str) => self.emit_str(&str),
+                super::ExprInner::IdentAssignment(ident_assignment) => {
                     self.emit_ident_assignment(*ident_assignment)
                 }
-                parser::ExprInner::FnInst(fn_inst) => self.emit_fn_inst(fn_inst),
-                parser::ExprInner::ObjInst(obj_inst) => self.emit_obj_inst(obj_inst),
-                parser::ExprInner::Ident(ident) => self.emit_ident(&ident),
+                super::ExprInner::FnInst(fn_inst) => self.emit_fn_inst(fn_inst),
+                super::ExprInner::ObjInst(obj_inst) => self.emit_obj_inst(obj_inst),
+                super::ExprInner::Ident(ident) => self.emit_ident(&ident),
             }?;
         }
 
@@ -38,7 +34,7 @@ impl Emitter {
         Ok(())
     }
 
-    fn emit_expr_ops(&mut self, expr: parser::Expr) -> EmitResult {
+    fn emit_expr_ops(&mut self, expr: super::Expr) -> EmitResult {
         let mut curr_acc_type = rcref(self.type_of_expr_inner(&expr.inner)?);
 
         let mut last_op = None;
@@ -59,7 +55,7 @@ impl Emitter {
 
         for (i, op) in expr.ops.iter().enumerate() {
             match op.clone() {
-                parser::ObjOp::Access(prop) => {
+                super::ObjOp::Access(prop) => {
                     // If this is the last op and there's an assignment we need to do,
                     // don't emit a `getFieldValue`; just skip it and write the set in a sec.
                     if has_assignment && i == n - 2 {
@@ -76,12 +72,12 @@ impl Emitter {
 
                     let typ = (*curr_acc_type.borrow()).head.clone();
                     curr_acc_type = match typ {
-                        parser::TypeIdentType::Name(ref type_ref) => self
+                        super::TypeIdentType::Name(ref type_ref) => self
                             .get_type(type_ref)
                             .ok_or(format!("could not find type {type_ref:?}"))?,
-                        parser::TypeIdentType::LiteralType(typ) => match *typ {
-                            parser::LiteralType::FnType { .. } => todo!(),
-                            parser::LiteralType::ObjType { fields } => {
+                        super::TypeIdentType::LiteralType(typ) => match *typ {
+                            super::LiteralType::FnType { .. } => todo!(),
+                            super::LiteralType::ObjType { fields } => {
                                 match fields.iter().find(|field| field.name == prop) {
                                     Some(field) => rcref(field.typ.clone()),
                                     None => {
@@ -90,10 +86,10 @@ impl Emitter {
                                 }
                             }
                         },
-                        parser::TypeIdentType::Interface(_) => todo!(),
+                        super::TypeIdentType::Interface(_) => todo!(),
                     };
                 }
-                parser::ObjOp::Invoc { args } => {
+                super::ObjOp::Invoc { args } => {
                     self.write("->invoke({")?;
 
                     let n = args.len();
@@ -109,16 +105,16 @@ impl Emitter {
 
                     self.write("})")?;
                 }
-                parser::ObjOp::Arithmetic(artm) => self.emit_arithmetic(artm)?,
-                parser::ObjOp::ComparisonOp(cmp) => self.emit_comparison_op(cmp)?,
-                parser::ObjOp::Assignment(asgn) => {
+                super::ObjOp::Arithmetic(artm) => self.emit_arithmetic(artm)?,
+                super::ObjOp::ComparisonOp(cmp) => self.emit_comparison_op(cmp)?,
+                super::ObjOp::Assignment(asgn) => {
                     let name = match last_op {
                         Some(op) => match op {
-                            parser::ObjOp::Access(name) => name,
-                            parser::ObjOp::Invoc { .. } => todo!(),
-                            parser::ObjOp::Arithmetic(_) => todo!(),
-                            parser::ObjOp::ComparisonOp(_) => todo!(),
-                            parser::ObjOp::Assignment(_) => {
+                            super::ObjOp::Access(name) => name,
+                            super::ObjOp::Invoc { .. } => todo!(),
+                            super::ObjOp::Arithmetic(_) => todo!(),
+                            super::ObjOp::ComparisonOp(_) => todo!(),
+                            super::ObjOp::Assignment(_) => {
                                 unreachable!("can't assign to an assignment")
                             }
                         },
@@ -137,7 +133,7 @@ impl Emitter {
         Ok(())
     }
 
-    fn emit_sub_expr(&mut self, expr: parser::Expr) -> EmitResult {
+    fn emit_sub_expr(&mut self, expr: super::Expr) -> EmitResult {
         self.write("([=] {\n")?;
         self.write("auto _result = ")?;
         self.emit_expr(expr)?;
@@ -148,17 +144,17 @@ impl Emitter {
         Ok(())
     }
 
-    fn emit_comparison_op(&mut self, op: parser::ComparisonOp) -> EmitResult {
+    fn emit_comparison_op(&mut self, op: super::ComparisonOp) -> EmitResult {
         self.emit_get_field_val(match op {
-            parser::ComparisonOp::LooseEq => "==",
-            parser::ComparisonOp::LooseNeq => "!=",
-            parser::ComparisonOp::Lt => "<",
-            parser::ComparisonOp::Gt => ">",
-            parser::ComparisonOp::And => "&&",
+            super::ComparisonOp::LooseEq => "==",
+            super::ComparisonOp::LooseNeq => "!=",
+            super::ComparisonOp::Lt => "<",
+            super::ComparisonOp::Gt => ">",
+            super::ComparisonOp::And => "&&",
         })
     }
 
-    fn emit_comparison(&mut self, comp: parser::Comparison) -> EmitResult {
+    fn emit_comparison(&mut self, comp: super::Comparison) -> EmitResult {
         self.emit_comparison_term(comp.left)?;
 
         self.emit_comparison_op(comp.op)?;
@@ -172,17 +168,17 @@ impl Emitter {
         Ok(())
     }
 
-    fn emit_comparison_term(&mut self, term: parser::ComparisonTerm) -> EmitResult {
+    fn emit_comparison_term(&mut self, term: super::ComparisonTerm) -> EmitResult {
         match term {
-            parser::ComparisonTerm::IncrDecr(incr_decr) => self.emit_incr_decr(incr_decr),
-            parser::ComparisonTerm::Num(num) => self.emit_num(num),
-            parser::ComparisonTerm::Str(str) => self.emit_str(&str),
-            parser::ComparisonTerm::IdentAssignment(ident_assign) => {
+            super::ComparisonTerm::IncrDecr(incr_decr) => self.emit_incr_decr(incr_decr),
+            super::ComparisonTerm::Num(num) => self.emit_num(num),
+            super::ComparisonTerm::Str(str) => self.emit_str(&str),
+            super::ComparisonTerm::IdentAssignment(ident_assign) => {
                 self.emit_ident_assignment(*ident_assign)
             }
-            parser::ComparisonTerm::Ident(ident) => self.emit_ident(&ident),
-            parser::ComparisonTerm::Comparison(comp) => self.emit_comparison(*comp),
-            parser::ComparisonTerm::Arithmetic(arthm) => self.emit_arithmetic(arthm),
+            super::ComparisonTerm::Ident(ident) => self.emit_ident(&ident),
+            super::ComparisonTerm::Comparison(comp) => self.emit_comparison(*comp),
+            super::ComparisonTerm::Arithmetic(arthm) => self.emit_arithmetic(arthm),
         }
     }
 
@@ -190,16 +186,16 @@ impl Emitter {
         self.write(&format!("->getFieldValue(\"{field}\")"))
     }
 
-    fn emit_arithmetic(&mut self, arthm: parser::Arithmetic) -> EmitResult {
+    fn emit_arithmetic(&mut self, arthm: super::Arithmetic) -> EmitResult {
         self.emit_arithmetic_term(arthm.term)?;
 
         for op in arthm.ops {
             self.emit_get_field_val(match op.0 {
-                parser::ArithmeticOp::Add => "+",
-                parser::ArithmeticOp::Sub => "-",
-                parser::ArithmeticOp::Mult => "*",
-                parser::ArithmeticOp::Div => "/",
-                parser::ArithmeticOp::Modu => "%",
+                super::ArithmeticOp::Add => "+",
+                super::ArithmeticOp::Sub => "-",
+                super::ArithmeticOp::Mult => "*",
+                super::ArithmeticOp::Div => "/",
+                super::ArithmeticOp::Modu => "%",
             })?;
 
             self.write("->invoke({")?;
@@ -212,10 +208,10 @@ impl Emitter {
         Ok(())
     }
 
-    fn emit_arithmetic_term(&mut self, term: parser::ArithmeticTerm) -> EmitResult {
+    fn emit_arithmetic_term(&mut self, term: super::ArithmeticTerm) -> EmitResult {
         match term {
-            parser::ArithmeticTerm::Ident(ident) => self.emit_ident(&ident),
-            parser::ArithmeticTerm::Num(num) => self.emit_num(num),
+            super::ArithmeticTerm::Ident(ident) => self.emit_ident(&ident),
+            super::ArithmeticTerm::Num(num) => self.emit_num(num),
         }
     }
 
@@ -227,7 +223,7 @@ impl Emitter {
         self.write(&format!("new TsString(\"{str}\")"))
     }
 
-    fn emit_ident_assignment(&mut self, assignment: parser::IdentAssignment) -> EmitResult {
+    fn emit_ident_assignment(&mut self, assignment: super::IdentAssignment) -> EmitResult {
         self.emit_ident(&assignment.ident)?;
         self.write(" = ")?;
         self.emit_expr(assignment.assignment)?;
@@ -235,26 +231,26 @@ impl Emitter {
         Ok(())
     }
 
-    fn emit_incr_decr(&mut self, incr_decr: parser::IncrDecr) -> EmitResult {
+    fn emit_incr_decr(&mut self, incr_decr: super::IncrDecr) -> EmitResult {
         let (target, fn_name) = match incr_decr {
-            parser::IncrDecr::Incr(incr) => match incr {
-                parser::Increment::Pre(tgt) => match tgt {
-                    parser::IncrDecrTarget::Ident(_) => {
+            super::IncrDecr::Incr(incr) => match incr {
+                super::Increment::Pre(tgt) => match tgt {
+                    super::IncrDecrTarget::Ident(_) => {
                         todo!()
                     }
                 },
-                parser::Increment::Post(tgt) => match tgt {
-                    parser::IncrDecrTarget::Ident(ident) => (self.mangle_ident(&ident), "++"),
+                super::Increment::Post(tgt) => match tgt {
+                    super::IncrDecrTarget::Ident(ident) => (self.mangle_ident(&ident), "++"),
                 },
             },
-            parser::IncrDecr::Decr(decr) => match decr {
-                parser::Decrement::Pre(tgt) => match tgt {
-                    parser::IncrDecrTarget::Ident(_) => {
+            super::IncrDecr::Decr(decr) => match decr {
+                super::Decrement::Pre(tgt) => match tgt {
+                    super::IncrDecrTarget::Ident(_) => {
                         todo!()
                     }
                 },
-                parser::Decrement::Post(tgt) => match tgt {
-                    parser::IncrDecrTarget::Ident(_) => {
+                super::Decrement::Post(tgt) => match tgt {
+                    super::IncrDecrTarget::Ident(_) => {
                         todo!()
                     }
                 },

@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use super::{Scope, Type};
+use super::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Module {

@@ -1,19 +1,29 @@
-use std::{cell::RefCell, rc::Rc, collections::HashMap};
+use ::core::num::dec2flt::parse;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use maplit::hashmap;
 
-use crate::{
-    parser::{self, Scope, StmtOrExpr, Module, Type},
-    util::rcref,
-};
+use crate::{parser, util::rcref};
 
-mod stmt;
-pub use stmt::*;
+mod core;
+pub use self::core::*;
 
 mod expr;
 pub use expr::*;
 
+mod module;
+pub use module::*;
+
 mod runtime;
+
+mod scope;
+pub use scope::*;
+
+mod stmt;
+pub use stmt::*;
+
+mod types;
+pub use types::*;
 
 type EmitterError = String;
 type EmitResult = Result<(), EmitterError>;
@@ -74,19 +84,28 @@ impl Emitter {
             }
         }
 
+        let mods = {
+            let mut mods: Vec<Module> = vec![];
+            for parsed_mod in parsed_mods {
+                let m = parsed_mod.into()?;
+            }
+
+            mods
+        };
+
         // Write main to buffer.
         {
             self.write("int main() {\n")?;
 
-            for module in parsed_mods {
+            for module in mods {
                 for construct in module.top_level_constructs.iter() {
                     let construct = construct.clone();
 
                     match construct {
-                        parser::TopLevelConstruct::Interface(iface) => self.reg_iface(iface)?,
-                        parser::TopLevelConstruct::StmtOrExpr(stmt_or_expr) => match stmt_or_expr {
-                            parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
-                            parser::StmtOrExpr::Expr(_) => todo!(),
+                        TopLevelConstruct::Interface(iface) => self.reg_iface(iface)?,
+                        TopLevelConstruct::StmtOrExpr(stmt_or_expr) => match stmt_or_expr {
+                            StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
+                            StmtOrExpr::Expr(_) => todo!(),
                         },
                     }
                 }
@@ -125,25 +144,25 @@ impl Emitter {
     fn emit_body(&mut self, body: Vec<StmtOrExpr>) -> Result<(), EmitterError> {
         for stmt_or_expr in body {
             match stmt_or_expr {
-                crate::parser::StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
-                crate::parser::StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
+                StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
+                StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
             }
         }
 
         Ok(())
     }
 
-    fn reg_iface(&mut self, iface: parser::Interface) -> Result<(), EmitterError> {
+    fn reg_iface(&mut self, iface: Interface) -> Result<(), EmitterError> {
         self.curr_scope.borrow_mut().add_iface(iface);
 
         Ok(())
     }
 
-    fn type_of(&self, expr: &parser::Expr) -> Result<Type, EmitterError> {
+    fn type_of(&self, expr: &Expr) -> Result<Type, EmitterError> {
         self.curr_scope.borrow().type_of(expr)
     }
 
-    fn type_of_expr_inner(&self, expr_inner: &parser::ExprInner) -> Result<Type, EmitterError> {
+    fn type_of_expr_inner(&self, expr_inner: &ExprInner) -> Result<Type, EmitterError> {
         self.curr_scope.borrow().type_of_expr_inner(expr_inner)
     }
 
@@ -202,11 +221,11 @@ impl Emitter {
         self.curr_scope.borrow().types_equal(left, right)
     }
 
-    fn get_type(&self, type_ref: &parser::TypeRef) -> Option<Rc<RefCell<Type>>> {
+    fn get_type(&self, type_ref: &TypeRef) -> Option<Rc<RefCell<Type>>> {
         let mod_path: String = type_ref.mod_path.clone().into();
         match self.modules.get(&mod_path) {
             Some(module) => module.borrow().get_type(&type_ref.name),
-            None => None
+            None => None,
         }
     }
 }

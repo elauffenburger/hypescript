@@ -2,12 +2,9 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use maplit::hashmap;
 
-use crate::{
-    parser::{self, Expr, ExprInner, Interface, LiteralType, ObjTypeField, TypeIdentType},
-    util::rcref,
-};
+use crate::util::rcref;
 
-use super::{BuiltInTypes, Type, GLOBAL_SCOPE, MOD_CORE_PATH};
+use super::*;
 
 #[derive(Debug, PartialEq)]
 pub struct Scope {
@@ -207,10 +204,10 @@ impl Scope {
         // Walk through each obj op and update the typ to match the last op's type.
         for op in &expr.ops {
             match op {
-                parser::ObjOp::Access(ref access) => typ = self.type_field_type(&typ, access)?,
-                parser::ObjOp::Invoc { .. } => typ = self.invoc_type(&typ)?,
-                parser::ObjOp::Arithmetic(_) => typ = BuiltInTypes::Number.to_type(),
-                parser::ObjOp::ComparisonOp(_) => typ = BuiltInTypes::Boolean.to_type(),
+                super::ObjOp::Access(ref access) => typ = self.type_field_type(&typ, access)?,
+                super::ObjOp::Invoc { .. } => typ = self.invoc_type(&typ)?,
+                super::ObjOp::Arithmetic(_) => typ = BuiltInTypes::Number.to_type(),
+                super::ObjOp::ComparisonOp(_) => typ = BuiltInTypes::Boolean.to_type(),
                 r @ _ => todo!("{:?}", r),
             }
         }

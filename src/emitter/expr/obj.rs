@@ -1,20 +1,20 @@
-use crate::parser;
+use super::*;
 
 use crate::emitter::*;
 
 impl Emitter {
-    pub(in crate::emitter) fn emit_obj_inst(&mut self, obj_inst: parser::ObjInst) -> EmitResult {
+    pub(in crate::emitter) fn emit_obj_inst(&mut self, obj_inst: super::ObjInst) -> EmitResult {
         // TODO: actually impl this thang.
         let type_id = 1;
 
         let obj_type = rcref(Type {
             mod_path: self.curr_scope.borrow().mod_path.clone(),
-            head: parser::TypeIdentType::literal(parser::LiteralType::ObjType {
+            head: super::TypeIdentType::literal(super::LiteralType::ObjType {
                 fields: {
                     let mut fields = vec![];
 
                     for field in obj_inst.fields.iter() {
-                        fields.push(parser::ObjTypeField {
+                        fields.push(super::ObjTypeField {
                             name: field.name.clone(),
                             optional: false,
                             typ: self.type_of(&field.value)?,
@@ -50,7 +50,7 @@ impl Emitter {
                 }
 
                 self.enter_scope();
-                if let parser::ExprInner::FnInst(_) = &field.value.inner {
+                if let super::ExprInner::FnInst(_) = &field.value.inner {
                     self.curr_scope.borrow_mut().this = obj_type.clone();
                 }
 

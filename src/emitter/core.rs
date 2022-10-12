@@ -1,11 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{
-    parser::{FnParam, Interface, InterfaceField, LiteralType, TypeIdentType, Scope, Module},
-    util::rcref,
-};
+use crate::util::rcref;
 
-use super::Type;
+use super::*;
 
 pub const MOD_CORE_PATH: &str = "_/core";
 
@@ -52,7 +49,7 @@ thread_local! {
         rcref(scope)
     };
 
-    pub static MOD_CORE: Rc<RefCell<crate::parser::Module>> = {
+    pub static MOD_CORE: Rc<RefCell<Module>> = {
         GLOBAL_SCOPE.with(|scope| rcref(Module::new(MOD_CORE_PATH, "__hypescript_core", scope.clone())))
     };
 }

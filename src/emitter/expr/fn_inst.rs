@@ -1,9 +1,9 @@
-use crate::parser;
+use super::*;
 
 use crate::emitter::{EmitResult, Emitter, Type};
 
 impl Emitter {
-    pub(in crate::emitter) fn emit_fn_inst(&mut self, mut fn_inst: parser::FnInst) -> EmitResult {
+    pub(in crate::emitter) fn emit_fn_inst(&mut self, mut fn_inst: super::FnInst) -> EmitResult {
         // If the fn is named, add a reference to it in the current scope.
         let fn_name = if let Some(ref name) = &fn_inst.name {
             let mod_path = self.curr_scope.borrow().mod_path.clone();
@@ -12,7 +12,7 @@ impl Emitter {
                 name,
                 Type::simple(
                     &mod_path,
-                    parser::TypeIdentType::literal(parser::LiteralType::FnType {
+                    super::TypeIdentType::literal(super::LiteralType::FnType {
                         params: fn_inst.params.clone(),
                         return_type: fn_inst.return_type.clone(),
                     }),
@@ -65,14 +65,14 @@ impl Emitter {
             let mut did_return = false;
             for stmt_or_expr in fn_inst.body.clone().into_iter() {
                 match stmt_or_expr {
-                    parser::StmtOrExpr::Stmt(stmt) => {
+                    super::StmtOrExpr::Stmt(stmt) => {
                         self.emit_stmt(stmt.clone())?;
 
-                        if let parser::Stmt::ReturnExpr(_) = &stmt {
+                        if let super::Stmt::ReturnExpr(_) = &stmt {
                             did_return = true;
                         }
                     }
-                    parser::StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
+                    super::StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
                 }
             }
 
@@ -89,7 +89,7 @@ impl Emitter {
                 let mut acc = None;
                 for stmt_or_expr in fn_inst.body.iter() {
                     match stmt_or_expr {
-                        parser::StmtOrExpr::Stmt(parser::Stmt::ReturnExpr(ret_expr)) => {
+                        super::StmtOrExpr::Stmt(super::Stmt::ReturnExpr(ret_expr)) => {
                             let typ = self.type_of(ret_expr).map_err(|e| {
                                 format!("couldn't determine type of return expr: {e}")
                             })?;
@@ -126,10 +126,10 @@ impl Emitter {
                             }
                         }
                         None => match expl_ret_type {
-                            parser::Type {
+                            super::Type {
                                 mod_path: _,
                                 head:
-                                    parser::TypeIdentType::Name(parser::TypeRef {
+                                    super::TypeIdentType::Name(super::TypeRef {
                                         mod_path: _,
                                         name: type_name,
                                     }),
@@ -159,7 +159,7 @@ impl Emitter {
                                 name,
                                 Type::simple(
                                     &mod_path,
-                                    parser::TypeIdentType::literal(parser::LiteralType::FnType {
+                                    super::TypeIdentType::literal(super::LiteralType::FnType {
                                         params: fn_inst.params.clone(),
                                         return_type: fn_inst.return_type.clone(),
                                     }),

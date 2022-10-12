@@ -15,34 +15,34 @@ pub struct Interface {
 pub struct InterfaceMethod {
     pub name: String,
     pub params: Vec<FnParam>,
-    pub typ: Option<TypeIdent>,
+    pub typ: Option<Type>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct InterfaceField {
     pub name: String,
     pub optional: bool,
-    pub typ: TypeIdent,
+    pub typ: Type,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct FnParam {
     pub name: String,
     pub optional: bool,
-    pub typ: Option<TypeIdent>,
+    pub typ: Option<Type>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct TypeIdent {
+pub struct Type {
     pub mod_path: String,
 
     pub head: TypeIdentType,
     pub rest: Option<Vec<TypeIdentPart>>,
 }
 
-impl TypeIdent {
+impl Type {
     pub fn simple(mod_path: &str, t: TypeIdentType) -> Self {
-        TypeIdent {
+        Type {
             mod_path: mod_path.into(),
             head: t,
             rest: None,
@@ -52,8 +52,8 @@ impl TypeIdent {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeIdentPart {
-    Union(TypeIdent),
-    Sum(TypeIdent),
+    Union(Type),
+    Sum(Type),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -86,7 +86,7 @@ pub struct TypeRef {
 pub enum LiteralType {
     FnType {
         params: Vec<FnParam>,
-        return_type: Option<TypeIdent>,
+        return_type: Option<Type>,
     },
     ObjType {
         fields: Vec<ObjTypeField>,
@@ -97,7 +97,7 @@ pub enum LiteralType {
 pub struct ObjTypeField {
     pub name: String,
     pub optional: bool,
-    pub typ: TypeIdent,
+    pub typ: Type,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -116,7 +116,7 @@ pub enum Stmt {
     },
     LetDecl {
         name: String,
-        typ: Option<TypeIdent>,
+        typ: Option<Type>,
         assignment: Option<Expr>,
     },
     Expr(Expr),
@@ -239,7 +239,7 @@ pub struct FnInst {
     pub name: Option<String>,
     pub params: Vec<FnParam>,
     pub body: Vec<StmtOrExpr>,
-    pub return_type: Option<TypeIdent>,
+    pub return_type: Option<Type>,
 }
 
 #[derive(Debug, PartialEq, Clone)]

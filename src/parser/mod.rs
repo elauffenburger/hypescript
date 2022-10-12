@@ -555,7 +555,7 @@ impl Parser {
         Ok(self.parse_expr(pair.into_inner().next().unwrap())?)
     }
 
-    fn parse_type_ident(&self, pair: Pair<Rule>) -> Result<Type, ParseError> {
+    fn parse_type_ident(&self, pair: Pair<Rule>) -> Result<TypeIdent, ParseError> {
         assert_rule!(pair, Rule::type_ident);
 
         let mut inner = pair.into_inner();
@@ -571,12 +571,12 @@ impl Parser {
                 let typ = self.parse_type_ident_type(inner.next().unwrap())?;
 
                 parts.push(match op_pair.as_rule() {
-                    Rule::union => TypeIdentPart::Union(Type {
+                    Rule::union => TypeIdentPart::Union(TypeIdent {
                         mod_path: self.mod_path.clone(),
                         head: typ,
                         rest: None,
                     }),
-                    Rule::sum => TypeIdentPart::Sum(Type {
+                    Rule::sum => TypeIdentPart::Sum(TypeIdent {
                         mod_path: self.mod_path.clone(),
                         head: typ,
                         rest: None,
@@ -588,7 +588,7 @@ impl Parser {
             parts
         };
 
-        Ok(Type {
+        Ok(TypeIdent {
             mod_path: self.mod_path.clone(),
             head,
             rest: if rest.is_empty() { None } else { Some(rest) },
