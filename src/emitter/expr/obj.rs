@@ -1,7 +1,5 @@
 use super::*;
 
-use crate::emitter::*;
-
 impl Emitter {
     pub(in crate::emitter) fn emit_obj_inst(&mut self, obj_inst: super::ObjInst) -> EmitResult {
         // TODO: actually impl this thang.

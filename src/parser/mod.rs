@@ -1,20 +1,7 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use pest::{iterators::Pair, Parser as PestParser};
 
 use crate::ast;
 use crate::ast::Rule;
-use crate::util::rcref;
-
-pub use self::core::*;
-mod core;
-
-pub use module::*;
-mod module;
-
-pub use scope::*;
-mod scope;
 
 mod types;
 #[macro_use]
@@ -24,24 +11,23 @@ pub use types::*;
 pub type ParseError = Box<dyn std::error::Error>;
 
 #[derive(Debug, PartialEq)]
-pub struct ParserResult {
+pub struct Module {
+    pub path: String,
     pub top_level_constructs: Vec<TopLevelConstruct>,
 }
 
 pub struct Parser {
     pub mod_path: String,
-    pub curr_scope: Rc<RefCell<Scope>>,
 }
 
 impl Parser {
     pub fn new(mod_path: String) -> Self {
         Parser {
             mod_path: mod_path.clone(),
-            curr_scope: rcref(new_mod_scope(mod_path)),
         }
     }
 
-    pub fn parse(&self, src: &str) -> Result<ParserResult, ParseError> {
+    pub fn parse(&self, src: &str) -> Result<Module, ParseError> {
         let root_pairs = ast::TsParser::parse(Rule::ts, src)?;
 
         let mut top_level_constructs = vec![];
@@ -57,7 +43,8 @@ impl Parser {
             })
         }
 
-        Ok(ParserResult {
+        Ok(Module {
+            path: self.mod_path.clone(),
             top_level_constructs,
         })
     }
@@ -555,7 +542,7 @@ impl Parser {
         Ok(self.parse_expr(pair.into_inner().next().unwrap())?)
     }
 
-    fn parse_type_ident(&self, pair: Pair<Rule>) -> Result<TypeIdent, ParseError> {
+    fn parse_type_ident(&self, pair: Pair<Rule>) -> Result<Type, ParseError> {
         assert_rule!(pair, Rule::type_ident);
 
         let mut inner = pair.into_inner();
@@ -571,13 +558,11 @@ impl Parser {
                 let typ = self.parse_type_ident_type(inner.next().unwrap())?;
 
                 parts.push(match op_pair.as_rule() {
-                    Rule::union => TypeIdentPart::Union(TypeIdent {
-                        mod_path: self.mod_path.clone(),
+                    Rule::union => TypeIdentPart::Union(Type {
                         head: typ,
                         rest: None,
                     }),
-                    Rule::sum => TypeIdentPart::Sum(TypeIdent {
-                        mod_path: self.mod_path.clone(),
+                    Rule::sum => TypeIdentPart::Sum(Type {
                         head: typ,
                         rest: None,
                     }),
@@ -588,8 +573,7 @@ impl Parser {
             parts
         };
 
-        Ok(TypeIdent {
-            mod_path: self.mod_path.clone(),
+        Ok(Type {
             head,
             rest: if rest.is_empty() { None } else { Some(rest) },
         })
@@ -603,15 +587,7 @@ impl Parser {
             Rule::literal_type => {
                 TypeIdentType::LiteralType(Box::new(self.parse_literal_type(inner)?))
             }
-            Rule::ident => {
-                let typ = self.parse_ident(inner.clone())?;
-
-                self.curr_scope
-                    .borrow()
-                    .get_type(&typ)
-                    .map(|typ| typ.borrow().head.clone())
-                    .ok_or(format!("failed to find type {typ:?}"))?
-            }
+            Rule::ident => TypeIdentType::name(&self.parse_ident(inner.clone())?),
             _ => unreachable!(),
         })
     }

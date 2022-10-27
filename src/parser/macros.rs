@@ -4,7 +4,7 @@ macro_rules! assert_rule {
         let rule = $pair.as_rule();
         let expected = $expected;
         if rule != $expected {
-            panic!("expected {expected:?}, go: {rule:?}")
+            panic!("expected {expected:?}, got: {rule:?}")
         }
     }}
 }

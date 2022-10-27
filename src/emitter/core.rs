@@ -50,7 +50,7 @@ thread_local! {
     };
 
     pub static MOD_CORE: Rc<RefCell<Module>> = {
-        GLOBAL_SCOPE.with(|scope| rcref(Module::new(MOD_CORE_PATH, "__hypescript_core", scope.clone())))
+        GLOBAL_SCOPE.with(|scope| rcref(Module::new(MOD_CORE_PATH, scope.clone())))
     };
 }
 

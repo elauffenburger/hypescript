@@ -1,4 +1,3 @@
-use ::core::num::dec2flt::parse;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use maplit::hashmap;
@@ -65,7 +64,7 @@ impl Emitter {
 
     pub fn emit(
         mut self,
-        parsed_mods: &[parser::ParserResult],
+        parsed_mods: &[parser::Module],
     ) -> Result<EmitterResult, EmitterError> {
         // Write includes to buffer.
         {
@@ -84,20 +83,13 @@ impl Emitter {
             }
         }
 
-        let mods = {
-            let mut mods: Vec<Module> = vec![];
-            for parsed_mod in parsed_mods {
-                let m = parsed_mod.into()?;
-            }
-
-            mods
-        };
-
         // Write main to buffer.
         {
             self.write("int main() {\n")?;
 
-            for module in mods {
+            for parsed_mod in parsed_mods {
+                let module: Module = parsed_mod.into();
+
                 for construct in module.top_level_constructs.iter() {
                     let construct = construct.clone();
 
@@ -118,22 +110,22 @@ impl Emitter {
             files: vec![
                 // out
                 EmittedFile::Dir {
-                    name: String::from("src"),
+                    name: "src".into(),
                     files: vec![
                         // out/main.cpp
                         EmittedFile::File {
-                            name: String::from("main.cpp"),
+                            name: "main.cpp".into(),
                             content: self.buffer,
                         },
                         // out/runtime.cpp
                         EmittedFile::File {
-                            name: String::from("runtime.cpp"),
-                            content: String::from(runtime::RUNTIME_CPP),
+                            name: "runtime.cpp".into(),
+                            content: runtime::RUNTIME_CPP.into(),
                         },
                         // out/runtime.hpp
                         EmittedFile::File {
-                            name: String::from("runtime.hpp"),
-                            content: String::from(runtime::RUNTIME_HPP),
+                            name: "runtime.hpp".into(),
+                            content: runtime::RUNTIME_HPP.into(),
                         },
                     ],
                 },

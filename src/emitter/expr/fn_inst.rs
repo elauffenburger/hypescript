@@ -1,5 +1,3 @@
-use super::*;
-
 use crate::emitter::{EmitResult, Emitter, Type};
 
 impl Emitter {

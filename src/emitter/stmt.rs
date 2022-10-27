@@ -1,7 +1,5 @@
 use super::*;
 
-use super::*;
-
 impl Emitter {
     pub(in crate::emitter) fn emit_stmt(&mut self, stmt: Stmt) -> EmitResult {
         match stmt {
