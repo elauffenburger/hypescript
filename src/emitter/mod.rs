@@ -53,19 +53,23 @@ pub struct Emitter {
 
 impl Emitter {
     pub fn new() -> Self {
-        Emitter {
-            // Create a dummy scope.
-            // HACK: this feels...wrong -- probably should be using an Option, but it feels weird because you should have a handle when we're actually running the emitter.
-            curr_scope: rcref(Scope::new("_/dummy".into())),
-            modules: HashMap::new(),
-            buffer: String::new(),
-        }
+        MOD_CORE.with(|mod_core| {
+            Emitter {
+                // Create a dummy scope.
+                // HACK: this feels...wrong -- probably should be using an Option, but it feels weird because you should have a handle when we're actually running the emitter.
+                curr_scope: rcref(Scope::new("_/dummy".into())),
+
+                // Register the global module.
+                modules: hashmap! {
+                    String::from(MOD_CORE_PATH) => mod_core.clone(),
+                },
+
+                buffer: String::new(),
+            }
+        })
     }
 
-    pub fn emit(
-        mut self,
-        parsed_mods: &[parser::Module],
-    ) -> Result<EmitterResult, EmitterError> {
+    pub fn emit(mut self, parsed_mods: &[parser::Module]) -> Result<EmitterResult, EmitterError> {
         // Write includes to buffer.
         {
             let includes = [
@@ -90,6 +94,10 @@ impl Emitter {
             for parsed_mod in parsed_mods {
                 let module: Module = parsed_mod.into();
 
+                // Apply the module scope to the current emitter scope.
+                let old_scope = self.curr_scope.clone();
+                self.curr_scope = module.scope.clone();
+
                 for construct in module.top_level_constructs.iter() {
                     let construct = construct.clone();
 
@@ -101,6 +109,8 @@ impl Emitter {
                         },
                     }
                 }
+
+                self.curr_scope = old_scope;
             }
 
             self.write("}")?;
