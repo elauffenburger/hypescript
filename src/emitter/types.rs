@@ -122,7 +122,7 @@ impl Type {
                 .scope
                 .as_ref()
                 .borrow()
-                .get_ident_type(name)
+                .get_type(name)
                 .map(|typ| typ.as_ref().borrow().mod_path.clone()),
             parser::TypeIdentType::LiteralType(_) => Some(m.path.clone()),
             parser::TypeIdentType::Interface(_) => Some(m.path.clone()),
@@ -133,9 +133,14 @@ impl Type {
 impl FromParsed<&parser::Type> for Type {
     fn from_parsed(m: &Module, typ: &parser::Type) -> Self {
         Type {
-            mod_path: Self::path_for_parser_type(m, typ)
-                .ok_or_else(|| panic!("failed to find mod_path for type"))
-                .unwrap(),
+            mod_path: {
+                let path = Self::path_for_parser_type(m, typ);
+                if path.is_none() {
+                    panic!("failed to find mod_path for type");
+                }
+
+                path.unwrap()
+            },
             head: TypeIdentType::from_parsed(m, &typ.head),
             rest: match typ.rest.as_ref() {
                 Some(rest) => Some(
@@ -589,7 +594,10 @@ impl FromParsed<&parser::FnInst> for FnInst {
                 .map(|param| FnParam::from_parsed(m, &param))
                 .collect(),
             body: StmtOrExpr::from_parsed_vec(m, &fn_inst.body),
-            return_type: fn_inst.return_type.as_ref().map(|typ| Type::from_parsed(m, &typ)),
+            return_type: fn_inst
+                .return_type
+                .as_ref()
+                .map(|typ| Type::from_parsed(m, &typ)),
         }
     }
 }

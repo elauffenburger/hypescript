@@ -1,5 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
+
 use crate::util::rcref;
 
 use super::*;
@@ -40,11 +43,15 @@ thread_local! {
         // Add `global` interface.
         scope.add_iface(Interface{name: "Global".into(), fields: vec![], methods: vec![]});
 
-        // Add `string` interface.
-        scope.add_iface(Interface{name: "string".into(), fields: vec![], methods: vec![]});
-
-        // Add `number` interface.
-        scope.add_iface(Interface{name: "number".into(), fields: vec![], methods: vec![]});
+        // Add built-in types.
+        for typ in BuiltInTypes::iter() {
+            match typ {
+                BuiltInTypes::String => scope.add_iface(Interface{name: "string".into(), fields: vec![], methods: vec![]}),
+                BuiltInTypes::Number => scope.add_iface(Interface{name: "number".into(), fields: vec![], methods: vec![]}),
+                BuiltInTypes::Boolean => scope.add_iface(Interface{name: "boolean".into(), fields: vec![], methods: vec![]}),
+                BuiltInTypes::Void => scope.add_iface(Interface{name: "void".into(), fields: vec![], methods: vec![]}),
+            };
+        }
 
         rcref(scope)
     };
@@ -54,10 +61,12 @@ thread_local! {
     };
 }
 
+#[derive(Debug, EnumIter)]
 pub enum BuiltInTypes {
     String,
     Number,
     Boolean,
+    Void,
 }
 
 impl BuiltInTypes {
@@ -66,6 +75,7 @@ impl BuiltInTypes {
             BuiltInTypes::String => "string",
             BuiltInTypes::Number => "number",
             BuiltInTypes::Boolean => "boolean",
+            BuiltInTypes::Void => "void",
         }
     }
 
