@@ -1,47 +1,35 @@
 #!/usr/bin/env bash
 
-usage() {
-    echo "usage: $0 [src]"
-}
+set -o errexit -o pipefail -o nounset
 
-main() {
-    src=
+# Build hsc.
+cargo build --bin hsc
 
-    while :; do
-        case "$1" in
-        '')
-            break
-            ;;
+# Make a dir for build output.
+rm -rf ./build
+mkdir ./build
 
-        *)
-            # Read the source from the provided path.
-            if [[ -z "$src" ]]; then
-                src=$(cat "$1")
-                shift
+build_dir=./build
+src_dir="$build_dir"/src
+bin_dir="$build_dir"/bin
 
-                continue
-            fi
+# Forward the script args to hsc.
+cargo run --bin hsc -- -o "$build_dir" "$@"
 
-            # If we've already read src, this is an unknown flag.
-            usage
-            exit 1
-            ;;
-        esac
-    done
+# Format the output files.
+clang-format $src_dir/* -i
 
-    # Read the src from stdin.
-    if [[ -z "$src" ]]; then
-        src=$(cat /dev/stdin)
-    fi
+# Compilation time!
 
-    # Build it!
-    exe=$(echo "$src" | ./bin/build.sh)
-    if [[ $? -ne 0 ]]; then
-        exit
-    fi
+# Make the bin dir
+mkdir "$bin_dir"
 
-    # Run it!
-    "$exe"
-}
+# Compile the runtime and main obj files.
+clang++ -g -c -std=c++20 "$src_dir"/runtime.cpp -o "$bin_dir"/runtime.o
+clang++ -g -c -std=c++20 "$src_dir"/main.cpp -o "$bin_dir"/main.o
 
-main "$@"
+# Compile the executable.
+clang++ -g -std=c++20 "$bin_dir"/*.o -o "$bin_dir"/out
+
+# Run the compiled binary.
+"$bin_dir"/out

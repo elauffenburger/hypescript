@@ -1,28 +1,24 @@
-use std::{
-    env::{self},
-    fmt::Display,
-    fs,
-    io::{self, BufRead, Read},
-};
+use std::{env, fmt::Display, fs};
 
 use hypescript::{emitter, parser};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = parse_args()?;
-    let output_dir = args.output_dir.expect("output dir required!");
-    let mut src_reader: Box<dyn BufRead> = match args.source {
-        Some(source) => match source {
-            Source::Stdin => Box::new(io::BufReader::new(io::stdin().lock())),
-            Source::Path(path) => Box::new(io::BufReader::new(fs::File::open(path)?)),
-        },
-        None => Box::new(io::BufReader::new(io::stdin().lock())),
-    };
 
-    let mut src = String::new();
-    src_reader.read_to_string(&mut src)?;
+    let output_dir = args.output_dir.expect("output dir required!");
 
     let parser = parser::Parser::new(".".into());
-    let emitted = emitter::Emitter::new().emit(&[parser.parse(&src)?])?;
+    let parsed_mods: Result<Vec<_>, parser::Error> = args
+        .srcs
+        .iter()
+        .map(|path| {
+            fs::read_to_string(path)
+                .map_err(|err| Box::new(err) as parser::Error)
+                .and_then(|src| parser.parse(&src))
+        })
+        .collect();
+
+    let emitted = emitter::Emitter::new().emit(&parsed_mods?)?;
 
     for file in &emitted.files {
         write_emitted_file(&file, &output_dir)?;
@@ -76,20 +72,15 @@ impl ParseArgsError {
     }
 }
 
-enum Source {
-    Stdin,
-    Path(String),
-}
-
 struct HscArgs {
     output_dir: Option<String>,
-    source: Option<Source>,
+    srcs: Vec<String>,
 }
 
 fn parse_args() -> Result<HscArgs, Box<dyn std::error::Error>> {
     let mut args = HscArgs {
         output_dir: None,
-        source: None,
+        srcs: vec![],
     };
 
     let mut env_args = env::args().skip(1);
@@ -101,16 +92,13 @@ fn parse_args() -> Result<HscArgs, Box<dyn std::error::Error>> {
                 }
                 None => return Err(ParseArgsError::new("arg for -o required")),
             },
-            _ => match args.source {
-                None => {
-                    args.source = Some(if arg == "-" {
-                        Source::Stdin
-                    } else {
-                        Source::Path(arg)
-                    })
+            arg @ _ => {
+                if arg.starts_with("-") {
+                    return Err(ParseArgsError::new(&format!("unknown arg {arg}")));
                 }
-                Some(_) => return Err(ParseArgsError::new(&format!("unknown arg {arg}"))),
-            },
+
+                args.srcs.push(arg.into())
+            }
         }
     }
 

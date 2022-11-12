@@ -8,7 +8,7 @@ mod types;
 mod macros;
 pub use types::*;
 
-pub type ParseError = Box<dyn std::error::Error>;
+pub type Error = Box<dyn std::error::Error>;
 
 #[derive(Debug, PartialEq)]
 pub struct Module {
@@ -27,7 +27,7 @@ impl Parser {
         }
     }
 
-    pub fn parse(&self, src: &str) -> Result<Module, ParseError> {
+    pub fn parse(&self, src: &str) -> Result<Module, Error> {
         let root_pairs = ast::TsParser::parse(Rule::ts, src)?;
 
         let mut top_level_constructs = vec![];
@@ -49,7 +49,7 @@ impl Parser {
         })
     }
 
-    fn parse_interface(&self, pair: Pair<Rule>) -> Result<Interface, ParseError> {
+    fn parse_interface(&self, pair: Pair<Rule>) -> Result<Interface, Error> {
         assert_rule!(pair, Rule::iface_defn);
 
         let mut inner = pair.into_inner();
@@ -127,7 +127,7 @@ impl Parser {
         })
     }
 
-    fn parse_stmt_or_expr(&self, pair: Pair<Rule>) -> Result<StmtOrExpr, ParseError> {
+    fn parse_stmt_or_expr(&self, pair: Pair<Rule>) -> Result<StmtOrExpr, Error> {
         assert_rule!(pair, Rule::stmt_or_expr);
 
         let inner = pair.into_inner().next().unwrap();
@@ -138,7 +138,7 @@ impl Parser {
         })
     }
 
-    fn parse_expr(&self, pair: Pair<Rule>) -> Result<Expr, ParseError> {
+    fn parse_expr(&self, pair: Pair<Rule>) -> Result<Expr, Error> {
         let mut inner = pair.into_inner();
         let (is_sub_expr, expr_inner) = match inner.peek().unwrap().as_rule() {
             Rule::expr_inner => (false, self.parse_expr_inner(inner.next().unwrap())?),
@@ -184,7 +184,7 @@ impl Parser {
         })
     }
 
-    fn parse_expr_inner(&self, pair: Pair<Rule>) -> Result<ExprInner, ParseError> {
+    fn parse_expr_inner(&self, pair: Pair<Rule>) -> Result<ExprInner, Error> {
         let inner = pair.into_inner().next().unwrap();
 
         Ok(match inner.as_rule() {
@@ -219,7 +219,7 @@ impl Parser {
         })
     }
 
-    fn parse_comparison(&self, pair: Pair<Rule>) -> Result<Comparison, ParseError> {
+    fn parse_comparison(&self, pair: Pair<Rule>) -> Result<Comparison, Error> {
         assert_rule!(pair, Rule::comparison);
 
         let mut inner = pair.into_inner();
@@ -231,7 +231,7 @@ impl Parser {
         Ok(Comparison { left, op, right })
     }
 
-    fn parse_comparison_op(&self, pair: Pair<Rule>) -> Result<ComparisonOp, ParseError> {
+    fn parse_comparison_op(&self, pair: Pair<Rule>) -> Result<ComparisonOp, Error> {
         assert_rule!(pair, Rule::comparison_op);
 
         Ok(match pair.as_str() {
@@ -244,7 +244,7 @@ impl Parser {
         })
     }
 
-    fn parse_comparison_term(&self, pair: Pair<Rule>) -> Result<ComparisonTerm, ParseError> {
+    fn parse_comparison_term(&self, pair: Pair<Rule>) -> Result<ComparisonTerm, Error> {
         assert_rule!(pair, Rule::comparison_term);
 
         let inner = pair.into_inner().next().unwrap();
@@ -259,7 +259,7 @@ impl Parser {
         })
     }
 
-    fn parse_arithmetic(&self, pair: Pair<Rule>) -> Result<Arithmetic, ParseError> {
+    fn parse_arithmetic(&self, pair: Pair<Rule>) -> Result<Arithmetic, Error> {
         assert_rule!(pair, Rule::arthm);
 
         let mut inner = pair.into_inner();
@@ -289,7 +289,7 @@ impl Parser {
         Ok(Arithmetic { term, ops })
     }
 
-    fn parse_arithmetic_term(&self, pair: Pair<Rule>) -> Result<ArithmeticTerm, ParseError> {
+    fn parse_arithmetic_term(&self, pair: Pair<Rule>) -> Result<ArithmeticTerm, Error> {
         assert_rule!(pair, Rule::arthm_term);
 
         let term = pair.into_inner().next().unwrap();
@@ -300,7 +300,7 @@ impl Parser {
         })
     }
 
-    fn parse_incr_decr(&self, pair: Pair<Rule>) -> Result<IncrDecr, ParseError> {
+    fn parse_incr_decr(&self, pair: Pair<Rule>) -> Result<IncrDecr, Error> {
         assert_rule!(pair, Rule::incr_decr);
 
         let inner = pair.into_inner().next().unwrap();
@@ -337,7 +337,7 @@ impl Parser {
         })
     }
 
-    fn parse_incr_decr_target(&self, pair: Pair<Rule>) -> Result<IncrDecrTarget, ParseError> {
+    fn parse_incr_decr_target(&self, pair: Pair<Rule>) -> Result<IncrDecrTarget, Error> {
         assert_rule!(pair, Rule::incr_target);
 
         let inner = pair.into_inner().next().unwrap();
@@ -348,25 +348,25 @@ impl Parser {
         })
     }
 
-    fn parse_num(&self, pair: Pair<Rule>) -> Result<f32, ParseError> {
+    fn parse_num(&self, pair: Pair<Rule>) -> Result<f32, Error> {
         assert_rule!(pair, Rule::num);
 
         Ok(pair.as_str().parse::<f32>().map_err(|e| format!("{e}"))?)
     }
 
-    fn parse_str(&self, pair: Pair<Rule>) -> Result<String, ParseError> {
+    fn parse_str(&self, pair: Pair<Rule>) -> Result<String, Error> {
         assert_rule!(pair, Rule::string);
 
         Ok(pair.into_inner().next().unwrap().as_str().into())
     }
 
-    fn parse_ident(&self, pair: Pair<Rule>) -> Result<String, ParseError> {
+    fn parse_ident(&self, pair: Pair<Rule>) -> Result<String, Error> {
         assert_rule!(pair, Rule::ident);
 
         Ok(pair.as_str().into())
     }
 
-    fn parse_fn_inst(&self, pair: Pair<Rule>) -> Result<FnInst, ParseError> {
+    fn parse_fn_inst(&self, pair: Pair<Rule>) -> Result<FnInst, Error> {
         assert_rule!(pair, Rule::fn_inst);
 
         let (mut name, mut params, mut return_type, mut body) = (None, None, None, vec![]);
@@ -388,7 +388,7 @@ impl Parser {
         })
     }
 
-    fn parse_stmt(&self, pair: Pair<Rule>) -> Result<Stmt, ParseError> {
+    fn parse_stmt(&self, pair: Pair<Rule>) -> Result<Stmt, Error> {
         assert_rule!(pair, Rule::stmt);
 
         let inner = pair.into_inner().next().unwrap();
@@ -441,7 +441,7 @@ impl Parser {
         })
     }
 
-    fn parse_if_stmt(&self, pair: Pair<Rule>) -> Result<IfStmt, ParseError> {
+    fn parse_if_stmt(&self, pair: Pair<Rule>) -> Result<IfStmt, Error> {
         assert_rule!(pair, Rule::if_stmt);
 
         let mut inner = pair.into_inner();
@@ -514,7 +514,7 @@ impl Parser {
         })
     }
 
-    fn parse_let_decl(&self, pair: Pair<Rule>) -> Result<Stmt, ParseError> {
+    fn parse_let_decl(&self, pair: Pair<Rule>) -> Result<Stmt, Error> {
         assert_rule!(pair, Rule::let_decl);
 
         let mut inner = pair.into_inner();
@@ -536,13 +536,13 @@ impl Parser {
         })
     }
 
-    fn parse_assignment(&self, pair: Pair<Rule>) -> Result<Expr, ParseError> {
+    fn parse_assignment(&self, pair: Pair<Rule>) -> Result<Expr, Error> {
         assert_rule!(pair, Rule::assignment);
 
         Ok(self.parse_expr(pair.into_inner().next().unwrap())?)
     }
 
-    fn parse_type_ident(&self, pair: Pair<Rule>) -> Result<Type, ParseError> {
+    fn parse_type_ident(&self, pair: Pair<Rule>) -> Result<Type, Error> {
         assert_rule!(pair, Rule::type_ident);
 
         let mut inner = pair.into_inner();
@@ -579,7 +579,7 @@ impl Parser {
         })
     }
 
-    fn parse_type_ident_type(&self, pair: Pair<Rule>) -> Result<TypeIdentType, ParseError> {
+    fn parse_type_ident_type(&self, pair: Pair<Rule>) -> Result<TypeIdentType, Error> {
         assert_rule!(pair, Rule::type_ident_type);
 
         let inner = pair.into_inner().next().unwrap();
@@ -592,7 +592,7 @@ impl Parser {
         })
     }
 
-    fn parse_literal_type(&self, pair: Pair<Rule>) -> Result<LiteralType, ParseError> {
+    fn parse_literal_type(&self, pair: Pair<Rule>) -> Result<LiteralType, Error> {
         assert_rule!(pair, Rule::literal_type);
 
         let inner = pair.into_inner().next().unwrap();
@@ -639,7 +639,7 @@ impl Parser {
         })
     }
 
-    fn parse_fn_param_list(&self, pair: Pair<Rule>) -> Result<Vec<FnParam>, ParseError> {
+    fn parse_fn_param_list(&self, pair: Pair<Rule>) -> Result<Vec<FnParam>, Error> {
         assert_rule!(pair, Rule::fn_param_list);
 
         let mut fn_params = vec![];
