@@ -1,0 +1,152 @@
+---
+source: tests/parser_test.rs
+assertion_line: 31
+expression: parsed
+---
+[
+    Module {
+        path: "./parser_tests/mods/simple/foo.ts",
+        top_level_constructs: [
+            Export(
+                Interface(
+                    Interface {
+                        name: "Foo",
+                        fields: [
+                            InterfaceField {
+                                name: "name",
+                                optional: false,
+                                typ: Type {
+                                    head: Name(
+                                        "string",
+                                    ),
+                                    rest: None,
+                                },
+                            },
+                        ],
+                        methods: [],
+                    },
+                ),
+            ),
+        ],
+    },
+    Module {
+        path: "./parser_tests/mods/simple/bar.ts",
+        top_level_constructs: [
+            Import(
+                Import {
+                    targets: Idents(
+                        [
+                            ImportTarget {
+                                ident: "Foo",
+                            },
+                        ],
+                    ),
+                    from: "./foo",
+                },
+            ),
+            Interface(
+                Interface {
+                    name: "Bar",
+                    fields: [
+                        InterfaceField {
+                            name: "foo",
+                            optional: false,
+                            typ: Type {
+                                head: Name(
+                                    "Foo",
+                                ),
+                                rest: None,
+                            },
+                        },
+                    ],
+                    methods: [],
+                },
+            ),
+            StmtOrExpr(
+                Stmt(
+                    LetDecl {
+                        name: "bar",
+                        typ: Some(
+                            Type {
+                                head: Name(
+                                    "Bar",
+                                ),
+                                rest: None,
+                            },
+                        ),
+                        assignment: Some(
+                            Expr {
+                                inner: ObjInst(
+                                    ObjInst {
+                                        fields: [
+                                            ObjFieldInst {
+                                                name: "foo",
+                                                value: Expr {
+                                                    inner: ObjInst(
+                                                        ObjInst {
+                                                            fields: [
+                                                                ObjFieldInst {
+                                                                    name: "name",
+                                                                    value: Expr {
+                                                                        inner: Str(
+                                                                            "hi i'm a foo!",
+                                                                        ),
+                                                                        is_sub_expr: false,
+                                                                        ops: [],
+                                                                    },
+                                                                },
+                                                            ],
+                                                        },
+                                                    ),
+                                                    is_sub_expr: false,
+                                                    ops: [],
+                                                },
+                                            },
+                                        ],
+                                    },
+                                ),
+                                is_sub_expr: false,
+                                ops: [],
+                            },
+                        ),
+                    },
+                ),
+            ),
+            StmtOrExpr(
+                Stmt(
+                    Expr(
+                        Expr {
+                            inner: Ident(
+                                "console",
+                            ),
+                            is_sub_expr: false,
+                            ops: [
+                                Access(
+                                    "log",
+                                ),
+                                Invoc {
+                                    args: [
+                                        Expr {
+                                            inner: Ident(
+                                                "bar",
+                                            ),
+                                            is_sub_expr: false,
+                                            ops: [
+                                                Access(
+                                                    "foo",
+                                                ),
+                                                Access(
+                                                    "name",
+                                                ),
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ),
+                ),
+            ),
+        ],
+    },
+]

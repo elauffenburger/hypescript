@@ -3,3 +3,5 @@ interface Foo {
 }
 
 interface Bar {}
+
+export {};

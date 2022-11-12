@@ -23,6 +23,7 @@ impl FromParsed<&parser::TopLevelConstruct> for TopLevelConstruct {
             parser::TopLevelConstruct::StmtOrExpr(stmt_or_expr) => {
                 TopLevelConstruct::StmtOrExpr(StmtOrExpr::from_parsed(m, stmt_or_expr))
             }
+            _ => todo!("{c:?}"),
         }
     }
 }

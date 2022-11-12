@@ -16,3 +16,5 @@ function fizzbuzz(n: number): void {
 }
 
 fizzbuzz(10);
+
+export {};

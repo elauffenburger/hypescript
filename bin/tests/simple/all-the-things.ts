@@ -143,3 +143,5 @@ function run(): void {
 }
 
 run();
+
+export {};

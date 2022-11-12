@@ -124,7 +124,8 @@ impl Module {
                         })
                         .collect();
                 }
-                parser::TopLevelConstruct::StmtOrExpr(_) => {}
+                parser::TopLevelConstruct::StmtOrExpr(_) => {},
+                c @ _ => todo!("{c:?}")
             };
         }
 

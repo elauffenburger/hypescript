@@ -2,6 +2,31 @@
 pub enum TopLevelConstruct {
     Interface(Interface),
     StmtOrExpr(StmtOrExpr),
+    Export(Export),
+    Import(Import),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Export {
+    Empty,
+    Interface(Interface),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Import {
+    pub targets: ImportTargets,
+    pub from: String,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ImportTargets {
+    All,
+    Idents(Vec<ImportTarget>)
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ImportTarget {
+    pub ident: String,
 }
 
 #[derive(Debug, PartialEq, Clone)]

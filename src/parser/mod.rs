@@ -16,18 +16,14 @@ pub struct Module {
     pub top_level_constructs: Vec<TopLevelConstruct>,
 }
 
-pub struct Parser {
-    pub mod_path: String,
-}
+pub struct Parser {}
 
 impl Parser {
-    pub fn new(mod_path: String) -> Self {
-        Parser {
-            mod_path: mod_path.clone(),
-        }
+    pub fn new() -> Self {
+        Parser {}
     }
 
-    pub fn parse(&self, src: &str) -> Result<Module, Error> {
+    pub fn parse(&self, mod_path: &str, src: &str) -> Result<Module, Error> {
         let root_pairs = ast::TsParser::parse(Rule::ts, src)?;
 
         let mut top_level_constructs = vec![];
@@ -39,14 +35,54 @@ impl Parser {
             top_level_constructs.push(match pair.as_rule() {
                 Rule::iface_defn => TopLevelConstruct::Interface(self.parse_interface(pair)?),
                 Rule::stmt_or_expr => TopLevelConstruct::StmtOrExpr(self.parse_stmt_or_expr(pair)?),
-                _ => unreachable!(),
+                Rule::export => TopLevelConstruct::Export(self.parse_export(pair)?),
+                Rule::import => TopLevelConstruct::Import(self.parse_import(pair)?),
+                c @ _ => todo!("{c:#?}"),
             })
         }
 
         Ok(Module {
-            path: self.mod_path.clone(),
+            path: mod_path.into(),
             top_level_constructs,
         })
+    }
+
+    fn parse_export(&self, pair: Pair<Rule>) -> Result<Export, Error> {
+        assert_rule!(pair, Rule::export);
+
+        let inner = pair.into_inner().next().unwrap();
+        Ok(match inner.as_rule() {
+            Rule::empty_obj => Export::Empty,
+            Rule::iface_defn => Export::Interface(self.parse_interface(inner)?),
+            r @ _ => todo!("{r:?}"),
+        })
+    }
+
+    fn parse_import(&self, pair: Pair<Rule>) -> Result<Import, Error> {
+        assert_rule!(pair, Rule::import);
+
+        let mut inner = pair.into_inner();
+
+        let mut next = inner.next().unwrap();
+        let targets = match next.as_str() {
+            "*" => ImportTargets::All,
+            _ => {
+                let mut targets = vec![];
+                while next.as_rule() == Rule::ident {
+                    targets.push(ImportTarget {
+                        ident: self.parse_ident(next)?,
+                    });
+
+                    next = inner.next().unwrap();
+                }
+
+                ImportTargets::Idents(targets)
+            }
+        };
+
+        let from = self.parse_str(next)?;
+
+        Ok(Import { targets, from })
     }
 
     fn parse_interface(&self, pair: Pair<Rule>) -> Result<Interface, Error> {

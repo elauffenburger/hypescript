@@ -1,0 +1,15 @@
+---
+source: tests/parser_test.rs
+assertion_line: 26
+expression: parsed
+---
+[
+    Module {
+        path: "./parser_tests/empty-export.ts",
+        top_level_constructs: [
+            Export(
+                Empty,
+            ),
+        ],
+    },
+]

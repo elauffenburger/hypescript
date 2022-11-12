@@ -7,14 +7,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let output_dir = args.output_dir.expect("output dir required!");
 
-    let parser = parser::Parser::new(".".into());
+    let parser = parser::Parser::new();
     let parsed_mods: Result<Vec<_>, parser::Error> = args
         .srcs
         .iter()
         .map(|path| {
             fs::read_to_string(path)
                 .map_err(|err| Box::new(err) as parser::Error)
-                .and_then(|src| parser.parse(&src))
+                .and_then(|src| parser.parse(&path, &src))
         })
         .collect();
 
