@@ -220,3 +220,16 @@ fn can_emit_subexpr() {
         "#,
     )
 }
+
+#[test]
+fn can_emit_out_of_order_ifaces() {
+    insta_test!(
+        r#"
+            interface Foo {
+                bar: Bar;
+            }
+
+            interface Bar {}
+        "#,
+    )
+}

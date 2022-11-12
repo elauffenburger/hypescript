@@ -32,6 +32,8 @@ pub struct Interface {
     pub name: String,
     pub fields: Vec<InterfaceField>,
     pub methods: Vec<InterfaceMethod>,
+
+    pub resolved: bool,
 }
 
 impl FromParsed<&parser::Interface> for Interface {
@@ -60,6 +62,7 @@ impl FromParsed<&parser::Interface> for Interface {
                     typ: mthd.typ.as_ref().map(|typ| Type::from_parsed(m, &typ)),
                 })
                 .collect(),
+            resolved: true,
         }
     }
 }
@@ -224,7 +227,7 @@ impl FromParsed<&parser::TypeIdentType> for TypeIdentType {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct TypeRef {
     pub name: String,
     pub mod_path: String,
@@ -418,7 +421,7 @@ pub enum IncrDecr {
 }
 
 impl FromParsed<&parser::IncrDecr> for IncrDecr {
-    fn from_parsed(m: &Module, incr_decr: &parser::IncrDecr) -> Self {
+    fn from_parsed(_: &Module, incr_decr: &parser::IncrDecr) -> Self {
         match incr_decr {
             parser::IncrDecr::Incr(incr) => IncrDecr::Incr(match incr {
                 parser::Increment::Pre(pre) => Increment::Pre(match pre {
@@ -428,7 +431,14 @@ impl FromParsed<&parser::IncrDecr> for IncrDecr {
                     parser::IncrDecrTarget::Ident(ident) => IncrDecrTarget::Ident(ident.clone()),
                 }),
             }),
-            parser::IncrDecr::Decr(decr) => todo!(),
+            parser::IncrDecr::Decr(decr) => IncrDecr::Decr(match decr {
+                parser::Decrement::Pre(pre) => Decrement::Pre(match pre {
+                    parser::IncrDecrTarget::Ident(ident) => IncrDecrTarget::Ident(ident.clone()),
+                }),
+                parser::Decrement::Post(post) => Decrement::Post(match post {
+                    parser::IncrDecrTarget::Ident(ident) => IncrDecrTarget::Ident(ident.clone()),
+                }),
+            }),
         }
     }
 }
@@ -530,7 +540,7 @@ pub enum ArithmeticTerm {
 }
 
 impl FromParsed<&parser::ArithmeticTerm> for ArithmeticTerm {
-    fn from_parsed(m: &Module, term: &parser::ArithmeticTerm) -> Self {
+    fn from_parsed(_: &Module, term: &parser::ArithmeticTerm) -> Self {
         match term {
             parser::ArithmeticTerm::Ident(ident) => ArithmeticTerm::Ident(ident.clone()),
             parser::ArithmeticTerm::Num(num) => ArithmeticTerm::Num(*num),
@@ -548,7 +558,7 @@ pub enum ComparisonOp {
 }
 
 impl FromParsed<&parser::ComparisonOp> for ComparisonOp {
-    fn from_parsed(m: &Module, op: &parser::ComparisonOp) -> Self {
+    fn from_parsed(_: &Module, op: &parser::ComparisonOp) -> Self {
         match op {
             parser::ComparisonOp::LooseEq => ComparisonOp::LooseEq,
             parser::ComparisonOp::LooseNeq => ComparisonOp::LooseNeq,

@@ -1,5 +1,3 @@
-use crate::emitter::FromParsed;
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum TopLevelConstruct {
     Interface(Interface),

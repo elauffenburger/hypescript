@@ -58,7 +58,7 @@ impl Scope {
 
     pub fn get_type(&self, name: &str) -> Option<Rc<RefCell<Type>>> {
         match self.types.get(name) {
-            Some(t) => Some(t.to_owned()),
+            Some(t) => Some(t.clone()),
             None => match self.parent.clone() {
                 Some(parent) => parent.borrow().get_type(name),
                 None => None,
@@ -68,13 +68,32 @@ impl Scope {
 
     pub fn add_iface(&mut self, iface: Interface) -> Rc<RefCell<Type>> {
         let name = iface.name.clone();
-
-        let typ = rcref(Type {
+        let typ = Type {
             mod_path: self.mod_path.clone(),
             head: TypeIdentType::Interface(iface),
             rest: None,
-        });
+        };
 
+        // If we already had an interface def, make sure it was an unresolved iface.
+        if let Some(existing) = self.get_type(&name) {
+            if let Some(_) = existing.borrow().rest {
+                panic!("expected interface");
+            }
+
+            match existing.borrow_mut().head {
+                TypeIdentType::Interface(ref iface) => {
+                    if iface.resolved {
+                        panic!("expected unresolved")
+                    }
+                }
+                _ => panic!("expected interface"),
+            };
+
+            existing.swap(&RefCell::new(typ));
+            return self.get_type(&name).unwrap();
+        }
+
+        let typ = rcref(typ);
         self.types.insert(name, typ.clone());
 
         typ

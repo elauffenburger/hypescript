@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use maplit::hashmap;
+use maplit::{hashmap, hashset};
 
 use crate::{parser, util::rcref};
 
@@ -92,17 +92,19 @@ impl Emitter {
             self.write("int main() {\n")?;
 
             for parsed_mod in parsed_mods {
-                let module: Module = parsed_mod.into();
+                // Parse the module and add it to the emitter.
+                let module: Rc<RefCell<Module>> = rcref(parsed_mod.into());
+                self.modules.insert(module.borrow().path.clone(), module.clone());
 
                 // Apply the module scope to the current emitter scope.
                 let old_scope = self.curr_scope.clone();
-                self.curr_scope = module.scope.clone();
+                self.curr_scope = module.borrow().scope.clone();
 
-                for construct in module.top_level_constructs.iter() {
+                for construct in module.borrow().top_level_constructs.iter() {
                     let construct = construct.clone();
 
                     match construct {
-                        TopLevelConstruct::Interface(iface) => self.reg_iface(iface)?,
+                        TopLevelConstruct::Interface(_) => {}
                         TopLevelConstruct::StmtOrExpr(stmt_or_expr) => match stmt_or_expr {
                             StmtOrExpr::Stmt(stmt) => self.emit_stmt(stmt)?,
                             StmtOrExpr::Expr(_) => todo!(),
@@ -150,12 +152,6 @@ impl Emitter {
                 StmtOrExpr::Expr(expr) => self.emit_expr(expr)?,
             }
         }
-
-        Ok(())
-    }
-
-    fn reg_iface(&mut self, iface: Interface) -> Result<(), EmitterError> {
-        self.curr_scope.borrow_mut().add_iface(iface);
 
         Ok(())
     }
@@ -227,7 +223,10 @@ impl Emitter {
         let mod_path: String = type_ref.mod_path.clone().into();
         match self.modules.get(&mod_path) {
             Some(module) => module.borrow().get_type(&type_ref.name),
-            None => None,
+            None => {
+                eprintln!("failed to find module {mod_path:#?}");
+                None
+            }
         }
     }
 }

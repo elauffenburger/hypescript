@@ -1,5 +1,5 @@
-use crate::util::rcref;
 use super::*;
+use crate::util::rcref;
 
 mod fn_inst;
 pub use fn_inst::*;
@@ -74,7 +74,7 @@ impl Emitter {
                     curr_acc_type = match typ {
                         super::TypeIdentType::Name(ref type_ref) => self
                             .get_type(type_ref)
-                            .ok_or(format!("could not find type {type_ref:?}"))?,
+                            .ok_or_else(|| format!("could not find type {type_ref:?}"))?,
                         super::TypeIdentType::LiteralType(typ) => match *typ {
                             super::LiteralType::FnType { .. } => todo!(),
                             super::LiteralType::ObjType { fields } => {

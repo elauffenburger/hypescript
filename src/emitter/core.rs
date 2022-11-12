@@ -35,21 +35,22 @@ thread_local! {
                     }),
                 ),
             }],
+            resolved: true,
         });
 
         // Add `console` ident.
         scope.add_ident("console", Type::simple(MOD_CORE_PATH, TypeIdentType::name(MOD_CORE_PATH, "Console")));
 
         // Add `global` interface.
-        scope.add_iface(Interface{name: "Global".into(), fields: vec![], methods: vec![]});
+        scope.add_iface(Interface{name: "Global".into(), fields: vec![], methods: vec![], resolved: true});
 
         // Add built-in types.
         for typ in BuiltInTypes::iter() {
             match typ {
-                BuiltInTypes::String => scope.add_iface(Interface{name: "string".into(), fields: vec![], methods: vec![]}),
-                BuiltInTypes::Number => scope.add_iface(Interface{name: "number".into(), fields: vec![], methods: vec![]}),
-                BuiltInTypes::Boolean => scope.add_iface(Interface{name: "boolean".into(), fields: vec![], methods: vec![]}),
-                BuiltInTypes::Void => scope.add_iface(Interface{name: "void".into(), fields: vec![], methods: vec![]}),
+                BuiltInTypes::String => scope.add_iface(Interface{name: "string".into(), fields: vec![], methods: vec![], resolved: true}),
+                BuiltInTypes::Number => scope.add_iface(Interface{name: "number".into(), fields: vec![], methods: vec![], resolved: true}),
+                BuiltInTypes::Boolean => scope.add_iface(Interface{name: "boolean".into(), fields: vec![], methods: vec![], resolved: true}),
+                BuiltInTypes::Void => scope.add_iface(Interface{name: "void".into(), fields: vec![], methods: vec![], resolved: true}),
             };
         }
 

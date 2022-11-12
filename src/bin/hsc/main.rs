@@ -2,21 +2,24 @@ use std::{
     env::{self},
     fmt::Display,
     fs,
-    io::{self, Read},
+    io::{self, BufRead, Read},
 };
 
 use hypescript::{emitter, parser};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let src = {
-        let mut buf = String::new();
-        io::stdin().read_to_string(&mut buf)?;
-
-        buf
-    };
-
     let args = parse_args()?;
     let output_dir = args.output_dir.expect("output dir required!");
+    let mut src_reader: Box<dyn BufRead> = match args.source {
+        Some(source) => match source {
+            Source::Stdin => Box::new(io::BufReader::new(io::stdin().lock())),
+            Source::Path(path) => Box::new(io::BufReader::new(fs::File::open(path)?)),
+        },
+        None => Box::new(io::BufReader::new(io::stdin().lock())),
+    };
+
+    let mut src = String::new();
+    src_reader.read_to_string(&mut src)?;
 
     let parser = parser::Parser::new(".".into());
     let emitted = emitter::Emitter::new().emit(&[parser.parse(&src)?])?;
@@ -73,12 +76,21 @@ impl ParseArgsError {
     }
 }
 
+enum Source {
+    Stdin,
+    Path(String),
+}
+
 struct HscArgs {
     output_dir: Option<String>,
+    source: Option<Source>,
 }
 
 fn parse_args() -> Result<HscArgs, Box<dyn std::error::Error>> {
-    let mut args = HscArgs { output_dir: None };
+    let mut args = HscArgs {
+        output_dir: None,
+        source: None,
+    };
 
     let mut env_args = env::args().skip(1);
     while let Some(arg) = env_args.next() {
@@ -89,7 +101,16 @@ fn parse_args() -> Result<HscArgs, Box<dyn std::error::Error>> {
                 }
                 None => return Err(ParseArgsError::new("arg for -o required")),
             },
-            _ => return Err(ParseArgsError::new(&format!("unknown arg {arg}"))),
+            _ => match args.source {
+                None => {
+                    args.source = Some(if arg == "-" {
+                        Source::Stdin
+                    } else {
+                        Source::Path(arg)
+                    })
+                }
+                Some(_) => return Err(ParseArgsError::new(&format!("unknown arg {arg}"))),
+            },
         }
     }
 

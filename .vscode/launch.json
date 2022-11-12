@@ -8,9 +8,10 @@
       "type": "lldb",
       "request": "launch",
       "name": "Launch bin/cli",
-      "program": "${workspaceFolder}/target/debug/cli",
-      "args": [],
-      "cwd": "${workspaceFolder}"
+      "program": "${workspaceFolder}/target/debug/hsc",
+      "args": ["${input:args}", "-o", "./build"],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "build"
     },
     {
       "type": "lldb",
@@ -19,6 +20,14 @@
       "program": "${workspaceFolder}/build/bin/out",
       "args": [],
       "cwd": "${workspaceFolder}/build"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "args",
+      "description": "args to pass to cli",
+      "type": "promptString",
+      "default": "./bin/tests/all-the-things.ts"
     }
   ]
 }
